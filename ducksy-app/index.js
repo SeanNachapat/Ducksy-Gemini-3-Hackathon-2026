@@ -4,18 +4,44 @@ const path = require('node:path')
 const fs = require('node:fs')
 
 let tray;
+let position;
+let mainWindow;
 
 function createWindow() {
-
-      let mainWindow;
       let workSizeArea = screen.getPrimaryDisplay().workAreaSize;
       const MAIN_WINDOWS_WIDTH = 300;
       const MAIN_WINDOWS_HEIGHT = 350;
-      let initialPosition = {
-            x: workSizeArea.width - MAIN_WINDOWS_WIDTH,
-            y: workSizeArea.height - MAIN_WINDOWS_HEIGHT
-      }
 
+      position = [
+            {
+                  name: "TopRight",
+                  position: {
+                        x: workSizeArea.width - MAIN_WINDOWS_WIDTH,
+                        y: 20
+                  }
+            },
+            {
+                  name: "TopLeft",
+                  position: {
+                        x: 0,
+                        y: 0
+                  }
+            },
+            {
+                  name: "BottomRight",
+                  position: {
+                        x: workSizeArea.width - MAIN_WINDOWS_WIDTH,
+                        y: workSizeArea.height - MAIN_WINDOWS_HEIGHT
+                  }
+            },
+            {
+                  name: "BottomLeft",
+                  position: {
+                        x: 0,
+                        y: workSizeArea.height - MAIN_WINDOWS_HEIGHT
+                  }
+            }
+      ];
       mainWindow = new BrowserWindow({
             width: MAIN_WINDOWS_WIDTH,
             height: MAIN_WINDOWS_HEIGHT,
@@ -29,7 +55,7 @@ function createWindow() {
             }
       })
       mainWindow.setIgnoreMouseEvents(true)
-      mainWindow.setPosition(initialPosition.x, initialPosition.y)
+      mainWindow.setPosition(position[0].position.x, position[0].position.y)
       mainWindow.setAlwaysOnTop(true, 'screen-saver')
       mainWindow.setVisibleOnAllWorkspaces(true)
       mainWindow.setMenuBarVisibility(false)
@@ -62,42 +88,49 @@ function createWindow() {
 }
 const createTaskBar = () => {
       try {
-            const icon = nativeImage.createFromDataURL("");
+            let iconPath;
 
-            if (icon.isEmpty()) {
-                  console.error('Failed to create icon from data URL');
-                  return;
+            if (process.platform === 'darwin') {
+                  iconPath = path.join(__dirname, 'assets', 'icon-22x22.png');
+            } else if (process.platform === 'win32') {
+                  iconPath = path.join(__dirname, 'assets', 'icon-16x16.png');
+            } else {
+                  iconPath = path.join(__dirname, 'assets', 'icon-32x32.png');
             }
-
-            console.log('Icon created:', icon.getSize());
-
-            const resizedIcon = icon.resize({ width: 16, height: 16 });
-
-            resizedIcon.setTemplateImage(true);
-
-            tray = new Tray(resizedIcon);
+            tray = new Tray(iconPath);
             tray.setToolTip('Ducksy');
 
-            const contextMenu = Menu.buildFromTemplate([
-                  {
-                        label: 'Quit',
-                        click: () => app.quit()
-                  },
-                  {
-                        label: 'Quit',
-                        click: () => app.quit()
-                  },
-                  {
-                        label: 'Quit',
-                        click: () => app.quit()
-                  },
-                  {
-                        label: 'Quit',
-                        click: () => app.quit()
-                  },
-            ]);
+            let currentPosition = 0;
 
-            tray.setContextMenu(contextMenu);
+            const updateTrayMenu = () => {
+
+                  const contextMenu = Menu.buildFromTemplate([
+                        {
+                              label: `Now Position : ${position[currentPosition].name}`
+                        },
+                        {
+                              label: `Next Position : ${position[(currentPosition + 1) % position.length].name}`,
+                              click: () => {
+                                    console.log(currentPosition)
+                                    if (position.length - 1 > currentPosition) {
+                                          currentPosition++
+                                    } else {
+                                          currentPosition = 0
+                                    }
+                                    mainWindow.setPosition(position[currentPosition].position.x, position[currentPosition].position.y)
+                                    updateTrayMenu();
+                              }
+                        },
+                        {
+                              label: 'Quit',
+                              click: () => app.quit()
+                        },
+                  ]);
+
+                  tray.setContextMenu(contextMenu);
+            }
+
+            updateTrayMenu();
 
             console.log('Tray created successfully');
             console.log('Tray bounds:', tray.getBounds());
@@ -109,7 +142,9 @@ const createTaskBar = () => {
 
 app.whenReady().then(() => {
       createWindow()
-      createTaskBar();
+      setTimeout(() => {
+            createTaskBar();
+      }, 500)
       app.on('activate', () => {
             if (BrowserWindow.getAllWindows().length === 0) {
                   createWindow()
