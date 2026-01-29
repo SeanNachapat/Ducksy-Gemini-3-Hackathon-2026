@@ -20,10 +20,13 @@ async function createWindow() {
             backgroundColor: "#0a0a0a",
             titleBarStyle: "hiddenInset",
             trafficLightPosition: { x: 16, y: 16 },
+            frame: false,
+            autoHideMenuBar: true,
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
                   contextIsolation: true,
+                  devTools: false
             },
       })
 
