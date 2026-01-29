@@ -1,0 +1,15 @@
+{
+      "name": "ducksy-gemini-3-hackathon",
+      "private": true,
+      "workspaces": [
+            "ducksy-app",
+            "ducksy-ui"
+      ],
+      "scripts": {
+            "dev": "concurrently -n \"NEXT,ELECTRON\" -c \"yellow,blue\" --kill-others \"npm -w ducksy-ui run dev\" \"npm -w ducksy-app run electron\"",
+            "build": "npm -w ducksy-ui run build && npm -w ducksy-app run build"
+      },
+      "devDependencies": {
+            "concurrently": "^9.2.1"
+      }
+}

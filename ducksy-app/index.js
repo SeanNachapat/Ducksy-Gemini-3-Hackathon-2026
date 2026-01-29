@@ -1,159 +1,216 @@
-const { nativeImage } = require('electron/common');
-const { app, BrowserWindow, session, desktopCapturer, screen, Tray, Menu } = require('electron/main')
-const path = require('node:path')
-const fs = require('node:fs')
+const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer } = require("electron")
+const path = require("path")
+const serve = require("electron-serve")
+const { permission } = require("process")
 
-let tray;
-let position;
-let mainWindow;
+const isProd = process.env.NODE_ENV === "production"
 
-function createWindow() {
-      let workSizeArea = screen.getPrimaryDisplay().workAreaSize;
-      const MAIN_WINDOWS_WIDTH = 300;
-      const MAIN_WINDOWS_HEIGHT = 350;
+if (isProd) {
+      serve({ directory: "out" })
+}
 
-      position = [
-            {
-                  name: "TopRight",
-                  position: {
-                        x: workSizeArea.width - MAIN_WINDOWS_WIDTH,
-                        y: 20
-                  }
-            },
-            {
-                  name: "TopLeft",
-                  position: {
-                        x: 0,
-                        y: 0
-                  }
-            },
-            {
-                  name: "BottomRight",
-                  position: {
-                        x: workSizeArea.width - MAIN_WINDOWS_WIDTH,
-                        y: workSizeArea.height - MAIN_WINDOWS_HEIGHT
-                  }
-            },
-            {
-                  name: "BottomLeft",
-                  position: {
-                        x: 0,
-                        y: workSizeArea.height - MAIN_WINDOWS_HEIGHT
-                  }
-            }
-      ];
+let mainWindow
+
+async function createWindow() {
       mainWindow = new BrowserWindow({
-            width: MAIN_WINDOWS_WIDTH,
-            height: MAIN_WINDOWS_HEIGHT,
-            transparent: true,
-            frame: false,
-            resizable: false,
-            hasShadow: false,
+            width: 1200,
+            height: 800,
+            minWidth: 800,
+            minHeight: 600,
+            backgroundColor: "#0a0a0a",
+            titleBarStyle: "hiddenInset",
+            trafficLightPosition: { x: 16, y: 16 },
             webPreferences: {
-                  devTools: true,
-                  preload: path.join(__dirname, 'preload.js')
-            }
+                  preload: path.join(__dirname, "preload.js"),
+                  nodeIntegration: false,
+                  contextIsolation: true,
+            },
       })
-      mainWindow.setIgnoreMouseEvents(true)
-      mainWindow.setPosition(position[0].position.x, position[0].position.y)
-      mainWindow.setAlwaysOnTop(true, 'screen-saver')
-      mainWindow.setVisibleOnAllWorkspaces(true)
-      mainWindow.setMenuBarVisibility(false)
-      mainWindow.setIgnoreMouseEvents(true)
 
-      function setTopRightPosition() {
-            let workAreaSize = screen.getPrimaryDisplay().workAreaSize;
-            mainWindow.setPosition(workAreaSize.width - MAIN_WINDOWS_WIDTH, 20)
+      if (isProd) {
+            await mainWindow.loadURL("app://./index.html")
+      } else {
+            await mainWindow.loadURL("http://localhost:3000")
+            mainWindow.webContents.openDevTools()
       }
-      function setTopLeftPosition() {
-            mainWindow.setPosition(0, 0)
-      }
-      function setBottomRightPosition() {
-            let workAreaSize = screen.getPrimaryDisplay().workAreaSize;
-            mainWindow.setPosition(workAreaSize.width - MAIN_WINDOWS_WIDTH, workAreaSize.height - MAIN_WINDOWS_HEIGHT)
-      }
-      function setBottomLeftPosition() {
-            let workAreaSize = screen.getPrimaryDisplay().workAreaSize;
-            mainWindow.setPosition(0, workAreaSize.height - MAIN_WINDOWS_HEIGHT)
-      }
-      // session.defaultSession.setDisplayMediaRequestHandler((req, callback) => {
-      //       desktopCapturer.getSources({ types: ['screen', 'window'] }).then(src => {
-      //             callback({ video: src[0], audio: 'loopback' })
-      //       })
-      // }, {
-      //       useSystemPicker: true
-      // })
 
-      mainWindow.loadFile(path.join(__dirname, 'views', 'index.html'))
-}
-const createTaskBar = () => {
-      try {
-            let iconPath;
-
-            if (process.platform === 'darwin') {
-                  iconPath = path.join(__dirname, 'assets', 'icon-22x22.png');
-            } else if (process.platform === 'win32') {
-                  iconPath = path.join(__dirname, 'assets', 'icon-16x16.png');
-            } else {
-                  iconPath = path.join(__dirname, 'assets', 'icon-32x32.png');
-            }
-            tray = new Tray(iconPath);
-            tray.setToolTip('Ducksy');
-
-            let currentPosition = 0;
-
-            const updateTrayMenu = () => {
-
-                  const contextMenu = Menu.buildFromTemplate([
-                        {
-                              label: `Now Position : ${position[currentPosition].name}`
-                        },
-                        {
-                              label: `Next Position : ${position[(currentPosition + 1) % position.length].name}`,
-                              click: () => {
-                                    console.log(currentPosition)
-                                    if (position.length - 1 > currentPosition) {
-                                          currentPosition++
-                                    } else {
-                                          currentPosition = 0
-                                    }
-                                    mainWindow.setPosition(position[currentPosition].position.x, position[currentPosition].position.y)
-                                    updateTrayMenu();
-                              }
-                        },
-                        {
-                              label: 'Quit',
-                              click: () => app.quit()
-                        },
-                  ]);
-
-                  tray.setContextMenu(contextMenu);
-            }
-
-            updateTrayMenu();
-
-            console.log('Tray created successfully');
-            console.log('Tray bounds:', tray.getBounds());
-
-      } catch (error) {
-            console.error('Error creating tray:', error);
-      }
+      mainWindow.webContents.on("did-finish-load", () => {
+            mainWindow.webContents.send("app-ready")
+      })
 }
 
-app.whenReady().then(() => {
-      createWindow()
-      setTimeout(() => {
-            createTaskBar();
-      }, 500)
-      app.on('activate', () => {
-            if (BrowserWindow.getAllWindows().length === 0) {
-                  createWindow()
-            }
-      })
+// App lifecycle
+app.whenReady().then(createWindow)
+
+app.on("window-all-closed", () => {
+      if (process.platform !== "darwin") {
+            app.quit()
+      }
 })
 
-app.on('window-all-closed', () => {
-      if (process.platform !== 'darwin') {
-            app.quit()
+app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow()
+      }
+})
+
+async function checkPermissions() {
+      const permissions = {
+            microphone: "unknown",
+            screen: "unknown",
+      }
+
+      if (process.platform === "darwin") {
+            permissions.microphone = systemPreferences.getMediaAccessStatus("microphone")
+            permissions.screen = systemPreferences.getMediaAccessStatus("screen")
+            console.log("permissions.screen", permissions.screen)
+      } else if (process.platform === "win32") {
+            permissions.microphone = "granted"
+            permissions.screen = "granted"
+      } else {
+            permissions.microphone = "granted"
+            permissions.screen = "granted"
+      }
+
+      return permissions
+}
+
+async function requestMicrophonePermission() {
+      if (process.platform === "darwin") {
+            const status = systemPreferences.getMediaAccessStatus("microphone")
+
+            if (status === "not-determined") {
+                  const granted = await systemPreferences.askForMediaAccess("microphone")
+                  return granted ? "granted" : "denied"
+            }
+
+            return status
+      }
+
+      return "granted"
+}
+
+async function requestScreenPermission() {
+      if (process.platform === "darwin") {
+            const status = systemPreferences.getMediaAccessStatus("screen")
+
+            if (status === "not-determined" || status === "denied") {
+                  try {
+                        await desktopCapturer.getSources({ types: ["screen", "window"] })
+                  } catch (e) {
+                        console.log("Screen permission request triggered")
+                  }
+
+                  return systemPreferences.getMediaAccessStatus("screen")
+            }
+
+            return status
+      }
+
+      return "granted"
+}
+
+function openSystemPreferences(type) {
+      if (process.platform === "darwin") {
+            const { shell } = require("electron")
+
+            if (type === "microphone") {
+                  shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+            } else if (type === "screen") {
+                  shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+            }
+      }
+}
+
+ipcMain.on("step-changed", (event, data) => {
+      console.log("Step changed:", data)
+})
+
+ipcMain.on("onboarding-complete", (event, data) => {
+      console.log("Onboarding complete:", data)
+})
+
+ipcMain.on("request-permissions", async (event) => {
+      console.log("Requesting permissions...")
+
+      const micStatus = await requestMicrophonePermission()
+      const screenStatus = await requestScreenPermission()
+
+      const result = {
+            microphone: micStatus,
+            screen: screenStatus,
+      }
+
+      console.log("Permission results:", result)
+      mainWindow.webContents.send("permissions-result", result)
+})
+
+ipcMain.handle("check-permissions", async () => {
+      return await checkPermissions()
+})
+
+ipcMain.handle("request-microphone", async () => {
+      return await requestMicrophonePermission()
+})
+
+ipcMain.handle("request-screen", async () => {
+      return await requestScreenPermission()
+})
+
+ipcMain.on("open-system-preferences", (event, type) => {
+      openSystemPreferences(type)
+})
+
+ipcMain.handle("get-screen-sources", async () => {
+      try {
+            const sources = await desktopCapturer.getSources({
+                  types: ["screen", "window"],
+                  thumbnailSize: { width: 150, height: 150 },
+            })
+
+            return sources.map(source => ({
+                  id: source.id,
+                  name: source.name,
+                  thumbnail: source.thumbnail.toDataURL(),
+            }))
+      } catch (e) {
+            console.error("Failed to get screen sources:", e)
+            return []
+      }
+})
+
+ipcMain.on("app-minimize", () => {
+      mainWindow?.minimize()
+})
+
+ipcMain.on("app-maximize", () => {
+      if (mainWindow?.isMaximized()) {
+            mainWindow.unmaximize()
+      } else {
+            mainWindow?.maximize()
+      }
+})
+
+ipcMain.on("app-close", () => {
+      mainWindow?.close()
+})
+
+ipcMain.handle("get-settings", async () => {
+      return {
+            language: "en",
+            theme: "dark",
+      }
+})
+
+ipcMain.handle("save-settings", async (event, settings) => {
+      console.log("Saving settings:", settings)
+      return true
+})
+
+ipcMain.handle("get-system-info", async () => {
+      return {
+            platform: process.platform,
+            arch: process.arch,
+            version: app.getVersion(),
       }
 })

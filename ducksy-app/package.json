@@ -1,16 +1,16 @@
 {
-  "dependencies": {
-    "electron": "^40.0.0"
-  },
   "name": "ducksy-app",
   "version": "1.0.0",
   "main": "index.js",
-  "devDependencies": {},
-  "scripts": {
-    "start": "electron ."
+  "dependencies": {
+    "electron": "^40.0.0",
+    "electron-serve": "^3.0.1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "devDependencies": {
+    "electron-builder": "^26.4.0"
+  },
+  "scripts": {
+    "electron": "electron .",
+    "build": "electron-builder"
+  }
 }
