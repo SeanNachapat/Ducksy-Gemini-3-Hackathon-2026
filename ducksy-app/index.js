@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer } = require("electron")
+const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen } = require("electron")
 const path = require("path")
 const serve = require("electron-serve")
 const { permission } = require("process")
@@ -11,6 +11,41 @@ if (isProd) {
 }
 
 let mainWindow
+let onRecordingWindow
+
+async function createOnRecordingWindow() {
+
+      const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+      const width_f = 350;
+      const height_f = 100;
+
+      onRecordingWindow = new BrowserWindow({
+            width: width_f,
+            height: height_f,
+            minWidth: width_f,
+            minHeight: height_f,
+            backgroundColor: "#0a0a0a",
+            titleBarStyle: "hidden",
+            frame: false,
+            autoHideMenuBar: true,
+            webPreferences: {
+                  preload: path.join(__dirname, "preload.js"),
+                  nodeIntegration: false,
+                  contextIsolation: true,
+                  // devTools: false,
+                  defaultFontFamily: "monospace"
+            },
+      })
+
+      onRecordingWindow.setPosition(width - width_f, 20);
+
+      if (isProd) {
+            await onRecordingWindow.loadURL("app://./index.html")
+      } else {
+            await onRecordingWindow.loadURL("http://localhost:3000/onRecord")
+            onRecordingWindow.webContents.openDevTools()
+      }
+}
 
 async function createWindow() {
       mainWindow = new BrowserWindow({
@@ -27,7 +62,7 @@ async function createWindow() {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
                   contextIsolation: true,
-                  devTools: false,
+                  // devTools: false,
                   defaultFontFamily: "monospace"
             },
       })
@@ -70,6 +105,12 @@ async function setUpApplication() {
       // `)
 }
 
+async function getMicrophoneDevices() {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      console.log("devices", devices)
+      return devices.filter(device => device.kind === "audioinput")
+}
 
 async function checkPermissions() {
       const permissions = {
@@ -138,6 +179,23 @@ function openSystemPreferences(type) {
             }
       }
 }
+
+ipcMain.on("record-audio", (event, data) => {
+      console.log("Record audio:", data)
+      createOnRecordingWindow()
+})
+
+ipcMain.on("realtime-time-record", (event, data) => {
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.webContents.send("realtime-time-record", data)
+      }
+})
+
+ipcMain.on("recording-control-update", (event, data) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("recording-control-update", data)
+      }
+})
 
 ipcMain.on("step-changed", (event, data) => {
       console.log("Step changed:", data)

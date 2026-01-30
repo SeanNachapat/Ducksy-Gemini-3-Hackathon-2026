@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { useDialog, useConfirmDialog, useAlertDialog } from "@/context/dialog";
 const translations = {
       en: {
             dashboard: "Dashboard",
@@ -259,6 +259,7 @@ export default function DashboardPage() {
       const sharingInterval = useRef(null);
 
       const t = translations[lang];
+      const { confirm } = useConfirmDialog();
 
       useEffect(() => {
             if (isRecording) {
@@ -309,6 +310,64 @@ export default function DashboardPage() {
       const handleCapture = () => {
             setCaptureFlash(true);
             setTimeout(() => setCaptureFlash(false), 200);
+      };
+
+      const [selectDevice, setSelectDevice] = useState(null);
+      const intervalRef = useRef(null);
+
+      const recordAudio = async () => {
+            if (!isRecording) {
+
+                  const devices = await window.electron.getMicrophoneDevices()
+                  console.log("devices", devices)
+
+                  confirm({
+                        title: "Record Audio",
+                        message: "Are you sure you want to record audio?",
+                        confirmText: "Yes",
+                        cancelText: "No",
+                        addons: (
+                              <>
+                                    <select className="px-4 py-2 w-full bg-neutral-800 text-white rounded-lg">
+                                          {devices.map((device) => (
+                                                <option key={device.deviceId} onChange={(e) => setSelectDevice(e.target.value)} value={device.deviceId}>
+                                                      {device.label}
+                                                </option>
+                                          ))}
+                                    </select>
+
+                              </>
+                        ),
+                        onConfirm: () => {
+                              window.electron.send("record-audio", {
+                                    action: "start",
+                                    deviceId: selectDevice
+                              })
+
+                              intervalRef.current = setInterval(() => {
+                                    setRecordTime(prev => {
+                                          const newTime = prev + 1
+                                          window.electron.send("realtime-time-record", {
+                                                time: newTime,
+                                                formatted: formatTime(newTime)
+                                          })
+                                          return newTime
+                                    })
+                              }, 1000)
+                              setIsRecording(true)
+                        }
+                  })
+            } else {
+                  confirm({
+                        title: "Stop Recording",
+                        message: "Are you sure you want to stop recording?",
+                        confirmText: "Yes",
+                        cancelText: "No",
+                        onConfirm: () => {
+                              setIsRecording(false)
+                        }
+                  })
+            }
       };
 
       const stats = {
@@ -489,7 +548,7 @@ export default function DashboardPage() {
                                                 {/* Voice Record */}
                                                 <motion.button
                                                       whileTap={{ scale: 0.98 }}
-                                                      onClick={() => setIsRecording(!isRecording)}
+                                                      onClick={() => recordAudio()}
                                                       className={`w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all
                              ${isRecording
                                                                   ? "bg-rose-500/20 border-rose-500/50"

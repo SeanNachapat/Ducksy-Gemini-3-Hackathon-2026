@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld("electron", {
                   "app-close",
                   "request-permissions",
                   "open-system-preferences",
+                  "record-audio",
+                  "realtime-time-record",
+                  "recording-control-update",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.send(channel, data)
@@ -22,6 +25,8 @@ contextBridge.exposeInMainWorld("electron", {
                   "update-available",
                   "language-changed",
                   "permissions-result",
+                  "update-record-time",
+                  "recording-control-update",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.on(channel, (event, ...args) => callback(...args))
@@ -46,5 +51,24 @@ contextBridge.exposeInMainWorld("electron", {
                   return await ipcRenderer.invoke(channel, data)
             }
             return null
+      },
+
+
+      getMicrophoneDevices: async () => {
+            try {
+                  await navigator.mediaDevices.getUserMedia({ audio: true })
+                  const devices = await navigator.mediaDevices.enumerateDevices()
+                  return devices
+                        .filter(device => device.kind === "audioinput")
+                        .map(device => ({
+                              deviceId: device.deviceId,
+                              label: device.label || `Microphone ${device.deviceId.slice(0, 8)}`,
+                              kind: device.kind,
+                              groupId: device.groupId
+                        }))
+            } catch (error) {
+                  console.error("Failed to get microphone devices:", error)
+                  return []
+            }
       },
 })
