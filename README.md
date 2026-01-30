@@ -2,7 +2,7 @@
 
 **AI Productivity Companion**
 
-![Ducksy Logo](ducksy-ui/public/ducksy-logo.svg)
+<img src="ducksy-ui/public/ducksy-logo.svg" alt="Ducksy Logo" height="150">
 
 ## Introduction
 
