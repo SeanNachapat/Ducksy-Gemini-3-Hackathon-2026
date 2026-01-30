@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen } = require("electron")
 const path = require("path")
 const serve = require("electron-serve")
-const { permission } = require("process")
 const db = require("./utils/db")
 
 const isProd = process.env.NODE_ENV === "production"
@@ -14,10 +13,9 @@ let mainWindow
 let onRecordingWindow
 
 async function createOnRecordingWindow() {
-
-      const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-      const width_f = 350;
-      const height_f = 100;
+      const { width, height } = screen.getPrimaryDisplay().workAreaSize
+      const width_f = 350
+      const height_f = 100
 
       onRecordingWindow = new BrowserWindow({
             width: width_f,
@@ -26,25 +24,34 @@ async function createOnRecordingWindow() {
             minHeight: height_f,
             backgroundColor: "#0a0a0a",
             titleBarStyle: "hidden",
-            frame: false,
             autoHideMenuBar: true,
+            alwaysOnTop: true,
+            frame: false,
+            transparent: true,
+            hasShadow: false,
+            skipTaskbar: true,
+            resizable: false,
+            movable: true,
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
                   contextIsolation: true,
-                  // devTools: false,
                   defaultFontFamily: "monospace"
             },
       })
 
-      onRecordingWindow.setPosition(width - width_f, 20);
+      onRecordingWindow.setPosition(width - width_f - 20, 20)
+      onRecordingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
       if (isProd) {
-            await onRecordingWindow.loadURL("app://./index.html")
+            await onRecordingWindow.loadURL("app://./onRecord")
       } else {
             await onRecordingWindow.loadURL("http://localhost:3000/onRecord")
-            onRecordingWindow.webContents.openDevTools()
       }
+
+      onRecordingWindow.on("closed", () => {
+            onRecordingWindow = null
+      })
 }
 
 async function createWindow() {
@@ -62,7 +69,6 @@ async function createWindow() {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
                   contextIsolation: true,
-                  // devTools: false,
                   defaultFontFamily: "monospace"
             },
       })
@@ -79,7 +85,6 @@ async function createWindow() {
       })
 }
 
-// App lifecycle
 app.whenReady().then(createWindow)
 
 app.on("window-all-closed", () => {
@@ -94,24 +99,6 @@ app.on("activate", () => {
       }
 })
 
-async function setUpApplication() {
-      // db.exec(`
-      //       CREATE TABLE IF NOT EXISTS  (
-      //             id INTEGER PRIMARY KEY AUTOINCREMENT,
-      //             name TEXT,
-      //             email TEXT,
-      //             password TEXT
-      //       )
-      // `)
-}
-
-async function getMicrophoneDevices() {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      console.log("devices", devices)
-      return devices.filter(device => device.kind === "audioinput")
-}
-
 async function checkPermissions() {
       const permissions = {
             microphone: "unknown",
@@ -121,7 +108,6 @@ async function checkPermissions() {
       if (process.platform === "darwin") {
             permissions.microphone = systemPreferences.getMediaAccessStatus("microphone")
             permissions.screen = systemPreferences.getMediaAccessStatus("screen")
-            console.log("permissions.screen", permissions.screen)
       } else if (process.platform === "win32") {
             permissions.microphone = "granted"
             permissions.screen = "granted"
@@ -182,18 +168,26 @@ function openSystemPreferences(type) {
 
 ipcMain.on("record-audio", (event, data) => {
       console.log("Record audio:", data)
-      createOnRecordingWindow()
+      if (data.action === "start") {
+            createOnRecordingWindow()
+      }
 })
 
 ipcMain.on("realtime-time-record", (event, data) => {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
-            onRecordingWindow.webContents.send("realtime-time-record", data)
+            onRecordingWindow.webContents.send("update-record-time", data)
       }
 })
 
-ipcMain.on("recording-control-update", (event, data) => {
+ipcMain.on("recording-control", (event, data) => {
+      console.log("Recording control:", data)
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send("recording-control-update", data)
+      }
+
+      if (data.action === "stop" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.close()
+            onRecordingWindow = null
       }
 })
 

@@ -120,7 +120,6 @@ const languages = [
       { code: "zh", name: "中文", flag: "🇨🇳" },
 ];
 
-// Mock AI chat history
 const mockChatHistory = [
       {
             id: 1,
@@ -172,7 +171,6 @@ const mockChatHistory = [
       },
 ];
 
-// Icons
 const MicIcon = ({ className }) => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -223,7 +221,6 @@ const ChevronIcon = ({ className }) => (
       </svg>
 );
 
-// Duck Logo Component
 const DuckLogo = ({ size = 40 }) => (
       <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
             <circle cx="50" cy="50" r="45" fill="#FBBF24" />
@@ -236,7 +233,6 @@ const DuckLogo = ({ size = 40 }) => (
       </svg>
 );
 
-// Small Duck Avatar
 const DuckAvatar = ({ size = 32 }) => (
       <div
             className="rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0"
@@ -255,39 +251,59 @@ export default function DashboardPage() {
       const [showUserMenu, setShowUserMenu] = useState(false);
       const [captureFlash, setCaptureFlash] = useState(false);
       const [selectedChat, setSelectedChat] = useState(null);
-      const recordingInterval = useRef(null);
-      const sharingInterval = useRef(null);
+      const [selectDevice, setSelectDevice] = useState(null);
+
+      const recordingIntervalRef = useRef(null);
+      const sharingIntervalRef = useRef(null);
 
       const t = translations[lang];
       const { confirm } = useConfirmDialog();
 
-      useEffect(() => {
-            if (isRecording) {
-                  recordingInterval.current = setInterval(() => {
-                        setRecordingTime((prev) => prev + 1);
-                  }, 1000);
-            } else {
-                  if (recordingInterval.current) clearInterval(recordingInterval.current);
-                  setRecordingTime(0);
-            }
-            return () => {
-                  if (recordingInterval.current) clearInterval(recordingInterval.current);
-            };
-      }, [isRecording]);
+      // ลบ useEffect ที่ watch isRecording ออก - ใช้ interval ใน recordAudio แทน
 
       useEffect(() => {
             if (isSharing) {
-                  sharingInterval.current = setInterval(() => {
+                  sharingIntervalRef.current = setInterval(() => {
                         setSharingTime((prev) => prev + 1);
                   }, 1000);
             } else {
-                  if (sharingInterval.current) clearInterval(sharingInterval.current);
+                  if (sharingIntervalRef.current) clearInterval(sharingIntervalRef.current);
                   setSharingTime(0);
             }
             return () => {
-                  if (sharingInterval.current) clearInterval(sharingInterval.current);
+                  if (sharingIntervalRef.current) clearInterval(sharingIntervalRef.current);
             };
       }, [isSharing]);
+
+      // รับ control จาก onRecordingWindow
+      useEffect(() => {
+            if (!window.electron) return;
+
+            window.electron.receive("recording-control-update", (data) => {
+                  console.log("Recording control update:", data);
+                  if (data.action === "stop") {
+                        stopRecording();
+                  } else if (data.action === "pause") {
+                        pauseRecording();
+                  }
+            });
+
+            return () => {
+                  window.electron.removeAllListeners?.("recording-control-update");
+            };
+      }, []);
+
+      // Cleanup on unmount
+      useEffect(() => {
+            return () => {
+                  if (recordingIntervalRef.current) {
+                        clearInterval(recordingIntervalRef.current);
+                  }
+                  if (sharingIntervalRef.current) {
+                        clearInterval(sharingIntervalRef.current);
+                  }
+            };
+      }, []);
 
       const formatTime = (seconds) => {
             const mins = Math.floor(seconds / 60);
@@ -312,14 +328,62 @@ export default function DashboardPage() {
             setTimeout(() => setCaptureFlash(false), 200);
       };
 
-      const [selectDevice, setSelectDevice] = useState(null);
-      const intervalRef = useRef(null);
+      const startRecording = (deviceId) => {
+            window.electron.send("record-audio", {
+                  action: "start",
+                  deviceId: deviceId
+            });
+
+            // Clear interval ก่อนเริ่มใหม่
+            if (recordingIntervalRef.current) {
+                  clearInterval(recordingIntervalRef.current);
+            }
+
+            // Reset เวลา
+            setRecordingTime(0);
+
+            // สร้าง interval ใหม่ - ใช้ตัวแปร local เพื่อส่ง IPC
+            let currentTime = 0;
+            recordingIntervalRef.current = setInterval(() => {
+                  currentTime += 1;
+                  setRecordingTime(currentTime);
+                  window.electron.send("realtime-time-record", {
+                        time: currentTime,
+                        formatted: formatTime(currentTime)
+                  });
+            }, 1000);
+
+            setIsRecording(true);
+      };
+
+      const stopRecording = () => {
+            if (recordingIntervalRef.current) {
+                  clearInterval(recordingIntervalRef.current);
+                  recordingIntervalRef.current = null;
+            }
+
+            setRecordingTime(0);
+            setIsRecording(false);
+
+            window.electron.send("record-audio", {
+                  action: "stop"
+            });
+      };
+
+      const pauseRecording = () => {
+            if (recordingIntervalRef.current) {
+                  clearInterval(recordingIntervalRef.current);
+                  recordingIntervalRef.current = null;
+            }
+            // ไม่ reset เวลา เพราะเป็น pause
+      };
 
       const recordAudio = async () => {
             if (!isRecording) {
+                  const devices = await window.electron.getMicrophoneDevices();
+                  console.log("devices", devices);
 
-                  const devices = await window.electron.getMicrophoneDevices()
-                  console.log("devices", devices)
+                  let selectedDeviceId = devices[0]?.deviceId || null;
 
                   confirm({
                         title: "Record Audio",
@@ -328,35 +392,23 @@ export default function DashboardPage() {
                         cancelText: "No",
                         addons: (
                               <>
-                                    <select className="px-4 py-2 w-full bg-neutral-800 text-white rounded-lg">
+                                    <select
+                                          className="px-4 py-2 w-full bg-neutral-800 text-white rounded-lg"
+                                          onChange={(e) => { selectedDeviceId = e.target.value; }}
+                                          defaultValue={selectedDeviceId}
+                                    >
                                           {devices.map((device) => (
-                                                <option key={device.deviceId} onChange={(e) => setSelectDevice(e.target.value)} value={device.deviceId}>
+                                                <option key={device.deviceId} value={device.deviceId}>
                                                       {device.label}
                                                 </option>
                                           ))}
                                     </select>
-
                               </>
                         ),
                         onConfirm: () => {
-                              window.electron.send("record-audio", {
-                                    action: "start",
-                                    deviceId: selectDevice
-                              })
-
-                              intervalRef.current = setInterval(() => {
-                                    setRecordTime(prev => {
-                                          const newTime = prev + 1
-                                          window.electron.send("realtime-time-record", {
-                                                time: newTime,
-                                                formatted: formatTime(newTime)
-                                          })
-                                          return newTime
-                                    })
-                              }, 1000)
-                              setIsRecording(true)
+                              startRecording(selectedDeviceId);
                         }
-                  })
+                  });
             } else {
                   confirm({
                         title: "Stop Recording",
@@ -364,9 +416,9 @@ export default function DashboardPage() {
                         confirmText: "Yes",
                         cancelText: "No",
                         onConfirm: () => {
-                              setIsRecording(false)
+                              stopRecording();
                         }
-                  })
+                  });
             }
       };
 
@@ -377,7 +429,6 @@ export default function DashboardPage() {
             capture: 4,
       };
 
-      // Group chats by date
       const todayChats = mockChatHistory.filter(
             (chat) => Date.now() - chat.timestamp < 1000 * 60 * 60 * 24
       );
@@ -387,7 +438,6 @@ export default function DashboardPage() {
 
       return (
             <div className="min-h-screen bg-neutral-950 text-white overflow-hidden relative">
-                  {/* Flash effect for capture */}
                   <AnimatePresence>
                         {captureFlash && (
                               <motion.div
@@ -399,7 +449,6 @@ export default function DashboardPage() {
                         )}
                   </AnimatePresence>
 
-                  {/* Chat Detail Modal */}
                   <AnimatePresence>
                         {selectedChat && (
                               <motion.div
@@ -454,11 +503,9 @@ export default function DashboardPage() {
                         )}
                   </AnimatePresence>
 
-                  {/* Background */}
                   <div className="absolute inset-0 bg-gradient-to-b from-neutral-900 via-neutral-950 to-black" />
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-amber-500/5 blur-[150px] rounded-full" />
 
-                  {/* Header */}
                   <header className="relative z-20 border-b border-neutral-800/50">
                         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
                               <div className="flex items-center gap-3">
@@ -518,9 +565,7 @@ export default function DashboardPage() {
                         </div>
                   </header>
 
-                  {/* Main Content */}
                   <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-                        {/* Greeting */}
                         <motion.div
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
@@ -533,9 +578,7 @@ export default function DashboardPage() {
                         </motion.div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                              {/* Left Column */}
                               <div className="lg:col-span-1 space-y-4 sm:space-y-6">
-                                    {/* Quick Actions */}
                                     <motion.div
                                           initial={{ opacity: 0, y: 20 }}
                                           animate={{ opacity: 1, y: 0 }}
@@ -545,7 +588,6 @@ export default function DashboardPage() {
                                           <h2 className="text-lg font-semibold text-white mb-4">{t.quickActions}</h2>
 
                                           <div className="space-y-3">
-                                                {/* Voice Record */}
                                                 <motion.button
                                                       whileTap={{ scale: 0.98 }}
                                                       onClick={() => recordAudio()}
@@ -575,7 +617,6 @@ export default function DashboardPage() {
                                                       {isRecording && <span className="text-xs sm:text-sm text-rose-400">{t.stopRecording}</span>}
                                                 </motion.button>
 
-                                                {/* Screen Share */}
                                                 <motion.button
                                                       whileTap={{ scale: 0.98 }}
                                                       onClick={() => setIsSharing(!isSharing)}
@@ -605,7 +646,6 @@ export default function DashboardPage() {
                                                       {isSharing && <span className="text-xs sm:text-sm text-blue-400">{t.stopSharing}</span>}
                                                 </motion.button>
 
-                                                {/* Capture */}
                                                 <motion.button
                                                       whileTap={{ scale: 0.95 }}
                                                       onClick={handleCapture}
@@ -622,7 +662,6 @@ export default function DashboardPage() {
                                           </div>
                                     </motion.div>
 
-                                    {/* Stats */}
                                     <motion.div
                                           initial={{ opacity: 0, y: 20 }}
                                           animate={{ opacity: 1, y: 0 }}
@@ -652,7 +691,6 @@ export default function DashboardPage() {
                                     </motion.div>
                               </div>
 
-                              {/* Right Column - Chat History */}
                               <motion.div
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -670,7 +708,6 @@ export default function DashboardPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                          {/* Today */}
                                           {todayChats.length > 0 && (
                                                 <div>
                                                       <div className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
@@ -710,7 +747,6 @@ export default function DashboardPage() {
                                                 </div>
                                           )}
 
-                                          {/* Yesterday */}
                                           {yesterdayChats.length > 0 && (
                                                 <div>
                                                       <div className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2 mt-4">
@@ -754,7 +790,6 @@ export default function DashboardPage() {
                         </div>
                   </div>
 
-                  {/* Recording/Sharing indicator */}
                   <AnimatePresence>
                         {(isRecording || isSharing) && (
                               <motion.div

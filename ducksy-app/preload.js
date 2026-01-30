@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "open-system-preferences",
                   "record-audio",
                   "realtime-time-record",
-                  "recording-control-update",
+                  "recording-control",  // แก้จาก recording-control-update เป็น recording-control
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.send(channel, data)
@@ -37,6 +37,11 @@ contextBridge.exposeInMainWorld("electron", {
             ipcRenderer.removeListener(channel, callback)
       },
 
+      // เพิ่ม function นี้
+      removeAllListeners: (channel) => {
+            ipcRenderer.removeAllListeners(channel)
+      },
+
       invoke: async (channel, data) => {
             const validChannels = [
                   "get-settings",
@@ -52,7 +57,6 @@ contextBridge.exposeInMainWorld("electron", {
             }
             return null
       },
-
 
       getMicrophoneDevices: async () => {
             try {
