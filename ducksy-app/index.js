@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer } = requ
 const path = require("path")
 const serve = require("electron-serve")
 const { permission } = require("process")
+const db = require("./utils/db")
 
 const isProd = process.env.NODE_ENV === "production"
 
@@ -26,7 +27,8 @@ async function createWindow() {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
                   contextIsolation: true,
-                  devTools: false
+                  devTools: false,
+                  defaultFontFamily: "monospace"
             },
       })
 
@@ -56,6 +58,18 @@ app.on("activate", () => {
             createWindow()
       }
 })
+
+async function setUpApplication() {
+      // db.exec(`
+      //       CREATE TABLE IF NOT EXISTS  (
+      //             id INTEGER PRIMARY KEY AUTOINCREMENT,
+      //             name TEXT,
+      //             email TEXT,
+      //             password TEXT
+      //       )
+      // `)
+}
+
 
 async function checkPermissions() {
       const permissions = {

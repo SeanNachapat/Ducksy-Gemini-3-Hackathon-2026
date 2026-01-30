@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 const translations = {
   en: {
@@ -124,6 +125,7 @@ export default function Home() {
   })
 
   const t = translations[lang]
+  const router = useRouter();
 
   useEffect(() => {
     setIsElectron(!!window.electron)
@@ -169,6 +171,7 @@ export default function Home() {
 
   const handleFinish = () => {
     window.electron?.send("onboarding-complete", { language: lang })
+    router.push("/auth")
   }
 
   const requestMicrophonePermission = async () => {
