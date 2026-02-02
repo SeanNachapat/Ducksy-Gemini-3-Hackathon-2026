@@ -5,18 +5,19 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-import translations from "../locales/translations.json"
+import LoadingScreen from "@/components/LoadingScreen"
+import { useSettings } from "@/context/SettingsContext"
 
 const languages = [
   { code: "en", name: "English", flag: "🇺🇸" },
-  { code: "th", name: "ไทย", flag: "🇹🇭" },
   { code: "ja", name: "日本語", flag: "🇯🇵" },
+  { code: "th", name: "ไทย", flag: "🇹🇭" },
   { code: "zh", name: "中文", flag: "🇨🇳" },
 ]
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(0)
-  const [lang, setLang] = useState("en")
+  const { settings, updateSettings, t } = useSettings()
   const [isElectron, setIsElectron] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [permissions, setPermissions] = useState({
@@ -24,7 +25,6 @@ export default function Home() {
     screen: "unknown",
   })
 
-  const t = translations[lang]
   const router = useRouter();
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function Home() {
   }
 
   const handleFinish = () => {
-    window.electron?.send("onboarding-complete", { language: lang })
+    window.electron?.send("onboarding-complete", { language: settings.language })
     router.push("/auth")
   }
 
@@ -144,7 +144,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white overflow-hidden relative">
+    <main className="h-full bg-neutral-950 text-white overflow-hidden relative">
       <div className="absolute inset-0 bg-[#0a0a0a]" />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -189,10 +189,12 @@ export default function Home() {
         }}
       />
 
-      <div className="fixed top-6 right-6 z-50">
+      <div className="fixed top-0 left-0 w-full h-32 bg-linear-to-b from-black to-transparent z-40 pointer-events-none" />
+
+      <div className="fixed top-12 right-6 z-50">
         <select
-          value={lang}
-          onChange={e => setLang(e.target.value)}
+          value={settings.language}
+          onChange={e => updateSettings({ language: e.target.value })}
           className="bg-neutral-900/80 backdrop-blur border border-neutral-800 text-neutral-300 
                      text-sm px-3 py-2 rounded-lg cursor-pointer outline-none
                      hover:border-neutral-700 transition-colors"
@@ -229,7 +231,7 @@ export default function Home() {
             exit="exit"
             custom={1}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex flex-col items-center justify-center min-h-screen gap-6 relative z-10"
+            className="flex flex-col items-center justify-center h-full gap-6 relative z-10"
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -285,7 +287,7 @@ export default function Home() {
             exit="exit"
             custom={1}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex flex-col items-center justify-center min-h-screen gap-5 px-8 relative z-10"
+            className="flex flex-col items-center justify-center h-full gap-5 px-8 relative z-10"
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -327,7 +329,7 @@ export default function Home() {
             exit="exit"
             custom={1}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex flex-col items-center justify-center min-h-screen gap-5 px-8 relative z-10"
+            className="flex flex-col items-center justify-center h-full gap-5 px-8 relative z-10"
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -369,7 +371,7 @@ export default function Home() {
             exit="exit"
             custom={1}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex flex-col items-center justify-center min-h-screen gap-5 px-8 relative z-10"
+            className="flex flex-col items-center justify-center h-full gap-5 px-8 relative z-10"
           >
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
@@ -474,7 +476,7 @@ export default function Home() {
             exit="exit"
             custom={1}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex flex-col items-center justify-center min-h-screen gap-5 px-8 relative z-10"
+            className="flex flex-col items-center justify-center h-full gap-5 px-8 relative z-10"
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -534,30 +536,7 @@ export default function Home() {
         </div>
       )}
 
-      <AnimatePresence>
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-100 bg-[#0a0a0a] flex items-center justify-center"
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-              className="w-24 h-24 relative"
-            >
-              <Image
-                src="/ducksy-logo.svg"
-                alt="Loading..."
-                fill
-                className="object-contain"
-                priority
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <LoadingScreen isLoading={isLoading} />
     </main>
   )
 }

@@ -1,9 +1,12 @@
 "use client"
 import React, { useState, useEffect } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { X, Minus, Maximize2, Minimize2, Square } from "lucide-react"
 
 export default function WindowControls({ platform = 'mac' }) {
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const router = useRouter()
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -26,11 +29,19 @@ export default function WindowControls({ platform = 'mac' }) {
     }
 
     const handleClose = () => {
-        console.log("Close window triggered")
+        if (window.electron) {
+            window.electron.send('app-close')
+        } else {
+            router.push('/')
+        }
     }
 
     const handleMinimize = () => {
-        console.log("Minimize window triggered")
+        if (window.electron) {
+            window.electron.send('app-minimize')
+        } else {
+            console.log("Minimize window triggered (Browser Mode)")
+        }
     }
 
     if (platform === 'windows') {
