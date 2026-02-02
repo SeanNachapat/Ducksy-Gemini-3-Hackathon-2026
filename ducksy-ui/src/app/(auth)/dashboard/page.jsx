@@ -13,7 +13,6 @@ import {
       Zap,
       Ghost,
       Eye,
-      GraduationCap,
       HardDrive,
       Calendar,
       Layers,
@@ -24,6 +23,7 @@ import {
       ExternalLink
 } from "lucide-react"
 import Link from "next/link"
+import { useSettings } from "@/context/SettingsContext"
 
 const sessionLog = [
       {
@@ -43,22 +43,6 @@ const sessionLog = [
             }
       },
       {
-            id: 2,
-            type: "debug",
-            title: "Fixing Python Line 42",
-            subtitle: "Debug Session • 4h ago",
-            mode: "Coach Mode 🎓",
-            details: {
-                  bug: "TypeError: null is not an object",
-                  fix: "Added a null check on line 42.",
-                  code: `if (data) {
-  processData(data);
-} else {
-  console.warn("Data is null");
-}`
-            }
-      },
-      {
             id: 3,
             type: "chat",
             title: "Explain Quantum Computing",
@@ -70,17 +54,16 @@ const sessionLog = [
             }
       },
       { id: 4, type: "summary", title: "Weekly Team Sync", subtitle: "Meeting Summary • Yesterday", mode: "Ghost Mode 👻", details: { topic: "Weekly Sync", summary: "Team aligned on Q3 goals.", actionItems: [] } },
-      { id: 5, type: "chat", title: "React Component Help", subtitle: "Standard Chat • Yesterday", mode: "Coach Mode 🎓", details: { question: "How to use useEffect?", answer: "It runs after render. Use dependency array to control when it runs." } },
 ]
 
 export default function DashboardPage() {
       const [mode, setMode] = useState("lens")
       const [selectedSession, setSelectedSession] = useState(null)
+      const { t } = useSettings()
 
       const modes = [
             { id: "ghost", label: "Ghost", icon: Ghost, description: "Monitoring", color: "text-neutral-500", border: "border-neutral-800 bg-neutral-900" },
             { id: "lens", label: "Lens", icon: Eye, description: "Ready to Capture", color: "text-amber-400", border: "border-amber-500/50 bg-amber-500/10" },
-            { id: "coach", label: "Coach", icon: GraduationCap, description: "Proactive Teaching", color: "text-amber-400", border: "border-amber-500/50 bg-amber-500/10" },
       ]
 
       const getAvatarContent = () => {
@@ -88,8 +71,6 @@ export default function DashboardPage() {
                   case "ghost":
                         return <span className="text-lg grayscale opacity-50">🦆</span>
                   case "lens":
-                        return <span className="text-lg">🦆</span>
-                  case "coach":
                         return <span className="text-lg">🦆</span>
                   default:
                         return "🦆"
@@ -120,7 +101,7 @@ export default function DashboardPage() {
                                     </Link>
 
                                     <span className="absolute left-full ml-4 px-2 py-1 bg-neutral-900 border border-white/10 rounded-md text-xs text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none backdrop-blur-md z-50">
-                                          Configure Agent
+                                          {t.dashboardPage.configureAgent}
                                     </span>
                               </div>
                         </div>
@@ -168,19 +149,19 @@ export default function DashboardPage() {
                                     <div className="flex items-center gap-4 text-xs font-medium text-neutral-500 bg-neutral-900/50 px-4 py-2 rounded-full border border-white/5 backdrop-blur-md">
                                           <span className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                                Local Files
+                                                {t.dashboardPage.localFiles}
                                           </span>
                                           <span className="w-px h-3 bg-white/10" />
                                           <span className="flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-rose-500/50" />
-                                                G-Calendar
+                                                {t.dashboardPage.gCalendar}
                                           </span>
                                     </div>
 
                                     <div className="flex items-center gap-3 pl-6 border-l border-white/5">
                                           <div className="text-right hidden sm:block">
-                                                <div className="text-sm font-medium text-neutral-200">Commander</div>
-                                                <div className="text-xs text-neutral-500 font-mono tracking-wide">ONLINE</div>
+                                                <div className="text-sm font-medium text-neutral-200">{t.dashboardPage.commander}</div>
+                                                <div className="text-xs text-neutral-500 font-mono tracking-wide">{t.dashboardPage.online}</div>
                                           </div>
                                           <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-neutral-950 font-bold text-sm ring-2 ring-neutral-950 shadow-lg transition-all duration-300 relative overflow-hidden">
                                                 <div className="absolute inset-0 bg-linear-to-tr from-transparent to-white/20" />
@@ -206,8 +187,8 @@ export default function DashboardPage() {
                                                             <Zap className="w-6 h-6 fill-neutral-950" strokeWidth={0} />
                                                       </div>
                                                       <div className="text-center">
-                                                            <span className="block text-lg font-bold text-neutral-950 tracking-tight leading-none font-sans">GO INVISIBLE</span>
-                                                            <span className="text-[10px] font-mono text-neutral-900/60 uppercase tracking-[0.2em] mt-1 block">Launch Overlay</span>
+                                                            <span className="block text-lg font-bold text-neutral-950 tracking-tight leading-none font-sans">{t.dashboardPage.goInvisible}</span>
+                                                            <span className="text-[10px] font-mono text-neutral-900/60 uppercase tracking-[0.2em] mt-1 block">{t.dashboardPage.launchOverlay}</span>
                                                       </div>
                                                 </div>
                                           </motion.button>
@@ -216,7 +197,7 @@ export default function DashboardPage() {
 
                                                 <div>
                                                       <div className="flex items-center justify-between mb-4">
-                                                            <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">Up Next</h2>
+                                                            <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage.upNext}</h2>
                                                             <Calendar className="w-4 h-4 text-neutral-600" />
                                                       </div>
                                                       <div className="bg-white/5 rounded-2xl p-4 border border-white/5 group hover:border-amber-500/30 transition-colors">
@@ -233,27 +214,27 @@ export default function DashboardPage() {
                                                 </div>
 
                                                 <div>
-                                                      <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-4">Quick Inputs</h2>
+                                                      <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-4">{t.dashboardPage.quickInputs}</h2>
                                                       <div className="grid grid-cols-3 gap-3">
                                                             <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group">
                                                                   <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform text-neutral-400 group-hover:text-white">
                                                                         <Mic className="w-5 h-5" strokeWidth={1.5} />
                                                                   </div>
-                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">Voice</span>
+                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.voiceRecord}</span>
                                                             </button>
 
                                                             <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group">
                                                                   <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform text-neutral-400 group-hover:text-white">
                                                                         <Monitor className="w-5 h-5" strokeWidth={1.5} />
                                                                   </div>
-                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">Screen</span>
+                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.dashboardPage.camera}</span>
                                                             </button>
 
                                                             <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group">
                                                                   <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform text-neutral-400 group-hover:text-white">
                                                                         <Camera className="w-5 h-5" strokeWidth={1.5} />
                                                                   </div>
-                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">Camera</span>
+                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.capture}</span>
                                                             </button>
                                                       </div>
                                                 </div>
@@ -268,10 +249,10 @@ export default function DashboardPage() {
                                                             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
                                                                   <Activity className="w-4 h-4" />
                                                             </div>
-                                                            <h2 className="text-lg font-medium text-white tracking-tight">Session Log</h2>
+                                                            <h2 className="text-lg font-medium text-white tracking-tight">{t.dashboardPage.sessionLog}</h2>
                                                       </div>
                                                       <button className="text-[10px] font-mono font-bold text-neutral-500 hover:text-white transition-colors uppercase tracking-[0.2em] border border-white/5 px-3 py-1.5 rounded-full hover:bg-white/5">
-                                                            VIEW ALL
+                                                            {t.viewAll}
                                                       </button>
                                                 </div>
 
@@ -282,7 +263,7 @@ export default function DashboardPage() {
                                                                   onClick={() => setSelectedSession(log)}
                                                                   className="group flex items-center p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.05] transition-all cursor-pointer"
                                                             >
-                                                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 
+                                                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
                                                                         ${log.type === 'summary' ? 'bg-blue-500/10 text-blue-400' :
                                                                               log.type === 'debug' ? 'bg-red-500/10 text-red-400' :
                                                                                     'bg-amber-500/10 text-amber-400'}`}
@@ -355,15 +336,15 @@ export default function DashboardPage() {
                                                 {selectedSession.type === 'summary' && (
                                                       <div className="space-y-6">
                                                             <div>
-                                                                  <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">Meeting Topic</h4>
+                                                                  <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">{t.dashboardPage.meetingTopic}</h4>
                                                                   <p className="text-neutral-300 leading-relaxed font-light">{selectedSession.details.topic}</p>
                                                             </div>
                                                             <div>
-                                                                  <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">Summary</h4>
+                                                                  <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">{t.dashboardPage.summary}</h4>
                                                                   <p className="text-neutral-300 leading-relaxed font-light">{selectedSession.details.summary}</p>
                                                             </div>
                                                             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                                                  <h4 className="text-xs font-mono text-amber-400 uppercase tracking-widest mb-3">Action Items</h4>
+                                                                  <h4 className="text-xs font-mono text-amber-400 uppercase tracking-widest mb-3">{t.dashboardPage.actionItems}</h4>
                                                                   <ul className="space-y-2">
                                                                         {selectedSession.details.actionItems?.map((item, i) => (
                                                                               <li key={i} className="flex items-center gap-2 text-sm text-neutral-300">
@@ -372,7 +353,7 @@ export default function DashboardPage() {
                                                                               </li>
                                                                         ))}
                                                                         {(!selectedSession.details.actionItems || selectedSession.details.actionItems.length === 0) && (
-                                                                              <li className="text-sm text-neutral-500 italic">No action items recorded.</li>
+                                                                              <li className="text-sm text-neutral-500 italic">{t.dashboardPage.noActionItems}</li>
                                                                         )}
                                                                   </ul>
                                                             </div>
@@ -383,7 +364,7 @@ export default function DashboardPage() {
                                                       <div className="space-y-6">
                                                             <div>
                                                                   <h4 className="text-xs font-mono text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                                        <Bug className="w-3 h-3" /> Reported Bug
+                                                                        <Bug className="w-3 h-3" /> {t.dashboardPage.reportedBug}
                                                                   </h4>
                                                                   <p className="text-white font-mono text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">
                                                                         {selectedSession.details.bug}
@@ -391,7 +372,7 @@ export default function DashboardPage() {
                                                             </div>
                                                             <div>
                                                                   <h4 className="text-xs font-mono text-green-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                                        <Zap className="w-3 h-3" /> Solution applied
+                                                                        <Zap className="w-3 h-3" /> {t.dashboardPage.solutionApplied}
                                                                   </h4>
                                                                   <p className="text-neutral-300 text-sm leading-relaxed">
                                                                         {selectedSession.details.fix}
@@ -414,7 +395,7 @@ export default function DashboardPage() {
                                                       <div className="space-y-6">
                                                             <div className="flex gap-4">
                                                                   <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center shrink-0 border border-white/5">
-                                                                        <span className="text-xs">You</span>
+                                                                        <span className="text-xs">{t.you}</span>
                                                                   </div>
                                                                   <div className="bg-neutral-900 rounded-2xl rounded-tl-none p-4 border border-white/5 text-sm text-neutral-300 leading-relaxed max-w-[85%]">
                                                                         {selectedSession.details.question}
@@ -434,7 +415,7 @@ export default function DashboardPage() {
 
                                           <div className="p-6 border-t border-white/5 bg-neutral-900/30 flex gap-3">
                                                 <button className="flex-1 py-3 rounded-xl bg-white/5 border border-white/5 text-sm font-medium hover:bg-white/10 hover:text-white text-neutral-300 transition-colors flex items-center justify-center gap-2">
-                                                      <ExternalLink className="w-4 h-4" /> Open Overlay
+                                                      <ExternalLink className="w-4 h-4" /> {t.dashboardPage.openOverlay}
                                                 </button>
                                                 <button className="py-3 px-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-colors">
                                                       <Trash2 className="w-4 h-4" />
