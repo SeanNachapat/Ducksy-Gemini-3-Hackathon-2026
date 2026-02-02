@@ -5,60 +5,7 @@ import { motion } from "framer-motion"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 
-const translations = {
-      en: {
-            welcome: "Welcome back",
-            subtitle: "Sign in to continue with Ducksy",
-            continueWith: "Continue with",
-            github: "GitHub",
-            google: "Google",
-            apple: "Apple",
-            discord: "Discord",
-            terms: "By continuing, you agree to our",
-            termsLink: "Terms of Service",
-            and: "and",
-            privacyLink: "Privacy Policy",
-      },
-      th: {
-            welcome: "ยินดีต้อนรับกลับ",
-            subtitle: "ลงชื่อเข้าใช้เพื่อดำเนินการต่อกับ Ducksy",
-            continueWith: "ดำเนินการต่อด้วย",
-            github: "GitHub",
-            google: "Google",
-            apple: "Apple",
-            discord: "Discord",
-            terms: "การดำเนินการต่อหมายความว่าคุณยอมรับ",
-            termsLink: "ข้อกำหนดการใช้งาน",
-            and: "และ",
-            privacyLink: "นโยบายความเป็นส่วนตัว",
-      },
-      ja: {
-            welcome: "おかえりなさい",
-            subtitle: "Ducksyを続けるにはサインインしてください",
-            continueWith: "で続ける",
-            github: "GitHub",
-            google: "Google",
-            apple: "Apple",
-            discord: "Discord",
-            terms: "続行することで、",
-            termsLink: "利用規約",
-            and: "と",
-            privacyLink: "プライバシーポリシー",
-      },
-      zh: {
-            welcome: "欢迎回来",
-            subtitle: "登录以继续使用 Ducksy",
-            continueWith: "使用",
-            github: "GitHub",
-            google: "Google",
-            apple: "Apple",
-            discord: "Discord",
-            terms: "继续即表示您同意我们的",
-            termsLink: "服务条款",
-            and: "和",
-            privacyLink: "隐私政策",
-      },
-}
+import translations from "../../../locales/translations.json"
 
 const languages = [
       { code: "en", name: "English", flag: "🇺🇸" },
@@ -123,9 +70,7 @@ export default function LoginPage() {
 
       const handleSocialLogin = async (providerId) => {
             setIsLoading(providerId)
-            // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 1500))
-            // In real app: window.electron?.send("social-login", { provider: providerId })
             console.log(`Login with ${providerId}`)
             setIsLoading(null)
             router.push("/dashboard")
@@ -192,11 +137,10 @@ export default function LoginPage() {
                                     transition={{ delay: 0.3 }}
                                     className="text-neutral-400"
                               >
-                                    {t.subtitle}
+                                    {t.authSubtitle}
                               </motion.p>
                         </div>
 
-                        {/* Social Login Buttons */}
                         <motion.div
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}

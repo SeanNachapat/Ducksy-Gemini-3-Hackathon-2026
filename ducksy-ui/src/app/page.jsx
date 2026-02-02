@@ -18,6 +18,7 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(0)
   const [lang, setLang] = useState("en")
   const [isElectron, setIsElectron] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [permissions, setPermissions] = useState({
     microphone: "unknown",
     screen: "unknown",
@@ -40,10 +41,13 @@ export default function Home() {
         setPermissions(result)
       })
 
-      // Initial permission check
       checkPermissionStatus()
     }
+
+    const timer = setTimeout(() => setIsLoading(false), 2000)
+    return () => clearTimeout(timer)
   }, [])
+
 
   const checkPermissionStatus = async () => {
     if (window.electron) {
@@ -141,13 +145,50 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white overflow-hidden relative">
-      {/* Subtle gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-neutral-900 via-neutral-950 to-black" />
+      <div className="absolute inset-0 bg-[#0a0a0a]" />
 
-      {/* Minimal accent glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-amber-500/5 blur-[120px] rounded-full" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <RandomFloatingOrb
+          className="absolute -top-[10%] -left-[5%] w-[600px] h-[600px] bg-amber-500/40 rounded-full blur-[120px]"
+          pulse={{
+            scale: [1, 1.2, 1],
+            opacity: [0.8, 0.6, 0.8],
+            x: [0, 50, 0],
+            y: [0, -30, 0],
+          }}
+          duration={10}
+        />
+        <RandomFloatingOrb
+          className="absolute top-[20%] -right-[5%] w-[550px] h-[550px] bg-yellow-500/40 rounded-full blur-[110px]"
+          pulse={{
+            scale: [1, 1.3, 1],
+            opacity: [0.7, 0.5, 0.7],
+            x: [0, -40, 0],
+            y: [0, 30, 0],
+          }}
+          duration={12}
+          delay={1}
+        />
+        <RandomFloatingOrb
+          className="absolute -bottom-[10%] left-[20%] w-[700px] h-[700px] bg-orange-600/40 rounded-full blur-[140px]"
+          pulse={{
+            scale: [1, 1.1, 1],
+            opacity: [0.7, 0.5, 0.7],
+          }}
+          duration={15}
+          delay={2}
+        />
+      </div>
 
-      {/* Language selector */}
+
+
+      <div
+        className="absolute inset-0 opacity-[0.07] pointer-events-none mix-blend-overlay"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        }}
+      />
+
       <div className="fixed top-6 right-6 z-50">
         <select
           value={lang}
@@ -164,7 +205,6 @@ export default function Home() {
         </select>
       </div>
 
-      {/* Progress indicator */}
       <div className="fixed top-6 left-1/2 -translate-x-1/2 flex gap-2 z-50">
         {[0, 1, 2, 3, 4].map(i => (
           <div
@@ -179,7 +219,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Content */}
       <AnimatePresence mode="wait" custom={currentStep}>
         {currentStep === 0 && (
           <motion.div
@@ -254,7 +293,7 @@ export default function Home() {
               transition={{ delay: 0.1 }}
               className="w-20 h-20 bg-amber-400/10 rounded-2xl flex items-center justify-center"
             >
-              <span className="text-4xl">🎯</span>
+              <span className="text-4xl">🧠</span>
             </motion.div>
 
             <motion.h2
@@ -296,7 +335,7 @@ export default function Home() {
               transition={{ delay: 0.1 }}
               className="w-20 h-20 bg-emerald-400/10 rounded-2xl flex items-center justify-center"
             >
-              <span className="text-4xl">⚡</span>
+              <span className="text-4xl">👁️</span>
             </motion.div>
 
             <motion.h2
@@ -372,7 +411,6 @@ export default function Home() {
                 </div>
               </button>
 
-              {/* Screen Permission */}
               <button
                 onClick={requestScreenPermission}
                 disabled={permissions.screen === "granted"}
@@ -495,6 +533,31 @@ export default function Home() {
           Running in Electron
         </div>
       )}
+
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-100 bg-[#0a0a0a] flex items-center justify-center"
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+              className="w-24 h-24 relative"
+            >
+              <Image
+                src="/ducksy-logo.svg"
+                alt="Loading..."
+                fill
+                className="object-contain"
+                priority
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
@@ -525,4 +588,45 @@ function NavButtons({ t, onPrev, onNext, showPrev }) {
       </button>
     </motion.div>
   )
+}
+
+function RandomFloatingOrb({ className, pulse, duration, delay = 0 }) {
+  const [target, setTarget] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    setTarget(getRandomPos())
+  }, [])
+
+  return (
+    <motion.div
+      animate={target}
+      transition={{
+        duration: 5,
+        ease: "easeInOut",
+      }}
+      onAnimationComplete={() => {
+        setTarget(getRandomPos())
+      }}
+      className="absolute inset-0 flex items-center justify-center"
+    >
+      <motion.div
+        animate={pulse}
+        transition={{
+          duration: duration,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: delay,
+        }}
+        className={className}
+      />
+    </motion.div>
+  )
+}
+
+function getRandomPos() {
+  const range = 500
+  return {
+    x: Math.random() * range * 2 - range,
+    y: Math.random() * range * 2 - range,
+  }
 }
