@@ -11,6 +11,7 @@ if (isProd) {
 
 let mainWindow
 let onRecordingWindow
+let initalized
 
 async function createOnRecordingWindow() {
       const { width, height } = screen.getPrimaryDisplay().workAreaSize
@@ -85,7 +86,10 @@ async function createWindow() {
       })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(async () => {
+      await db.initializeDatabase()
+      createWindow()
+})
 
 app.on("window-all-closed", () => {
       if (process.platform !== "darwin") {
@@ -166,6 +170,11 @@ function openSystemPreferences(type) {
       }
 }
 
+ipcMain.handle("isInitial", async (event, data) => {
+      const status = await db.isAlreadyFile();
+      return status;
+})
+
 ipcMain.on("record-audio", (event, data) => {
       console.log("Record audio:", data)
       if (data.action === "start") {
@@ -212,6 +221,32 @@ ipcMain.on("request-permissions", async (event) => {
 
       console.log("Permission results:", result)
       mainWindow.webContents.send("permissions-result", result)
+})
+
+ipcMain.handle("request-sizeCache", async (event) => {
+      var size = await db.getSizeOfdb();
+
+      // Maximum 2 Gb to Percent
+      var maxCacheSize = 2 * 1024 * 1024 * 1024
+      var percent = (size / maxCacheSize) * 100
+
+      // ToFixed
+      percent = percent.toFixed(2)
+      size = size.toFixed(2)
+
+      var status = {
+            status: "",
+            percent,
+            size,
+      };
+      if (percent > 100) {
+            status.status = "warning"
+      } else {
+            status.status = "emerald"
+      }
+
+      console.log(status)
+      return status;
 })
 
 ipcMain.handle("check-permissions", async () => {
