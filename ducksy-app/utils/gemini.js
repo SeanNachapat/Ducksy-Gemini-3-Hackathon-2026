@@ -1,40 +1,60 @@
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
-export async function transcribeAudio(base64Audio, mimeType, apiKey) {
+export async function transcribeAudio(base64Audio, mimeType, apiKey, userLanguage = 'en') {
+      console.log(apiKey)
+
       if (!apiKey) {
             throw new Error('API Key is required')
       }
 
       const modelId = 'gemini-2.0-flash'
 
+      const languageNames = {
+            'en': 'English',
+            'th': 'Thai',
+            'zh': 'Chinese',
+            'ja': 'Japanese'
+      };
+
+      const outputLanguage = languageNames[userLanguage] || 'English';
+
       const prompt = `
-You are an expert audio transcription and analysis assistant.
+You are an expert multilingual audio transcription and analysis assistant.
 Process the provided audio file and generate a structured analysis.
+
+CRITICAL INSTRUCTIONS:
+1. The audio may be spoken in ANY language (English, Thai, Chinese, Japanese, or others)
+2. You MUST understand and transcribe the audio regardless of what language it's in
+3. You MUST translate and output ALL text content in ${outputLanguage} language
+4. Even if the audio is in a different language, your entire output must be in ${outputLanguage}
+
+Example: If audio is in English but app language is Thai, transcribe the English audio and output everything in Thai.
+Example: If audio is in Japanese but app language is English, transcribe the Japanese audio and output everything in English.
 
 Analyze the audio and determine:
 1. What type of content this is: "summary" (meeting/lecture), "chat" (Q&A/conversation), or "debug" (technical discussion/problem solving)
-2. Create an appropriate title for this recording
-3. Provide a comprehensive summary
-4. Extract action items if it's a meeting/lecture
-5. If it's a Q&A format, identify the main question and answer
-6. If it's debugging/technical, identify the bug discussed and the solution
-7. Full transcription content
+2. Create an appropriate title for this recording (translate to ${outputLanguage})
+3. Provide a comprehensive summary (translate to ${outputLanguage})
+4. Extract action items if it's a meeting/lecture (translate to ${outputLanguage})
+5. If it's a Q&A format, identify the main question and answer (translate to ${outputLanguage})
+6. If it's debugging/technical, identify the bug discussed and the solution (translate to ${outputLanguage})
+7. Full transcription content (translate to ${outputLanguage})
 
 Output Format: JSON object with this exact structure:
 {
     "type": "summary" | "chat" | "debug",
-    "title": "Clear descriptive title",
-    "summary": "Comprehensive summary of the content",
-    "language": "according to the language received",
-    "content": "Full transcription text here...",
+    "title": "Clear descriptive title translated to ${outputLanguage}",
+    "summary": "Comprehensive summary translated to ${outputLanguage}",
+    "language": "${userLanguage}",
+    "content": "Full transcription text translated to ${outputLanguage}...",
     "details": {
-        "topic": "Main topic discussed",
-        "actionItems": ["Action item 1", "Action item 2"],
-        "question": "Main question if Q&A format",
-        "answer": "Main answer if Q&A format",
-        "bug": "Bug description if debug type",
-        "fix": "Solution description if debug type",
-        "code": "Code snippet if any"
+        "topic": "Main topic discussed translated to ${outputLanguage}",
+        "actionItems": ["Action item 1 translated to ${outputLanguage}", "Action item 2 translated to ${outputLanguage}"],
+        "question": "Main question if Q&A format translated to ${outputLanguage}",
+        "answer": "Main answer if Q&A format translated to ${outputLanguage}",
+        "bug": "Bug description if debug type translated to ${outputLanguage}",
+        "fix": "Solution description if debug type translated to ${outputLanguage}",
+        "code": "Code snippet if any (keep in original programming language)"
     }
 }
 
@@ -44,7 +64,11 @@ Rules:
 - For "chat" type: focus on question and answer
 - For "debug" type: focus on bug, fix, and code
 - "actionItems" should be an array (empty array [] if none)
-- "language" should be ISO 639-1 code (e.g., "en", "th", "ja")
+- "language" must be "${userLanguage}"
+- The audio input can be in ANY language - you must understand it and translate it
+- ALL text fields (title, summary, content, topic, actionItems, question, answer, bug, fix) MUST be translated to ${outputLanguage}
+- Code snippets should remain in their original programming language (do not translate code)
+- Technical terms can be kept in English if they don't have good translations
 - Return ONLY the JSON object, no markdown code blocks
 `
 

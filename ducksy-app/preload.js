@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld("electron", {
                   "record-audio",
                   "realtime-time-record",
                   "recording-control",
+                  "open-overlay",
+                  "close-overlay",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.send(channel, data)

@@ -197,6 +197,11 @@ export default function DashboardPage() {
                                           <motion.button
                                                 whileHover={{ scale: 1.01, backgroundColor: "rgb(251 191 36)" }}
                                                 whileTap={{ scale: 0.99 }}
+                                                onClick={() => {
+                                                      if (typeof window !== 'undefined' && window.electron) {
+                                                            window.electron.send('open-overlay')
+                                                      }
+                                                }}
                                                 className="group w-full h-36 rounded-3xl bg-amber-500 flex flex-col items-center justify-center relative overflow-hidden transition-all shadow-[0_0_40px_-10px_rgba(245,158,11,0.3)] border border-amber-400/20"
                                           >
 
