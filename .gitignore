@@ -1,3 +1,34 @@
+# General
 node_modules/
-package-lock.json/
+.DS_Store
+*.pem
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment
+.env
+.env*
 .env.local
+
+# Next.js
+.next/
+out/
+build/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Dependencies / Testing
+.pnp
+.pnp.js
+coverage/
+
+# Electron / App
+dist/
+release/
+*.db
+ducksy.db
