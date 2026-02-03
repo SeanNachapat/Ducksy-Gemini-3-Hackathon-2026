@@ -20,17 +20,22 @@ let captureWindow
 // ─── Recording Window ──────────────────────────────────────────────
 
 async function createOnRecordingWindow() {
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.show()
+            onRecordingWindow.focus()
+            return
+      }
+
       const { width } = screen.getPrimaryDisplay().workAreaSize
-      const width_f = 350
-      const height_f = 100
+      const width_f = 450
+      const height_f = 250
 
       onRecordingWindow = new BrowserWindow({
             width: width_f,
             height: height_f,
             minWidth: width_f,
             minHeight: height_f,
-            backgroundColor: "#0a0a0a",
-            titleBarStyle: "hidden",
+            backgroundColor: "#00000000",
             autoHideMenuBar: true,
             alwaysOnTop: true,
             frame: false,
@@ -222,6 +227,11 @@ ipcMain.on("record-audio", async (event, data) => {
       const { action } = data
 
       if (action === "start") {
+            // Minimize main window to tray
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.minimize()
+            }
+            // Create the recording overlay
             await createOnRecordingWindow()
       }
 })
@@ -241,9 +251,14 @@ ipcMain.on("recording-control", (event, data) => {
       }
 
       // Update the recording overlay window based on action
-      if (data.action === "stop") {
-            closeOnRecordingWindow()
-      }
+      // if (data.action === "stop") {
+      //       closeOnRecordingWindow()
+      //       // Restore main window from minimized state
+      //       if (mainWindow && !mainWindow.isDestroyed()) {
+      //             mainWindow.restore()
+      //             mainWindow.focus()
+      //       }
+      // }
 
       // For pause/resume, forward the state to the overlay window
       if (data.action === "pause" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
@@ -302,6 +317,32 @@ ipcMain.handle("request-screen", async () => {
 
 ipcMain.on("open-system-preferences", (event, type) => {
       openSystemPreferences(type)
+})
+
+// ─── IPC: Overlay Window ──────────────────────────────────────
+
+ipcMain.on("open-overlay", async () => {
+      // Minimize main window to tray
+      if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.minimize()
+      }
+
+      // Open or show overlay
+      if (!onRecordingWindow || onRecordingWindow.isDestroyed()) {
+            await createOnRecordingWindow()
+      } else {
+            onRecordingWindow.show()
+            onRecordingWindow.focus()
+      }
+})
+
+ipcMain.on("close-overlay", () => {
+      closeOnRecordingWindow()
+      // Restore main window
+      if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.restore()
+            mainWindow.focus()
+      }
 })
 
 // ─── IPC: Cache ────────────────────────────────────────────────────
