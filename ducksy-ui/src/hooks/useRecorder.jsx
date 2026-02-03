@@ -156,11 +156,23 @@ export function useRecorder() {
                   const base64 = await base64Promise
                   const actualMimeType = audioBlob.type || 'audio/webm'
 
+                  let userLanguage = 'en'
+                  try {
+                        const savedSettings = localStorage.getItem('ducksy_settings')
+                        if (savedSettings) {
+                              const settings = JSON.parse(savedSettings)
+                              userLanguage = settings.language || 'en'
+                        }
+                  } catch (err) {
+                        console.warn('Failed to get language setting:', err)
+                  }
+
                   if (typeof window !== 'undefined' && window.electron) {
                         const result = await window.electron.invoke('save-audio-file', {
                               buffer: base64,
                               mimeType: actualMimeType,
-                              duration: duration
+                              duration: duration,
+                              userLanguage: userLanguage
                         })
                         return result
                   }
