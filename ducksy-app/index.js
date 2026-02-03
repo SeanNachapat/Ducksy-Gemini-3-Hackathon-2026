@@ -4,6 +4,7 @@ const fs = require("fs")
 const serve = require("electron-serve")
 const db = require("./utils/db")
 const { registerIpcHandlers, setMainWindow } = require("./ipcHandlers")
+require("dotenv").config();
 
 const isProd = process.env.NODE_ENV === "production"
 

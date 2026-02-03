@@ -3,9 +3,10 @@ const path = require("path");
 const fs = require("fs");
 const db = require("./utils/db");
 const { transcribeAudio } = require("./utils/gemini");
+require("dotenv").config();
 
 let mainWindow = null;
-let geminiApiKey = process.env.GEMINI_API_KEY ?? "";
+let geminiApiKey = process.env.GEMINI_API_KEY;
 
 const setMainWindow = (window) => {
       mainWindow = window;

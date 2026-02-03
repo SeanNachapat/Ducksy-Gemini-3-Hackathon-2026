@@ -10,7 +10,8 @@
             "build": "npm -w ducksy-ui run build && npm -w ducksy-app run build"
       },
       "devDependencies": {
-            "concurrently": "^9.2.1"
+            "concurrently": "^9.2.1",
+            "dotenv": "^17.2.3"
       },
       "dependencies": {
             "better-sqlite3": "^12.6.2"
