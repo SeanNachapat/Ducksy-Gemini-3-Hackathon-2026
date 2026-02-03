@@ -15,6 +15,7 @@ if (isProd) {
 let mainWindow
 let onRecordingWindow
 let initalized
+let captureWindow
 
 // ─── Recording Window ──────────────────────────────────────────────
 
@@ -58,6 +59,34 @@ async function createOnRecordingWindow() {
       onRecordingWindow.on("closed", () => {
             onRecordingWindow = null
       })
+}
+
+async function createCaptureScreen() {
+      const { width, height } = screen.getPrimaryDisplay().size;
+
+      // captureWindow = new BrowserWindow({
+      //       width,
+      //       height,
+      //       backgroundColor: "#0a0a0a",
+      //       titleBarStyle: "hidden",
+      //       autoHideMenuBar: true,
+      //       alwaysOnTop: true,
+      //       frame: false,
+      //       transparent: true,
+      //       hasShadow: false,
+      //       skipTaskbar: true,
+      //       resizable: false,
+      //       movable: true,
+      //       webPreferences: {
+      //             preload: path.join(__dirname, "preload.js"),
+      //             nodeIntegration: false,
+      //             contextIsolation: true,
+      //             defaultFontFamily: "monospace"
+      //       },
+      // })
+
+      // captureWindow.loadURL("http://localhost:3000/capture")
+
 }
 
 function closeOnRecordingWindow() {
@@ -106,6 +135,7 @@ async function createWindow() {
 app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
+      createCaptureScreen();
 })
 
 app.on("window-all-closed", () => {
