@@ -20,46 +20,25 @@ import {
       X,
       Copy,
       Trash2,
-      ExternalLink
+      ExternalLink,
+      Loader2,
+      RefreshCw
 } from "lucide-react"
 import Link from "next/link"
-import { useSettings } from "@/context/SettingsContext"
-
-const sessionLog = [
-      {
-            id: 1,
-            type: "summary",
-            title: "CS Lecture Intro",
-            subtitle: "Meeting Summary • 2h ago",
-            mode: "Ghost Mode 👻",
-            details: {
-                  topic: "CS Lecture Intro",
-                  summary: "Professor discussed the syllabus and Big O notation.",
-                  actionItems: [
-                        "Read Ch. 1 by Monday",
-                        "Install Java JDK",
-                        "Join Discord server"
-                  ]
-            }
-      },
-      {
-            id: 3,
-            type: "chat",
-            title: "Explain Quantum Computing",
-            subtitle: "Standard Chat • 5h ago",
-            mode: "Lens Mode 🕶️",
-            details: {
-                  question: "Explain Quantum Computing like I'm 5",
-                  answer: "Imagine a coin spinning on a table. While it's spinning, it's kind of both Heads and Tails at the same time. That's a Qubit! Regular computers are like a coin that has stopped (just Heads or Tails)."
-            }
-      },
-      { id: 4, type: "summary", title: "Weekly Team Sync", subtitle: "Meeting Summary • Yesterday", mode: "Ghost Mode 👻", details: { topic: "Weekly Sync", summary: "Team aligned on Q3 goals.", actionItems: [] } },
-]
+import { useSettings } from "@/hooks/SettingsContext"
+import { useSessionLogs } from "@/hooks/useSessionLogs"
+import Voice from "@/components/Voice"
+import MicDevice from "@/components/MicDevice"
 
 export default function DashboardPage() {
       const [mode, setMode] = useState("lens")
       const [selectedSession, setSelectedSession] = useState(null)
+      const [micDevice, setMicDevice] = useState(null)
+      const [isDeleting, setIsDeleting] = useState(false)
       const { t } = useSettings()
+
+      // Use the hook to fetch session logs
+      const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
 
       const modes = [
             { id: "ghost", label: "Ghost", icon: Ghost, description: "Monitoring", color: "text-neutral-500", border: "border-neutral-800 bg-neutral-900" },
@@ -74,6 +53,54 @@ export default function DashboardPage() {
                         return <span className="text-lg">🦆</span>
                   default:
                         return "🦆"
+            }
+      }
+
+      const handleDeleteSession = async () => {
+            if (!selectedSession || isDeleting) return
+
+            setIsDeleting(true)
+            const result = await deleteSession(selectedSession.fileId)
+
+            if (result.success) {
+                  setSelectedSession(null)
+            } else {
+                  console.error("Failed to delete session:", result.error)
+                  // You could show a toast notification here
+            }
+            setIsDeleting(false)
+      }
+
+      const getStatusBadge = (status) => {
+            switch (status) {
+                  case 'pending':
+                        return (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 flex items-center gap-1">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                                    Pending
+                              </span>
+                        )
+                  case 'processing':
+                        return (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center gap-1">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    Processing
+                              </span>
+                        )
+                  case 'completed':
+                        return (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-green-500/10 text-green-500 border border-green-500/20">
+                                    Completed
+                              </span>
+                        )
+                  case 'failed':
+                        return (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-red-500/10 text-red-500 border border-red-500/20">
+                                    Failed
+                              </span>
+                        )
+                  default:
+                        return null
             }
       }
 
@@ -158,16 +185,7 @@ export default function DashboardPage() {
                                           </span>
                                     </div>
 
-                                    <div className="flex items-center gap-3 pl-6 border-l border-white/5">
-                                          <div className="text-right hidden sm:block">
-                                                <div className="text-sm font-medium text-neutral-200">{t.dashboardPage.commander}</div>
-                                                <div className="text-xs text-neutral-500 font-mono tracking-wide">{t.dashboardPage.online}</div>
-                                          </div>
-                                          <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-neutral-950 font-bold text-sm ring-2 ring-neutral-950 shadow-lg transition-all duration-300 relative overflow-hidden">
-                                                <div className="absolute inset-0 bg-linear-to-tr from-transparent to-white/20" />
-                                                {getAvatarContent()}
-                                          </div>
-                                    </div>
+                                    <MicDevice setMicDevice={setMicDevice} micDevice={micDevice} />
                               </div>
                         </header>
 
@@ -216,13 +234,7 @@ export default function DashboardPage() {
                                                 <div>
                                                       <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-4">{t.dashboardPage.quickInputs}</h2>
                                                       <div className="grid grid-cols-3 gap-3">
-                                                            <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group">
-                                                                  <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform text-neutral-400 group-hover:text-white">
-                                                                        <Mic className="w-5 h-5" strokeWidth={1.5} />
-                                                                  </div>
-                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.voiceRecord}</span>
-                                                            </button>
-
+                                                            <Voice t={t} micDevice={micDevice} mode={mode} onRecordingSaved={refetch} />
                                                             <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group">
                                                                   <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform text-neutral-400 group-hover:text-white">
                                                                         <Monitor className="w-5 h-5" strokeWidth={1.5} />
@@ -250,39 +262,92 @@ export default function DashboardPage() {
                                                                   <Activity className="w-4 h-4" />
                                                             </div>
                                                             <h2 className="text-lg font-medium text-white tracking-tight">{t.dashboardPage.sessionLog}</h2>
+                                                            {isLoading && (
+                                                                  <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
+                                                            )}
                                                       </div>
-                                                      <button className="text-[10px] font-mono font-bold text-neutral-500 hover:text-white transition-colors uppercase tracking-[0.2em] border border-white/5 px-3 py-1.5 rounded-full hover:bg-white/5">
-                                                            {t.viewAll}
-                                                      </button>
+                                                      <div className="flex items-center gap-2">
+                                                            <button
+                                                                  onClick={refetch}
+                                                                  disabled={isLoading}
+                                                                  className="p-2 rounded-full hover:bg-white/5 text-neutral-500 hover:text-white transition-colors disabled:opacity-50"
+                                                            >
+                                                                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                                            </button>
+                                                            <button className="text-[10px] font-mono font-bold text-neutral-500 hover:text-white transition-colors uppercase tracking-[0.2em] border border-white/5 px-3 py-1.5 rounded-full hover:bg-white/5">
+                                                                  {t.viewAll}
+                                                            </button>
+                                                      </div>
                                                 </div>
 
                                                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar z-10 relative">
-                                                      {sessionLog.map((log) => (
-                                                            <div
-                                                                  key={log.id}
-                                                                  onClick={() => setSelectedSession(log)}
-                                                                  className="group flex items-center p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.05] transition-all cursor-pointer"
-                                                            >
-                                                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
-                                                                        ${log.type === 'summary' ? 'bg-blue-500/10 text-blue-400' :
-                                                                              log.type === 'debug' ? 'bg-red-500/10 text-red-400' :
-                                                                                    'bg-amber-500/10 text-amber-400'}`}
-                                                                  >
-                                                                        {log.type === 'summary' && <FileText className="w-4 h-4" strokeWidth={1.5} />}
-                                                                        {log.type === 'debug' && <Bug className="w-4 h-4" strokeWidth={1.5} />}
-                                                                        {log.type === 'chat' && <MessageSquare className="w-4 h-4" strokeWidth={1.5} />}
-                                                                  </div>
-
-                                                                  <div className="ml-5 flex-1 min-w-0">
-                                                                        <h3 className="text-neutral-200 font-medium truncate text-sm">{log.title}</h3>
-                                                                        <p className="text-xs text-neutral-500 mt-1 font-medium">{log.subtitle}</p>
-                                                                  </div>
-
-                                                                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-700 group-hover:text-white transition-all ml-4 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transform duration-200">
-                                                                        <ChevronRight className="w-4 h-4" />
-                                                                  </div>
+                                                      {isLoading && sessionLogs.length === 0 ? (
+                                                            <div className="flex flex-col items-center justify-center h-48">
+                                                                  <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
+                                                                  <p className="text-sm text-neutral-500">Loading sessions...</p>
                                                             </div>
-                                                      ))}
+                                                      ) : error ? (
+                                                            <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
+                                                                  <p className="text-sm mb-3">Failed to load sessions</p>
+                                                                  <button
+                                                                        onClick={refetch}
+                                                                        className="text-xs text-amber-500 hover:underline flex items-center gap-2"
+                                                                  >
+                                                                        <RefreshCw className="w-3 h-3" />
+                                                                        Try again
+                                                                  </button>
+                                                            </div>
+                                                      ) : sessionLogs.length === 0 ? (
+                                                            <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
+                                                                  <FileText className="w-10 h-10 mb-3 opacity-30" />
+                                                                  <p className="text-sm font-medium">No sessions yet</p>
+                                                                  <p className="text-xs mt-1 text-neutral-600">Start recording to see your sessions here</p>
+                                                            </div>
+                                                      ) : (
+                                                            sessionLogs.map((log) => (
+                                                                  <div
+                                                                        key={log.id}
+                                                                        onClick={() => setSelectedSession(log)}
+                                                                        className="group flex items-center p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.05] transition-all cursor-pointer"
+                                                                  >
+                                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
+                                                                              ${log.type === 'summary' ? 'bg-blue-500/10 text-blue-400' :
+                                                                                    log.type === 'debug' ? 'bg-red-500/10 text-red-400' :
+                                                                                          'bg-amber-500/10 text-amber-400'}`}
+                                                                        >
+                                                                              {log.type === 'summary' && <FileText className="w-4 h-4" strokeWidth={1.5} />}
+                                                                              {log.type === 'debug' && <Bug className="w-4 h-4" strokeWidth={1.5} />}
+                                                                              {log.type === 'chat' && <MessageSquare className="w-4 h-4" strokeWidth={1.5} />}
+                                                                        </div>
+
+                                                                        <div className="ml-5 flex-1 min-w-0">
+                                                                              <h3 className="text-neutral-200 font-medium truncate text-sm">{log.title}</h3>
+                                                                              <p className="text-xs text-neutral-500 mt-1 font-medium">{log.subtitle}</p>
+                                                                        </div>
+
+                                                                        {/* Status indicator */}
+                                                                        {log.transcriptionStatus === 'processing' && (
+                                                                              <div className="mr-2">
+                                                                                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                                                                              </div>
+                                                                        )}
+                                                                        {log.transcriptionStatus === 'pending' && (
+                                                                              <div className="mr-2">
+                                                                                    <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                                                                              </div>
+                                                                        )}
+                                                                        {log.transcriptionStatus === 'failed' && (
+                                                                              <div className="mr-2">
+                                                                                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                                                                              </div>
+                                                                        )}
+
+                                                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-700 group-hover:text-white transition-all ml-2 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transform duration-200">
+                                                                              <ChevronRight className="w-4 h-4" />
+                                                                        </div>
+                                                                  </div>
+                                                            ))
+                                                      )}
                                                 </div>
 
                                                 <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-neutral-950/80 to-transparent pointer-events-none" />
@@ -313,16 +378,22 @@ export default function DashboardPage() {
                                     >
                                           <div className="p-6 border-b border-white/5 flex items-start justify-between bg-neutral-900/30">
                                                 <div>
-                                                      <div className="flex items-center gap-2 mb-2">
+                                                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                             <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-white/5 text-neutral-400 border border-white/5">
                                                                   {selectedSession.mode}
                                                             </span>
                                                             <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
                                                                   {selectedSession.type}
                                                             </span>
+                                                            {getStatusBadge(selectedSession.transcriptionStatus)}
                                                       </div>
                                                       <h2 className="text-xl font-bold text-white leading-tight">{selectedSession.title}</h2>
                                                       <p className="text-xs text-neutral-500 mt-1">{selectedSession.subtitle}</p>
+                                                      {selectedSession.duration && (
+                                                            <p className="text-xs text-neutral-600 mt-1">
+                                                                  Duration: {Math.floor(selectedSession.duration / 60)}m {selectedSession.duration % 60}s
+                                                            </p>
+                                                      )}
                                                 </div>
                                                 <button
                                                       onClick={() => setSelectedSession(null)}
@@ -333,83 +404,117 @@ export default function DashboardPage() {
                                           </div>
 
                                           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                                                {selectedSession.type === 'summary' && (
-                                                      <div className="space-y-6">
-                                                            <div>
-                                                                  <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">{t.dashboardPage.meetingTopic}</h4>
-                                                                  <p className="text-neutral-300 leading-relaxed font-light">{selectedSession.details.topic}</p>
+                                                {selectedSession.transcriptionStatus === 'pending' && (
+                                                      <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
+                                                            <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4">
+                                                                  <div className="w-3 h-3 rounded-full bg-yellow-500 animate-pulse" />
                                                             </div>
-                                                            <div>
-                                                                  <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">{t.dashboardPage.summary}</h4>
-                                                                  <p className="text-neutral-300 leading-relaxed font-light">{selectedSession.details.summary}</p>
+                                                            <p className="text-sm font-medium">Waiting to process</p>
+                                                            <p className="text-xs mt-1 text-neutral-600">This recording is in queue</p>
+                                                      </div>
+                                                )}
+
+                                                {selectedSession.transcriptionStatus === 'processing' && (
+                                                      <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
+                                                            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+                                                            <p className="text-sm font-medium">Processing...</p>
+                                                            <p className="text-xs mt-1 text-neutral-600">AI is analyzing your recording</p>
+                                                      </div>
+                                                )}
+
+                                                {selectedSession.transcriptionStatus === 'failed' && (
+                                                      <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
+                                                            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                                                                  <X className="w-6 h-6 text-red-500" />
                                                             </div>
-                                                            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                                                  <h4 className="text-xs font-mono text-amber-400 uppercase tracking-widest mb-3">{t.dashboardPage.actionItems}</h4>
-                                                                  <ul className="space-y-2">
-                                                                        {selectedSession.details.actionItems?.map((item, i) => (
-                                                                              <li key={i} className="flex items-center gap-2 text-sm text-neutral-300">
-                                                                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50" />
-                                                                                    {item}
-                                                                              </li>
-                                                                        ))}
-                                                                        {(!selectedSession.details.actionItems || selectedSession.details.actionItems.length === 0) && (
-                                                                              <li className="text-sm text-neutral-500 italic">{t.dashboardPage.noActionItems}</li>
+                                                            <p className="text-sm font-medium text-red-400">Processing failed</p>
+                                                            <p className="text-xs mt-1 text-neutral-600">There was an error processing this recording</p>
+                                                      </div>
+                                                )}
+
+                                                {selectedSession.transcriptionStatus === 'completed' && (
+                                                      <>
+                                                            {selectedSession.type === 'summary' && (
+                                                                  <div className="space-y-6">
+                                                                        <div>
+                                                                              <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">{t.dashboardPage.meetingTopic}</h4>
+                                                                              <p className="text-neutral-300 leading-relaxed font-light">{selectedSession.details.topic}</p>
+                                                                        </div>
+                                                                        <div>
+                                                                              <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-3">{t.dashboardPage.summary}</h4>
+                                                                              <p className="text-neutral-300 leading-relaxed font-light">{selectedSession.details.summary}</p>
+                                                                        </div>
+                                                                        <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+                                                                              <h4 className="text-xs font-mono text-amber-400 uppercase tracking-widest mb-3">{t.dashboardPage.actionItems}</h4>
+                                                                              <ul className="space-y-2">
+                                                                                    {selectedSession.details.actionItems?.map((item, i) => (
+                                                                                          <li key={i} className="flex items-center gap-2 text-sm text-neutral-300">
+                                                                                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50" />
+                                                                                                {item}
+                                                                                          </li>
+                                                                                    ))}
+                                                                                    {(!selectedSession.details.actionItems || selectedSession.details.actionItems.length === 0) && (
+                                                                                          <li className="text-sm text-neutral-500 italic">{t.dashboardPage.noActionItems}</li>
+                                                                                    )}
+                                                                              </ul>
+                                                                        </div>
+                                                                  </div>
+                                                            )}
+
+                                                            {selectedSession.type === 'debug' && (
+                                                                  <div className="space-y-6">
+                                                                        <div>
+                                                                              <h4 className="text-xs font-mono text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                                                    <Bug className="w-3 h-3" /> {t.dashboardPage.reportedBug}
+                                                                              </h4>
+                                                                              <p className="text-white font-mono text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+                                                                                    {selectedSession.details.bug}
+                                                                              </p>
+                                                                        </div>
+                                                                        <div>
+                                                                              <h4 className="text-xs font-mono text-green-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                                                                    <Zap className="w-3 h-3" /> {t.dashboardPage.solutionApplied}
+                                                                              </h4>
+                                                                              <p className="text-neutral-300 text-sm leading-relaxed">
+                                                                                    {selectedSession.details.fix}
+                                                                              </p>
+                                                                        </div>
+                                                                        {selectedSession.details.code && (
+                                                                              <div className="relative group">
+                                                                                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                          <button className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors">
+                                                                                                <Copy className="w-3 h-3" />
+                                                                                          </button>
+                                                                                    </div>
+                                                                                    <pre className="bg-[#0d1117] p-4 rounded-xl border border-white/10 text-xs font-mono text-neutral-300 overflow-x-auto">
+                                                                                          <code>{selectedSession.details.code}</code>
+                                                                                    </pre>
+                                                                              </div>
                                                                         )}
-                                                                  </ul>
-                                                            </div>
-                                                      </div>
-                                                )}
+                                                                  </div>
+                                                            )}
 
-                                                {selectedSession.type === 'debug' && (
-                                                      <div className="space-y-6">
-                                                            <div>
-                                                                  <h4 className="text-xs font-mono text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                                        <Bug className="w-3 h-3" /> {t.dashboardPage.reportedBug}
-                                                                  </h4>
-                                                                  <p className="text-white font-mono text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">
-                                                                        {selectedSession.details.bug}
-                                                                  </p>
-                                                            </div>
-                                                            <div>
-                                                                  <h4 className="text-xs font-mono text-green-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                                                        <Zap className="w-3 h-3" /> {t.dashboardPage.solutionApplied}
-                                                                  </h4>
-                                                                  <p className="text-neutral-300 text-sm leading-relaxed">
-                                                                        {selectedSession.details.fix}
-                                                                  </p>
-                                                            </div>
-                                                            <div className="relative group">
-                                                                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <button className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors">
-                                                                              <Copy className="w-3 h-3" />
-                                                                        </button>
+                                                            {selectedSession.type === 'chat' && (
+                                                                  <div className="space-y-6">
+                                                                        <div className="flex gap-4">
+                                                                              <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center shrink-0 border border-white/5">
+                                                                                    <span className="text-xs">{t.you}</span>
+                                                                              </div>
+                                                                              <div className="bg-neutral-900 rounded-2xl rounded-tl-none p-4 border border-white/5 text-sm text-neutral-300 leading-relaxed max-w-[85%]">
+                                                                                    {selectedSession.details.question}
+                                                                              </div>
+                                                                        </div>
+                                                                        <div className="flex gap-4">
+                                                                              <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shrink-0 text-black font-bold text-xs ring-2 ring-neutral-950">
+                                                                                    D
+                                                                              </div>
+                                                                              <div className="bg-amber-500/10 rounded-2xl rounded-tl-none p-4 border border-amber-500/10 text-sm text-neutral-200 leading-relaxed max-w-[85%]">
+                                                                                    {selectedSession.details.answer}
+                                                                              </div>
+                                                                        </div>
                                                                   </div>
-                                                                  <pre className="bg-[#0d1117] p-4 rounded-xl border border-white/10 text-xs font-mono text-neutral-300 overflow-x-auto">
-                                                                        <code>{selectedSession.details.code}</code>
-                                                                  </pre>
-                                                            </div>
-                                                      </div>
-                                                )}
-
-                                                {selectedSession.type === 'chat' && (
-                                                      <div className="space-y-6">
-                                                            <div className="flex gap-4">
-                                                                  <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center shrink-0 border border-white/5">
-                                                                        <span className="text-xs">{t.you}</span>
-                                                                  </div>
-                                                                  <div className="bg-neutral-900 rounded-2xl rounded-tl-none p-4 border border-white/5 text-sm text-neutral-300 leading-relaxed max-w-[85%]">
-                                                                        {selectedSession.details.question}
-                                                                  </div>
-                                                            </div>
-                                                            <div className="flex gap-4">
-                                                                  <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shrink-0 text-black font-bold text-xs ring-2 ring-neutral-950">
-                                                                        D
-                                                                  </div>
-                                                                  <div className="bg-amber-500/10 rounded-2xl rounded-tl-none p-4 border border-amber-500/10 text-sm text-neutral-200 leading-relaxed max-w-[85%]">
-                                                                        {selectedSession.details.answer}
-                                                                  </div>
-                                                            </div>
-                                                      </div>
+                                                            )}
+                                                      </>
                                                 )}
                                           </div>
 
@@ -417,8 +522,16 @@ export default function DashboardPage() {
                                                 <button className="flex-1 py-3 rounded-xl bg-white/5 border border-white/5 text-sm font-medium hover:bg-white/10 hover:text-white text-neutral-300 transition-colors flex items-center justify-center gap-2">
                                                       <ExternalLink className="w-4 h-4" /> {t.dashboardPage.openOverlay}
                                                 </button>
-                                                <button className="py-3 px-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-colors">
-                                                      <Trash2 className="w-4 h-4" />
+                                                <button
+                                                      onClick={handleDeleteSession}
+                                                      disabled={isDeleting}
+                                                      className="py-3 px-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                      {isDeleting ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                      ) : (
+                                                            <Trash2 className="w-4 h-4" />
+                                                      )}
                                                 </button>
                                           </div>
 
@@ -427,6 +540,6 @@ export default function DashboardPage() {
                         )}
                   </AnimatePresence>
 
-            </div>
+            </div >
       )
 }

@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { DialogProvider } from "@/context/dialog";
+import { DialogProvider } from "@/hooks/dialog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,7 +19,7 @@ export const metadata = {
 
 import GlobalWindowFrame from "@/components/GlobalWindowFrame";
 
-import { SettingsProvider } from "@/context/SettingsContext";
+import { SettingsProvider } from "@/hooks/SettingsContext";
 
 export default function RootLayout({ children }) {
   return (

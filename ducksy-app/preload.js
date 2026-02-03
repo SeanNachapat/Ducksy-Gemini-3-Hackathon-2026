@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "open-system-preferences",
                   "record-audio",
                   "realtime-time-record",
-                  "recording-control",  // แก้จาก recording-control-update เป็น recording-control
+                  "recording-control",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.send(channel, data)
@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld("electron", {
                   "permissions-result",
                   "update-record-time",
                   "recording-control-update",
+                  "recording-paused-state",
+                  "recording-saved",
+                  "transcription-updated",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.on(channel, (event, ...args) => callback(...args))
@@ -37,7 +40,6 @@ contextBridge.exposeInMainWorld("electron", {
             ipcRenderer.removeListener(channel, callback)
       },
 
-      // เพิ่ม function นี้
       removeAllListeners: (channel) => {
             ipcRenderer.removeAllListeners(channel)
       },
@@ -53,6 +55,15 @@ contextBridge.exposeInMainWorld("electron", {
                   "get-screen-sources",
                   "isInitial",
                   "request-sizeCache",
+                  "save-audio-file",
+                  "get-session-logs",
+                  "get-session",
+                  "delete-session",
+                  "update-transcription",
+                  "get-all-files",
+                  "get-db-size",
+                  "set-gemini-api-key",
+                  "retry-transcription",
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)
@@ -73,7 +84,6 @@ contextBridge.exposeInMainWorld("electron", {
                               groupId: device.groupId
                         }))
             } catch (error) {
-                  console.error("Failed to get microphone devices:", error)
                   return []
             }
       },

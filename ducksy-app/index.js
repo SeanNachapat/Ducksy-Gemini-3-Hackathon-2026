@@ -1,7 +1,9 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen } = require("electron")
+const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell } = require("electron")
 const path = require("path")
+const fs = require("fs")
 const serve = require("electron-serve")
 const db = require("./utils/db")
+const { registerIpcHandlers, setMainWindow } = require("./ipcHandlers")
 
 const isProd = process.env.NODE_ENV === "production"
 
@@ -13,8 +15,10 @@ let mainWindow
 let onRecordingWindow
 let initalized
 
+// ─── Recording Window ──────────────────────────────────────────────
+
 async function createOnRecordingWindow() {
-      const { width, height } = screen.getPrimaryDisplay().workAreaSize
+      const { width } = screen.getPrimaryDisplay().workAreaSize
       const width_f = 350
       const height_f = 100
 
@@ -55,6 +59,15 @@ async function createOnRecordingWindow() {
       })
 }
 
+function closeOnRecordingWindow() {
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.close()
+            onRecordingWindow = null
+      }
+}
+
+// ─── Main Window ───────────────────────────────────────────────────
+
 async function createWindow() {
       mainWindow = new BrowserWindow({
             width: 1200,
@@ -74,6 +87,7 @@ async function createWindow() {
             },
       })
 
+      setMainWindow(mainWindow);
       if (isProd) {
             await mainWindow.loadURL("app://./index.html")
       } else {
@@ -86,9 +100,11 @@ async function createWindow() {
       })
 }
 
+// ─── App Lifecycle ─────────────────────────────────────────────────
+
 app.whenReady().then(async () => {
-      await db.initializeDatabase()
       createWindow()
+      registerIpcHandlers();
 })
 
 app.on("window-all-closed", () => {
@@ -103,6 +119,8 @@ app.on("activate", () => {
       }
 })
 
+// ─── Permissions ───────────────────────────────────────────────────
+
 async function checkPermissions() {
       const permissions = {
             microphone: "unknown",
@@ -112,9 +130,6 @@ async function checkPermissions() {
       if (process.platform === "darwin") {
             permissions.microphone = systemPreferences.getMediaAccessStatus("microphone")
             permissions.screen = systemPreferences.getMediaAccessStatus("screen")
-      } else if (process.platform === "win32") {
-            permissions.microphone = "granted"
-            permissions.screen = "granted"
       } else {
             permissions.microphone = "granted"
             permissions.screen = "granted"
@@ -160,8 +175,6 @@ async function requestScreenPermission() {
 
 function openSystemPreferences(type) {
       if (process.platform === "darwin") {
-            const { shell } = require("electron")
-
             if (type === "microphone") {
                   shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
             } else if (type === "screen") {
@@ -170,15 +183,15 @@ function openSystemPreferences(type) {
       }
 }
 
-ipcMain.handle("isInitial", async (event, data) => {
-      const status = await db.isAlreadyFile();
-      return status;
-})
+// ─── IPC: Recording ────────────────────────────────────────────────
 
-ipcMain.on("record-audio", (event, data) => {
-      console.log("Record audio:", data)
-      if (data.action === "start") {
-            createOnRecordingWindow()
+ipcMain.on("record-audio", async (event, data) => {
+      console.log("Record audio:", data.action)
+
+      const { action } = data
+
+      if (action === "start") {
+            await createOnRecordingWindow()
       }
 })
 
@@ -189,15 +202,34 @@ ipcMain.on("realtime-time-record", (event, data) => {
 })
 
 ipcMain.on("recording-control", (event, data) => {
-      console.log("Recording control:", data)
+      console.log("Recording control:", data.action)
+
+      // Forward control action to the main window (renderer)
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send("recording-control-update", data)
       }
 
-      if (data.action === "stop" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
-            onRecordingWindow.close()
-            onRecordingWindow = null
+      // Update the recording overlay window based on action
+      if (data.action === "stop") {
+            closeOnRecordingWindow()
       }
+
+      // For pause/resume, forward the state to the overlay window
+      if (data.action === "pause" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.webContents.send("recording-paused-state", { isPaused: true })
+      }
+
+      if (data.action === "resume" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.webContents.send("recording-paused-state", { isPaused: false })
+      }
+})
+
+// ─── IPC: Onboarding / Steps ──────────────────────────────────────
+
+ipcMain.handle("isInitial", async (event, data) => {
+      const status = await db.isAlreadyFile()
+      await db.initializeDatabase()
+      return status
 })
 
 ipcMain.on("step-changed", (event, data) => {
@@ -207,6 +239,8 @@ ipcMain.on("step-changed", (event, data) => {
 ipcMain.on("onboarding-complete", (event, data) => {
       console.log("Onboarding complete:", data)
 })
+
+// ─── IPC: Permissions ──────────────────────────────────────────────
 
 ipcMain.on("request-permissions", async (event) => {
       console.log("Requesting permissions...")
@@ -221,32 +255,6 @@ ipcMain.on("request-permissions", async (event) => {
 
       console.log("Permission results:", result)
       mainWindow.webContents.send("permissions-result", result)
-})
-
-ipcMain.handle("request-sizeCache", async (event) => {
-      var size = await db.getSizeOfdb();
-
-      // Maximum 2 Gb to Percent
-      var maxCacheSize = 2 * 1024 * 1024 * 1024
-      var percent = (size / maxCacheSize) * 100
-
-      // ToFixed
-      percent = percent.toFixed(2)
-      size = size.toFixed(2)
-
-      var status = {
-            status: "",
-            percent,
-            size,
-      };
-      if (percent > 100) {
-            status.status = "warning"
-      } else {
-            status.status = "emerald"
-      }
-
-      console.log(status)
-      return status;
 })
 
 ipcMain.handle("check-permissions", async () => {
@@ -264,6 +272,38 @@ ipcMain.handle("request-screen", async () => {
 ipcMain.on("open-system-preferences", (event, type) => {
       openSystemPreferences(type)
 })
+
+// ─── IPC: Cache ────────────────────────────────────────────────────
+
+ipcMain.handle("request-sizeCache", async (event) => {
+      var size = await db.getSizeOfdb()
+
+      // Maximum 2 GB to Percent
+      var maxCacheSize = 2 * 1024 * 1024 * 1024
+      var percent = (size / maxCacheSize) * 100
+
+      percent = percent.toFixed(2)
+      size = size.toFixed(2)
+
+      var status = {
+            status: "",
+            percent,
+            size,
+      }
+
+      if (percent > 100) {
+            status.status = "danger"
+      } else if (percent >= 50 && percent <= 70) {
+            status.status = "warning"
+      } else {
+            status.status = "emerald"
+      }
+
+      console.log(status)
+      return status
+})
+
+// ─── IPC: Screen Sources ──────────────────────────────────────────
 
 ipcMain.handle("get-screen-sources", async () => {
       try {
@@ -283,6 +323,8 @@ ipcMain.handle("get-screen-sources", async () => {
       }
 })
 
+// ─── IPC: Window Controls ─────────────────────────────────────────
+
 ipcMain.on("app-minimize", () => {
       mainWindow?.minimize()
 })
@@ -298,6 +340,8 @@ ipcMain.on("app-maximize", () => {
 ipcMain.on("app-close", () => {
       mainWindow?.close()
 })
+
+// ─── IPC: Settings ────────────────────────────────────────────────
 
 ipcMain.handle("get-settings", async () => {
       return {

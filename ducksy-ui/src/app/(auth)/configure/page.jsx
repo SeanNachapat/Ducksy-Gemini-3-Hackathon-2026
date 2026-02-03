@@ -85,6 +85,7 @@ export default function ConfigurePage() {
     // Helper สำหรับเลือกสีตาม Status (แก้ปัญหา Dynamic Class ของ Tailwind)
     const getStatusColor = (status) => {
         if (status === 'warning') return { text: 'text-amber-500', bg: 'bg-amber-500', bgSoft: 'bg-amber-500/10' };
+        if (status === 'danger') return { text: 'text-red-500', bg: 'bg-red-500', bgSoft: 'bg-red-500/10' };
         return { text: 'text-emerald-500', bg: 'bg-emerald-500', bgSoft: 'bg-emerald-500/10' };
     }
 
