@@ -18,7 +18,25 @@ export default function OnRecordPage() {
             pauseRecording,
             resumeRecording,
             stopRecording,
+            audioBlob,
+            saveRecording,
+            resetRecording,
       } = useRecorder()
+
+
+      useEffect(() => {
+            if (!audioBlob) return
+
+            const save = async () => {
+                  const result = await saveRecording()
+                  if (result?.success) {
+                        console.log("Audio saved:", result.filePath)
+                  }
+                  resetRecording()
+            }
+
+            save()
+      }, [audioBlob, saveRecording, resetRecording])
 
       useEffect(() => {
             // Force transparent background
