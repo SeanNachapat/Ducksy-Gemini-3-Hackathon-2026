@@ -12,7 +12,11 @@ const setMainWindow = (window) => {
       mainWindow = window;
 };
 
-const processTranscription = async (fileId, filePath, mimeType) => {
+const setGeminiApiKey = (apiKey) => {
+      geminiApiKey = apiKey;
+};
+
+const processTranscription = async (fileId, filePath, mimeType, userLanguage = 'en') => {
       if (!geminiApiKey) {
             console.error("Gemini API key not set");
             db.updateTranscription({
@@ -38,7 +42,7 @@ const processTranscription = async (fileId, filePath, mimeType) => {
             const audioBuffer = fs.readFileSync(filePath);
             const base64Audio = audioBuffer.toString("base64");
 
-            const result = await transcribeAudio(base64Audio, mimeType, geminiApiKey);
+            const result = await transcribeAudio(base64Audio, mimeType, geminiApiKey, userLanguage);
 
             const transcription = db.getTranscriptionByFileId(fileId);
             if (transcription) {
@@ -90,8 +94,8 @@ const processTranscription = async (fileId, filePath, mimeType) => {
       }
 };
 
+
 const registerIpcHandlers = () => {
-      // Get all session logs
       ipcMain.handle("get-session-logs", async () => {
             try {
                   const sessionLogs = db.getSessionLogs();
@@ -102,7 +106,6 @@ const registerIpcHandlers = () => {
             }
       });
 
-      // Get single session by ID
       ipcMain.handle("get-session", async (event, { fileId }) => {
             try {
                   const file = db.getFileById(fileId);
@@ -147,19 +150,15 @@ const registerIpcHandlers = () => {
             }
       });
 
-      // Delete session
       ipcMain.handle("delete-session", async (event, { fileId }) => {
             try {
                   const file = db.getFileById(fileId);
 
                   if (file) {
-                        // Delete audio file if exists
                         if (file.path && fs.existsSync(file.path)) {
                               fs.unlinkSync(file.path);
                               console.log(`Deleted audio file: ${file.path}`);
                         }
-
-                        // Delete from database (transcription will be deleted via CASCADE)
                         db.deleteFile(fileId);
                         console.log(`Deleted session: ${fileId}`);
                   }
@@ -171,9 +170,8 @@ const registerIpcHandlers = () => {
             }
       });
 
-      // Save audio file
       ipcMain.handle("save-audio-file", async (event, data) => {
-            const { buffer, mimeType, duration, mode = "lens", title = "" } = data;
+            const { buffer, mimeType, duration, mode = "lens", title = "", userLanguage = "en" } = data;
 
             try {
                   const ext = mimeType.includes("mp4")
@@ -213,21 +211,19 @@ const registerIpcHandlers = () => {
 
                   const fileId = fileResult.lastInsertRowid;
 
-                  // Create initial transcription record with pending status
                   db.createTranscription({
                         fileId: fileId,
                         type: "summary",
                         title: title || `Recording ${new Date().toLocaleString()}`,
                         summary: "",
                         content: "",
-                        language: "en",
+                        language: userLanguage,
                         status: "pending",
                         details: {},
                         calendarEventId: null,
                         notionPageId: null
                   });
 
-                  // Notify renderer that recording is saved
                   if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send("recording-saved", {
                               fileId: fileId,
@@ -236,7 +232,7 @@ const registerIpcHandlers = () => {
                         });
                   }
 
-                  processTranscription(fileId, filePath, mimeType);
+                  processTranscription(fileId, filePath, mimeType, userLanguage);
 
                   return {
                         success: true,
@@ -255,7 +251,6 @@ const registerIpcHandlers = () => {
             }
       });
 
-      // Update transcription (for when AI processing completes)
       ipcMain.handle("update-transcription", async (event, data) => {
             const { fileId, type, title, summary, content, language, status, details } = data;
 
@@ -324,14 +319,23 @@ const registerIpcHandlers = () => {
             }
       });
 
-      ipcMain.handle("retry-transcription", async (event, { fileId }) => {
+      ipcMain.handle("set-gemini-api-key", async (event, { apiKey }) => {
+            try {
+                  geminiApiKey = apiKey;
+                  return { success: true };
+            } catch (err) {
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en" }) => {
             try {
                   const file = db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "File not found" };
                   }
 
-                  processTranscription(fileId, file.path, file.type);
+                  processTranscription(fileId, file.path, file.type, userLanguage);
                   return { success: true };
             } catch (err) {
                   console.error("Failed to retry transcription:", err);

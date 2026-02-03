@@ -147,8 +147,6 @@ export default function ConfigurePage() {
             <main className="flex-1 flex flex-col relative z-10 bg-neutral-950/50">
                 <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
                     <AnimatePresence mode="wait">
-
-                        {/* ... Persona Section ... */}
                         {activeSection === "persona" && (
                             <motion.div
                                 key="persona"
@@ -158,13 +156,10 @@ export default function ConfigurePage() {
                                 transition={{ duration: 0.2 }}
                                 className="max-w-4xl mx-auto space-y-8"
                             >
-                                {/* ... (Code เดิมส่วน Persona) ... */}
                                 <div className="mb-8"><h2 className="text-2xl font-bold text-white mb-2">Agent Persona</h2></div>
-                                {/* ใส่ Code เดิมตรงนี้ได้เลยครับ เพื่อความกระชับผมละไว้ */}
                             </motion.div>
                         )}
 
-                        {/* ... Memory Section ... */}
                         {activeSection === "memory" && (
                             <motion.div
                                 key="memory"
@@ -182,9 +177,7 @@ export default function ConfigurePage() {
                                 <div className="grid grid-cols-1 gap-6">
                                     <div className="border border-white/5 bg-neutral-900/40 p-8 rounded-3xl relative overflow-hidden backdrop-blur-sm min-h-[180px] flex flex-col justify-center">
 
-                                        {/* --- CHECK: เช็คว่ามีข้อมูลหรือยัง --- */}
                                         {sizeCache.percent === null ? (
-                                            // 1. Loading State (Skeleton)
                                             <div className="animate-pulse flex flex-col md:flex-row md:items-center justify-between gap-8">
                                                 <div className="space-y-4">
                                                     <div className="flex items-center gap-3">
@@ -205,11 +198,9 @@ export default function ConfigurePage() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            // 2. Data Loaded State
                                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
                                                 <div>
                                                     <div className="flex items-center gap-3 mb-4">
-                                                        {/* ใช้ Helper color function */}
                                                         <div className={`p-2 rounded-lg ${getStatusColor(sizeCache.status).bgSoft} ${getStatusColor(sizeCache.status).text}`}>
                                                             <Database className="w-5 h-5" />
                                                         </div>
@@ -217,7 +208,6 @@ export default function ConfigurePage() {
                                                     </div>
                                                     <div className="flex items-baseline gap-2">
                                                         <div className="text-5xl font-bold tracking-tight text-white">
-                                                            {/* แสดงค่า Size */}
                                                             {sizeCache.size}
                                                         </div>
                                                         <span className="text-xl text-neutral-500 font-medium">MB</span>
@@ -231,7 +221,6 @@ export default function ConfigurePage() {
                                                     <div className="flex justify-between text-xs font-medium mb-2">
                                                         <span className="text-white">Usage</span>
                                                         <span className={`${getStatusColor(sizeCache.status).text}`}>
-                                                            {/* ใช้ toFixed แทน Math.round(x, 1) เพราะ JS ไม่มี Math.round แบบระบุทศนิยม */}
                                                             {Number(sizeCache?.percent).toFixed(1)}%
                                                         </span>
                                                     </div>
@@ -244,11 +233,8 @@ export default function ConfigurePage() {
                                                 </div>
                                             </div>
                                         )}
-                                        {/* --- END CHECK --- */}
-
                                     </div>
 
-                                    {/* Clear Button (คงเดิม) */}
                                     <button
                                         onClick={handleClearMemory}
                                         disabled={clearing}
@@ -290,7 +276,6 @@ export default function ConfigurePage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">
-                                    {/* Notion Card */}
                                     <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex items-center justify-between group hover:border-white/10 transition-colors">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-black font-bold text-xl">
@@ -312,7 +297,6 @@ export default function ConfigurePage() {
                                         </button>
                                     </div>
 
-                                    {/* Google Card */}
                                     <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex items-center justify-between group hover:border-white/10 transition-colors">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-black font-bold text-xl overflow-hidden p-2">
@@ -419,7 +403,6 @@ export default function ConfigurePage() {
                                         </select>
                                     </div>
 
-                                    {/* Language Selection */}
                                     <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
@@ -437,14 +420,12 @@ export default function ConfigurePage() {
                                             className="bg-neutral-950 border border-white/10 text-white text-sm rounded-xl px-4 py-2 outline-none focus:border-amber-500/50 transition-colors"
                                         >
                                             <option value="en">English (US)</option>
-                                            <option value="es">Español</option>
-                                            <option value="fr">Français</option>
-                                            <option value="de">Deutsch</option>
-                                            <option value="ja">日本語</option>
+                                            <option value="th">ไทย (Thai)</option>
+                                            <option value="zh">中文 (Chinese)</option>
+                                            <option value="ja">日本語 (Japanese)</option>
                                         </select>
                                     </div>
 
-                                    {/* Other Toggles */}
                                     <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -480,7 +461,6 @@ export default function ConfigurePage() {
                         )}
                     </AnimatePresence>
                 </div>
-                {/* Footer Save Button (คงเดิม) */}
                 <div className="h-24 px-12 border-t border-white/5 flex items-center justify-between bg-neutral-900/50 backdrop-blur-xl">
                     <div className="text-xs text-neutral-500 font-medium">
                         <span className="text-neutral-600 mr-2">LAST SAVE</span>
