@@ -41,8 +41,8 @@ export default function DashboardPage() {
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
 
       const modes = [
-            { id: "ghost", label: "Ghost", icon: Ghost, description: "Monitoring", color: "text-neutral-500", border: "border-neutral-800 bg-neutral-900" },
-            { id: "lens", label: "Lens", icon: Eye, description: "Ready to Capture", color: "text-amber-400", border: "border-amber-500/50 bg-amber-500/10" },
+            { id: "ghost", label: t.modes.ghost, icon: Ghost, description: t.modes.ghostDesc, color: "text-neutral-500", border: "border-neutral-800 bg-neutral-900" },
+            { id: "lens", label: t.modes.lens, icon: Eye, description: t.modes.lensDesc, color: "text-amber-400", border: "border-amber-500/50 bg-amber-500/10" },
       ]
 
       const getAvatarContent = () => {
@@ -77,26 +77,26 @@ export default function DashboardPage() {
                         return (
                               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 flex items-center gap-1">
                                     <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                                    Pending
+                                    {t.status.pending}
                               </span>
                         )
                   case 'processing':
                         return (
                               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center gap-1">
                                     <Loader2 className="w-3 h-3 animate-spin" />
-                                    Processing
+                                    {t.status.processing}
                               </span>
                         )
                   case 'completed':
                         return (
                               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-green-500/10 text-green-500 border border-green-500/20">
-                                    Completed
+                                    {t.status.completed}
                               </span>
                         )
                   case 'failed':
                         return (
                               <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-red-500/10 text-red-500 border border-red-500/20">
-                                    Failed
+                                    {t.status.failed}
                               </span>
                         )
                   default:
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                                                                         <div className="text-xs font-mono text-amber-400">14:00 • Today</div>
                                                                   </div>
                                                                   <button className="px-3 py-1.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200 transition-colors">
-                                                                        Start
+                                                                        {t.session.start}
                                                                   </button>
                                                             </div>
                                                       </div>
@@ -283,24 +283,24 @@ export default function DashboardPage() {
                                                       {isLoading && sessionLogs.length === 0 ? (
                                                             <div className="flex flex-col items-center justify-center h-48">
                                                                   <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
-                                                                  <p className="text-sm text-neutral-500">Loading sessions...</p>
+                                                                  <p className="text-sm text-neutral-500">{t.session.loading}</p>
                                                             </div>
                                                       ) : error ? (
                                                             <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
-                                                                  <p className="text-sm mb-3">Failed to load sessions</p>
+                                                                  <p className="text-sm mb-3">{t.session.loadFailed}</p>
                                                                   <button
                                                                         onClick={refetch}
                                                                         className="text-xs text-amber-500 hover:underline flex items-center gap-2"
                                                                   >
                                                                         <RefreshCw className="w-3 h-3" />
-                                                                        Try again
+                                                                        {t.session.tryAgain}
                                                                   </button>
                                                             </div>
                                                       ) : sessionLogs.length === 0 ? (
                                                             <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
                                                                   <FileText className="w-10 h-10 mb-3 opacity-30" />
-                                                                  <p className="text-sm font-medium">No sessions yet</p>
-                                                                  <p className="text-xs mt-1 text-neutral-600">Start recording to see your sessions here</p>
+                                                                  <p className="text-sm font-medium">{t.session.noSessions}</p>
+                                                                  <p className="text-xs mt-1 text-neutral-600">{t.session.noSessionsDesc}</p>
                                                             </div>
                                                       ) : (
                                                             sessionLogs.map((log) => (
@@ -390,7 +390,7 @@ export default function DashboardPage() {
                                                       <p className="text-xs text-neutral-500 mt-1">{selectedSession.subtitle}</p>
                                                       {selectedSession.duration && (
                                                             <p className="text-xs text-neutral-600 mt-1">
-                                                                  Duration: {Math.floor(selectedSession.duration / 60)}m {selectedSession.duration % 60}s
+                                                                  {t.session.duration}: {Math.floor(selectedSession.duration / 60)}m {selectedSession.duration % 60}s
                                                             </p>
                                                       )}
                                                 </div>
@@ -408,16 +408,16 @@ export default function DashboardPage() {
                                                             <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4">
                                                                   <div className="w-3 h-3 rounded-full bg-yellow-500 animate-pulse" />
                                                             </div>
-                                                            <p className="text-sm font-medium">Waiting to process</p>
-                                                            <p className="text-xs mt-1 text-neutral-600">This recording is in queue</p>
+                                                            <p className="text-sm font-medium">{t.session.waiting}</p>
+                                                            <p className="text-xs mt-1 text-neutral-600">{t.session.queue}</p>
                                                       </div>
                                                 )}
 
                                                 {selectedSession.transcriptionStatus === 'processing' && (
                                                       <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
                                                             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-                                                            <p className="text-sm font-medium">Processing...</p>
-                                                            <p className="text-xs mt-1 text-neutral-600">AI is analyzing your recording</p>
+                                                            <p className="text-sm font-medium">{t.status.processing}...</p>
+                                                            <p className="text-xs mt-1 text-neutral-600">{t.session.analyzing}</p>
                                                       </div>
                                                 )}
 
@@ -426,8 +426,8 @@ export default function DashboardPage() {
                                                             <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                                                                   <X className="w-6 h-6 text-red-500" />
                                                             </div>
-                                                            <p className="text-sm font-medium text-red-400">Processing failed</p>
-                                                            <p className="text-xs mt-1 text-neutral-600">There was an error processing this recording</p>
+                                                            <p className="text-sm font-medium text-red-400">{t.session.failedTitle}</p>
+                                                            <p className="text-xs mt-1 text-neutral-600">{t.session.failedDesc}</p>
                                                       </div>
                                                 )}
 

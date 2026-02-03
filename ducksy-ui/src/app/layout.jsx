@@ -1,15 +1,24 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Prompt } from "next/font/google";
 import "./globals.css";
 import { DialogProvider } from "@/hooks/dialog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  adjustFontFallback: false,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  adjustFontFallback: false,
+});
+
+const prompt = Prompt({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ["thai"],
+  variable: "--font-prompt",
+  display: 'swap',
 });
 
 export const metadata = {
@@ -25,7 +34,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-neutral-950 text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} ${prompt.variable} font-sans antialiased bg-neutral-950 text-white`}
       >
         <SettingsProvider>
           <DialogProvider>

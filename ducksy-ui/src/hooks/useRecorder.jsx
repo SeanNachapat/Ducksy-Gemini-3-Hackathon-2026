@@ -103,7 +103,7 @@ export function useRecorder() {
 
             } catch (err) {
                   console.error('Failed to start recording:', err)
-                  setError('ไม่สามารถเข้าถึงไมโครโฟนได้ กรุณาตรวจสอบสิทธิ์การเข้าถึง')
+                  setError('Microphone access denied. Please check permissions.')
             }
       }, [sendTimeUpdate])
 
@@ -181,7 +181,7 @@ export function useRecorder() {
                   return null
             } catch (err) {
                   console.error('Failed to save recording:', err)
-                  setError('ไม่สามารถบันทึกไฟล์เสียงได้')
+                  setError('Failed to save audio file.')
                   return null
             }
       }, [audioBlob, duration])
