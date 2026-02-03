@@ -5,14 +5,10 @@ const db = require("./utils/db");
 const { transcribeAudio } = require("./utils/gemini");
 
 let mainWindow = null;
-let geminiApiKey = "AIzaSyCgpfIo_hcg9Fr4DLlr03f--DUWPIOs9Ag";
+let geminiApiKey = process.env.GEMINI_API_KEY ?? "";
 
 const setMainWindow = (window) => {
       mainWindow = window;
-};
-
-const setGeminiApiKey = (apiKey) => {
-      geminiApiKey = apiKey;
 };
 
 const processTranscription = async (fileId, filePath, mimeType) => {
@@ -327,15 +323,6 @@ const registerIpcHandlers = () => {
             }
       });
 
-      ipcMain.handle("set-gemini-api-key", async (event, { apiKey }) => {
-            try {
-                  geminiApiKey = apiKey;
-                  return { success: true };
-            } catch (err) {
-                  return { success: false, error: err.message };
-            }
-      });
-
       ipcMain.handle("retry-transcription", async (event, { fileId }) => {
             try {
                   const file = db.getFileById(fileId);
@@ -355,5 +342,4 @@ const registerIpcHandlers = () => {
 module.exports = {
       registerIpcHandlers,
       setMainWindow,
-      setGeminiApiKey
 };
