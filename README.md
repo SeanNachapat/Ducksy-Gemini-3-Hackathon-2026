@@ -26,15 +26,24 @@
   - Chinese (中文) 🇨🇳
 - **🔒 Privacy-Focused:** Explicit permission management for screen and microphone access.
 
+## Recent Updates 🚀
+- **Full Localization:** Complete UI translation for **English 🇺🇸, Thai 🇹🇭, Japanese 🇯🇵, and Chinese 🇨🇳**.
+- **Modern Typography:** Implemented hybrid font stack: **Geist** for English and **Prompt** for modern Thai rendering.
+- **Enhanced Dashboard:** New **Ghost** (Monitoring) and **Lens** (Capture) modes with localized descriptions.
+- **Improved UX:** 
+  - Settings changes apply instantly with auto-reload.
+  - Custom "General" settings section as default.
+  - Optimized `.gitignore` and build configuration.
+
 ## Development Progress
 
 - [x] **Project Setup:** Initial Electron and Next.js configuration.
-- [ ] **UI/UX Design:** Implemented onboarding flow with animations and multi-language support.
-- [ ] **Permission Handling:** System-level permission requests for Microphone and Screen Recording.
-- [ ] **Gemini 3 Integration:** Connecting to Gemini API for real-time intelligence.
-- [ ] **Audio Processing:** Implementing voice recording and transcription.
-- [ ] **Screen Context:** Analyzing screen content for AI context.
-- [ ] **Interactive Avatar:** Adding idle and reactive animations for Ducksy.
+- [x] **UI/UX Design:** Implemented onboarding, dashboard, settings, and overlay with "Ghost/Lens" modes.
+- [x] **Permission Handling:** System-level permission requests for Microphone and Screen Recording.
+- [x] **Gemini 3 Integration:** Connected to Gemini API for real-time transcription and translation.
+- [x] **Audio Processing:** Implemented voice recording, saving, and multilingual transcription.
+- [ ] **Screen Context:** utilizing `desktopCapturer` for visual context (In Progress).
+- [ ] **Interactive Avatar:** Enhanced idle and reactive animations for Ducksy.
 
 ## Tech Stack
 
