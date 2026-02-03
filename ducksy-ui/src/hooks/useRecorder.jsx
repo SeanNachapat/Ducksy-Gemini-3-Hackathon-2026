@@ -126,6 +126,7 @@ export function useRecorder() {
       }, [])
 
       const stopRecording = useCallback(() => {
+            console.log('stopRecording')
             if (mediaRecorderRef.current && (mediaRecorderRef.current.state === 'recording' || mediaRecorderRef.current.state === 'paused')) {
                   mediaRecorderRef.current.stop()
                   setIsRecording(false)
