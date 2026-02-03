@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Square, Pause, Play, Mic, Monitor, Camera, Home } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
+import { useSettings } from "@/hooks/SettingsContext"
 
 export default function OnRecordPage() {
+      const { t } = useSettings()
       const [recordTime, setRecordTime] = useState({ time: 0, formatted: "00:00" })
       const [isPaused, setIsPaused] = useState(false)
       const [isRecording, setIsRecording] = useState(false)
@@ -39,7 +41,6 @@ export default function OnRecordPage() {
       }, [audioBlob, saveRecording, resetRecording])
 
       useEffect(() => {
-            // Force transparent background
             document.body.style.backgroundColor = 'transparent'
             document.documentElement.style.backgroundColor = 'transparent'
 
@@ -153,7 +154,7 @@ export default function OnRecordPage() {
                                                             className={`w-3 h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500'} shadow-lg ${isPaused ? 'shadow-yellow-500/50' : 'shadow-red-500/50'}`}
                                                       />
                                                       <span className={`text-sm font-mono font-bold tracking-wider ${isPaused ? 'text-yellow-400' : 'text-red-400'}`}>
-                                                            {isPaused ? 'PAUSED' : 'REC'}
+                                                            {isPaused ? t.overlay.paused : t.overlay.rec}
                                                       </span>
                                                 </div>
 
@@ -206,7 +207,7 @@ export default function OnRecordPage() {
                                                             <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform">
                                                                   <Mic className="w-5 h-5 text-neutral-400 group-hover:text-white" strokeWidth={1.5} />
                                                             </div>
-                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">Voice</span>
+                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.voiceRecord}</span>
                                                       </motion.button>
 
                                                       {/* Screen Share Button */}
@@ -219,7 +220,7 @@ export default function OnRecordPage() {
                                                             <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform">
                                                                   <Monitor className="w-5 h-5 text-neutral-400 group-hover:text-white" strokeWidth={1.5} />
                                                             </div>
-                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">Screen</span>
+                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.overlay.screen}</span>
                                                       </motion.button>
 
                                                       {/* Camera Button */}
@@ -232,7 +233,7 @@ export default function OnRecordPage() {
                                                             <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform">
                                                                   <Camera className="w-5 h-5 text-neutral-400 group-hover:text-white" strokeWidth={1.5} />
                                                             </div>
-                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">Capture</span>
+                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.capture}</span>
                                                       </motion.button>
                                                 </div>
                                           </>
@@ -261,7 +262,7 @@ export default function OnRecordPage() {
                                     className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 hover:border-amber-500/30 hover:bg-neutral-800/80 transition-all group"
                               >
                                     <Home className="w-4 h-4 text-neutral-400 group-hover:text-amber-400" strokeWidth={1.5} />
-                                    <span className="text-xs font-medium text-neutral-400 group-hover:text-amber-400">Return to Dashboard</span>
+                                    <span className="text-xs font-medium text-neutral-400 group-hover:text-amber-400">{t.overlay.returnDashboard}</span>
                               </motion.button>
                         )}
                   </AnimatePresence>

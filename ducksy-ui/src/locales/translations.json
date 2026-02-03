@@ -96,6 +96,38 @@
             "reportedBug": "Reported Bug",
             "solutionApplied": "Solution applied",
             "openOverlay": "Open Overlay"
+        },
+        "modes": {
+            "ghost": "Ghost",
+            "lens": "Lens",
+            "ghostDesc": "Monitoring",
+            "lensDesc": "Ready to Capture"
+        },
+        "status": {
+            "pending": "Pending",
+            "processing": "Processing",
+            "completed": "Completed",
+            "failed": "Failed"
+        },
+        "session": {
+            "duration": "Duration",
+            "waiting": "Waiting to process",
+            "queue": "This recording is in queue",
+            "analyzing": "AI is analyzing your recording",
+            "failedTitle": "Processing failed",
+            "failedDesc": "There was an error processing this recording",
+            "start": "Start",
+            "noSessions": "No sessions yet",
+            "noSessionsDesc": "Start recording to see your sessions here",
+            "loading": "Loading sessions...",
+            "loadFailed": "Failed to load sessions",
+            "tryAgain": "Try again"
+        },
+        "overlay": {
+            "paused": "PAUSED",
+            "rec": "REC",
+            "returnDashboard": "Return to Dashboard",
+            "screen": "Screen"
         }
     },
     "ja": {
@@ -195,6 +227,38 @@
             "reportedBug": "報告されたバグ",
             "solutionApplied": "適用された解決策",
             "openOverlay": "オーバーレイを開く"
+        },
+        "modes": {
+            "ghost": "Ghost",
+            "lens": "Lens",
+            "ghostDesc": "監視中",
+            "lensDesc": "キャプチャ準備完了"
+        },
+        "status": {
+            "pending": "保留中",
+            "processing": "処理中",
+            "completed": "完了",
+            "failed": "失敗"
+        },
+        "session": {
+            "duration": "時間",
+            "waiting": "処理待ち",
+            "queue": "待機中",
+            "analyzing": "AI分析中",
+            "failedTitle": "失敗",
+            "failedDesc": "エラー発生",
+            "start": "開始",
+            "noSessions": "セッションなし",
+            "noSessionsDesc": "録画を開始",
+            "loading": "読み込み中...",
+            "loadFailed": "読み込み失敗",
+            "tryAgain": "再試行"
+        },
+        "overlay": {
+            "paused": "一時停止",
+            "rec": "録画",
+            "returnDashboard": "ダッシュボードへ戻る",
+            "screen": "画面"
         }
     },
     "th": {
@@ -257,6 +321,24 @@
         "noHistoryDesc": "เริ่มคุยกับ Ducksy เลย!",
         "today": "วันนี้",
         "yesterday": "เมื่อวาน",
+        "nav": {
+            "persona": "ตัวตนเอเจนต์",
+            "memory": "โมดูลความจำ",
+            "connections": "การเชื่อมต่อ",
+            "general": "ทั่วไป"
+        },
+        "general": {
+            "title": "การตั้งค่าทั่วไป",
+            "desc": "จัดการรูปลักษณ์และภาษาของแอปพลิเคชัน",
+            "appearance": "รูปลักษณ์",
+            "appearanceDesc": "เลือกธีมที่คุณต้องการ (เฉพาะโหมดมืด)",
+            "language": "ภาษา",
+            "languageDesc": "เลือกภาษาของอินเทอร์เฟซ",
+            "autoLaunch": "เปิดอัตโนมัติ",
+            "autoLaunchDesc": "เริ่ม Ducksy เมื่อเปิดเครื่อง",
+            "reducedMotion": "ลดการเคลื่อนไหว",
+            "reducedMotionDesc": "ปิดการใช้งานแอนิเมชั่นที่หนักหน่วง"
+        },
         "dashboardPage": {
             "configureAgent": "ตั้งค่าเอเจนต์",
             "localFiles": "ไฟล์ในเครื่อง",
@@ -276,6 +358,38 @@
             "reportedBug": "บั๊กที่รายงาน",
             "solutionApplied": "วิธีแก้ปัญหาที่ใช้",
             "openOverlay": "เปิดการซ้อนทับ"
+        },
+        "modes": {
+            "ghost": "Ghost",
+            "lens": "Lens",
+            "ghostDesc": "กำลังติดตาม",
+            "lensDesc": "พร้อมจับภาพ"
+        },
+        "status": {
+            "pending": "รอ",
+            "processing": "กำลังประมวลผล",
+            "completed": "เสร็จสิ้น",
+            "failed": "ล้มเหลว"
+        },
+        "session": {
+            "duration": "ระยะเวลา",
+            "waiting": "รอประมวลผล",
+            "queue": "กำลังอยู่ในคิว",
+            "analyzing": "AI กำลังวิเคราะห์",
+            "failedTitle": "ประมวลผลล้มเหลว",
+            "failedDesc": "เกิดข้อผิดพลาด",
+            "start": "เริ่ม",
+            "noSessions": "ไม่มีเซสชัน",
+            "noSessionsDesc": "เริ่มบันทึกเลย",
+            "loading": "กำลังโหลด...",
+            "loadFailed": "โหลดไม่สำเร็จ",
+            "tryAgain": "ลองใหม่"
+        },
+        "overlay": {
+            "paused": "หยุดชั่วคราว",
+            "rec": "อัดเสียง",
+            "returnDashboard": "กลับสู่แดชบอร์ด",
+            "screen": "หน้าจอ"
         }
     },
     "zh": {
@@ -338,6 +452,24 @@
         "noHistoryDesc": "开始与 Ducksy 聊天吧！",
         "today": "今天",
         "yesterday": "昨天",
+        "nav": {
+            "persona": "代理角色",
+            "memory": "记忆模块",
+            "connections": "连接",
+            "general": "通用"
+        },
+        "general": {
+            "title": "通用设置",
+            "desc": "管理应用程序外观和本地化。",
+            "appearance": "外观",
+            "appearanceDesc": "选择您的首选主题（仅限深色模式）。",
+            "language": "语言",
+            "languageDesc": "选择界面语言。",
+            "autoLaunch": "自动启动",
+            "autoLaunchDesc": "系统启动时启动 Ducksy。",
+            "reducedMotion": "减少动态效果",
+            "reducedMotionDesc": "禁用繁重的动画。"
+        },
         "dashboardPage": {
             "configureAgent": "配置代理",
             "localFiles": "本地文件",
@@ -357,6 +489,38 @@
             "reportedBug": "报告的错误",
             "solutionApplied": "已应用的解决方案",
             "openOverlay": "打开覆盖"
+        },
+        "modes": {
+            "ghost": "Ghost",
+            "lens": "Lens",
+            "ghostDesc": "监控中",
+            "lensDesc": "准备捕获"
+        },
+        "status": {
+            "pending": "等待中",
+            "processing": "处理中",
+            "completed": "完成",
+            "failed": "失败"
+        },
+        "session": {
+            "duration": "时长",
+            "waiting": "等待处理",
+            "queue": "正在排队",
+            "analyzing": "AI正在分析",
+            "failedTitle": "处理失败",
+            "failedDesc": "发生错误",
+            "start": "开始",
+            "noSessions": "无会话",
+            "noSessionsDesc": "开始录制",
+            "loading": "加载中...",
+            "loadFailed": "加载失败",
+            "tryAgain": "重试"
+        },
+        "overlay": {
+            "paused": "暂停",
+            "rec": "录制",
+            "returnDashboard": "返回仪表板",
+            "screen": "屏幕"
         }
     }
 }

@@ -6,7 +6,7 @@ import Link from "next/link"
 import translations from "../../../locales/translations.json"
 
 export default function ConfigurePage() {
-    const [activeSection, setActiveSection] = useState("persona")
+    const [activeSection, setActiveSection] = useState("general")
     const [clearing, setClearing] = useState(false)
     const [settings, setSettings] = useState({
         personality: 50,
@@ -22,7 +22,12 @@ export default function ConfigurePage() {
     useEffect(() => {
         const savedSettings = localStorage.getItem("ducksy_settings")
         if (savedSettings) {
-            setSettings(prev => ({ ...prev, ...JSON.parse(savedSettings) }))
+            // Ensure language is valid, fallback to en
+            const parsed = JSON.parse(savedSettings)
+            if (!['en', 'th', 'zh', 'ja'].includes(parsed.language)) {
+                parsed.language = 'en'
+            }
+            setSettings(prev => ({ ...prev, ...parsed }))
         }
     }, [])
 
@@ -77,7 +82,8 @@ export default function ConfigurePage() {
         setTimeout(() => {
             localStorage.setItem("ducksy_settings", JSON.stringify(settings))
             setSaving(false)
-            alert("Configuration Saved Successfully!")
+            // Reload the app to apply changes (especially language)
+            window.location.reload()
         }, 800)
     }
 
