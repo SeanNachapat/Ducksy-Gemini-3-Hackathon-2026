@@ -315,6 +315,25 @@ ipcMain.handle("request-screen", async () => {
       return await requestScreenPermission()
 })
 
+ipcMain.handle("delete-db", async () => {
+      console.log("Deleting database...")
+      try {
+            const result = await db.deleteDb();
+
+            if (result.status === "success") {
+                  setTimeout(() => {
+                        app.exit();
+                  }, 500);
+
+                  return { success: true };
+            }
+            return { success: false, error: result.message };
+      } catch (err) {
+            console.error("Failed to delete db:", err);
+            return { success: false, error: err.message };
+      }
+});
+
 ipcMain.on("open-system-preferences", (event, type) => {
       openSystemPreferences(type)
 })

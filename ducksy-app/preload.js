@@ -65,6 +65,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "get-all-files",
                   "get-db-size",
                   "set-gemini-api-key",
+                  "delete-db",
                   "retry-transcription",
             ]
             if (validChannels.includes(channel)) {
