@@ -14,6 +14,7 @@ export default function OnRecordPage() {
       const [isRecording, setIsRecording] = useState(false)
       const [expanded, setExpanded] = useState(false)
       const [transcriptionResult, setTranscriptionResult] = useState(null)
+      const [deviceId, setDeviceId] = useState(null)
 
       const {
             isRecording: recorderIsRecording,
@@ -126,7 +127,7 @@ export default function OnRecordPage() {
       }
 
       const handleVoiceClick = async () => {
-            console.log("Record By : " + deviceId     )
+            console.log("Record By : " + deviceId)
             await startRecording(deviceId)
             if (typeof window !== 'undefined' && window.electron) {
                   window.electron.send('record-audio', { action: 'start' })

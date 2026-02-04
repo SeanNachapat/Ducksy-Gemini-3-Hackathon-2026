@@ -22,6 +22,11 @@ let deviceId
 // ─── Recording Window ──────────────────────────────────────────────
 
 async function createOnRecordingWindow() {
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.show()
+            onRecordingWindow.focus()
+            return
+      }
 
       const { width } = screen.getPrimaryDisplay().workAreaSize
       const width_f = 450
@@ -135,6 +140,7 @@ async function createCaptureScreen() {
             skipTaskbar: true,
             resizable: false,
             movable: true,
+            show: false,
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
@@ -439,10 +445,17 @@ ipcMain.on("selection-complete", (event, selection) => {
       }
 
       // Here you would typically send this data back to the main window or process it
+      // Here you would typically send this data back to the main window or process it
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send("magic-lens-selection", selection)
-            mainWindow.restore()
-            mainWindow.focus()
+      }
+
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            onRecordingWindow.show()
+            onRecordingWindow.focus()
+            onRecordingWindow.setAlwaysOnTop(true)
+      } else {
+            createOnRecordingWindow();
       }
 })
 
