@@ -3,7 +3,7 @@ const path = require("path")
 const fs = require("fs")
 const serve = require("electron-serve")
 const db = require("./utils/db")
-const { registerIpcHandlers, setMainWindow } = require("./ipcHandlers")
+const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./ipcHandlers")
 require("dotenv").config();
 
 const isProd = process.env.NODE_ENV === "production"
@@ -64,7 +64,10 @@ async function createOnRecordingWindow() {
 
       onRecordingWindow.on("closed", () => {
             onRecordingWindow = null
+            setOnRecordingWindow(null)
       })
+
+      setOnRecordingWindow(onRecordingWindow)
 }
 
 async function createSelectionWindow() {
@@ -312,10 +315,14 @@ ipcMain.on("recording-control", (event, data) => {
       // if (data.action === "stop") {
       //       closeOnRecordingWindow()
       //       // Restore main window from minimized state
-      //       if (mainWindow && !mainWindow.isDestroyed()) {
-      //             mainWindow.restore()
-      //             mainWindow.focus()
-      //       }
+      ipcMain.on("close-overlay", () => {
+            closeOnRecordingWindow()
+            // Restore main window
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.restore()
+                  mainWindow.focus()
+            }
+      })
       // }
 
       // For pause/resume, forward the state to the overlay window
@@ -434,6 +441,17 @@ ipcMain.on("close-overlay", () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.restore()
             mainWindow.focus()
+      }
+})
+
+ipcMain.on("resize-recording-window", (event, { width, height }) => {
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            // Keep current width if not provided, or default to 450
+            const currentBounds = onRecordingWindow.getBounds()
+            const newWidth = width || currentBounds.width
+            const newHeight = height || currentBounds.height
+
+            onRecordingWindow.setSize(newWidth, newHeight, true)
       }
 })
 

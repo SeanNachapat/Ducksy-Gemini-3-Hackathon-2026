@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Square, Pause, Play, Mic, Monitor, Camera, Home } from "lucide-react"
+import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
 import { useSettings } from "@/hooks/SettingsContext"
 
@@ -11,6 +11,8 @@ export default function OnRecordPage() {
       const [recordTime, setRecordTime] = useState({ time: 0, formatted: "00:00" })
       const [isPaused, setIsPaused] = useState(false)
       const [isRecording, setIsRecording] = useState(false)
+      const [expanded, setExpanded] = useState(false)
+      const [transcriptionResult, setTranscriptionResult] = useState(null)
 
       const {
             isRecording: recorderIsRecording,
@@ -65,14 +67,25 @@ export default function OnRecordPage() {
                   }
             }
 
+            const handleEncryptionUpdate = (data) => {
+                  console.log("Transcription update:", data)
+                  if (data.status === 'completed') {
+                        setTranscriptionResult(data)
+                        setExpanded(true)
+                        window.electron.send('resize-recording-window', { height: 600 })
+                  }
+            }
+
             window.electron.receive('update-record-time', handleTimeUpdate)
             window.electron.receive('recording-paused-state', handlePausedState)
             window.electron.receive('recording-control-update', handleRecordingControl)
+            window.electron.receive('transcription-updated', handleEncryptionUpdate)
 
             return () => {
                   window.electron.removeAllListeners?.('update-record-time')
                   window.electron.removeAllListeners?.('recording-paused-state')
                   window.electron.removeAllListeners?.('recording-control-update')
+                  window.electron.removeAllListeners?.('transcription-updated')
             }
       }, [])
 
@@ -124,6 +137,14 @@ export default function OnRecordPage() {
       const handleReturnToDashboard = () => {
             if (typeof window !== 'undefined' && window.electron) {
                   window.electron.send('close-overlay')
+            }
+      }
+
+      const toggleExpand = () => {
+            const newExpanded = !expanded
+            setExpanded(newExpanded)
+            if (typeof window !== 'undefined' && window.electron) {
+                  window.electron.send('resize-recording-window', { height: newExpanded ? 600 : 250 })
             }
       }
 
@@ -251,6 +272,51 @@ export default function OnRecordPage() {
                               <div className="w-1 h-1 rounded-full bg-white/20" />
                         </div>
                   </motion.div>
+
+                  {/* Result Dropdown */}
+                  <AnimatePresence>
+                        {expanded && transcriptionResult && (
+                              <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="w-full max-w-sm mt-4 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+                              >
+                                    <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                                          <h3 className="text-sm font-bold text-white truncate pr-4">{transcriptionResult.title}</h3>
+                                          <button
+                                                onClick={toggleExpand}
+                                                className="p-1 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                                          >
+                                                <X className="w-4 h-4" />
+                                          </button>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar max-h-[300px]">
+                                          {transcriptionResult.details.summary && (
+                                                <div className="mb-4">
+                                                      <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-2">{t.dashboardPage.summary}</h4>
+                                                      <p className="text-sm text-neutral-300 leading-relaxed font-light">{transcriptionResult.details.summary}</p>
+                                                </div>
+                                          )}
+
+                                          {transcriptionResult.details.actionItems && transcriptionResult.details.actionItems.length > 0 && (
+                                                <div>
+                                                      <h4 className="text-xs font-mono text-amber-500 uppercase tracking-widest mb-2">{t.dashboardPage.actionItems}</h4>
+                                                      <ul className="space-y-2">
+                                                            {transcriptionResult.details.actionItems.map((item, i) => (
+                                                                  <li key={i} className="flex items-start gap-2 text-xs text-neutral-300">
+                                                                        <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                                                        {item}
+                                                                  </li>
+                                                            ))}
+                                                      </ul>
+                                                </div>
+                                          )}
+                                    </div>
+                              </motion.div>
+                        )}
+                  </AnimatePresence>
 
                   {/* Return to Dashboard Button */}
                   <AnimatePresence>

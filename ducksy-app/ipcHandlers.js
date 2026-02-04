@@ -6,10 +6,15 @@ const { transcribeAudio, analyzeImage } = require("./utils/gemini");
 require("dotenv").config();
 
 let mainWindow = null;
+let onRecordingWindow = null;
 let geminiApiKey = process.env.GEMINI_API_KEY;
 
 const setMainWindow = (window) => {
       mainWindow = window;
+};
+
+const setOnRecordingWindow = (window) => {
+      onRecordingWindow = window;
 };
 
 const setGeminiApiKey = (apiKey) => {
@@ -34,6 +39,13 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
 
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "processing"
+                  });
+            }
+
+            if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                  onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "processing"
                   });
@@ -72,6 +84,15 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                   });
             }
 
+            if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                  onRecordingWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "completed",
+                        title: result.title,
+                        details: result.details
+                  });
+            }
+
             console.log(`Transcription completed for file ${fileId}`);
       } catch (error) {
             console.error(`Transcription failed for file ${fileId}:`, error);
@@ -86,6 +107,14 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
 
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "failed",
+                        error: error.message
+                  });
+            }
+
+            if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                  onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "failed",
                         error: error.message
@@ -112,6 +141,13 @@ const processImageAnalysis = async (fileId, filePath, mimeType) => {
 
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "processing"
+                  });
+            }
+
+            if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                  onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "processing"
                   });
@@ -150,6 +186,15 @@ const processImageAnalysis = async (fileId, filePath, mimeType) => {
                   });
             }
 
+            if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                  onRecordingWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "completed",
+                        title: result.title,
+                        details: result.details
+                  });
+            }
+
             console.log(`Image analysis completed for file ${fileId}`);
       } catch (error) {
             console.error(`Image analysis failed for file ${fileId}:`, error);
@@ -164,6 +209,14 @@ const processImageAnalysis = async (fileId, filePath, mimeType) => {
 
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "failed",
+                        error: error.message
+                  });
+            }
+
+            if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                  onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "failed",
                         error: error.message
@@ -310,6 +363,14 @@ const registerIpcHandlers = () => {
                         });
                   }
 
+                  if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                        onRecordingWindow.webContents.send("recording-saved", {
+                              fileId: fileId,
+                              filePath: filePath,
+                              fileName: fileName
+                        });
+                  }
+
                   processTranscription(fileId, filePath, mimeType, userLanguage);
 
                   return {
@@ -330,7 +391,7 @@ const registerIpcHandlers = () => {
       });
 
       ipcMain.handle("save-image-file", async (event, data) => {
-            const { buffer, mimeType, width, height, title = "" } = data;
+            const { buffer, mimeType, width, height, title, mode = "lens" } = data;
 
             try {
                   const timestamp = Date.now();
@@ -345,17 +406,19 @@ const registerIpcHandlers = () => {
 
                   const filePath = path.join(savePath, fileName);
 
-                  // buffer comes as base64 string from renderer
-                  const base64Data = buffer.replace(/^data:image\/\w+;base64,/, "");
+                  // Handle Base64 Data URI or raw Base64
+                  let base64Data = buffer;
+                  if (typeof buffer === 'string' && buffer.startsWith('data:')) {
+                        base64Data = buffer.replace(/^data:image\/\w+;base64,/, "");
+                  }
+
                   const imageBuffer = Buffer.from(base64Data, "base64");
                   fs.writeFileSync(filePath, imageBuffer);
 
-                  console.log(`Image saved: ${filePath} (${width}x${height})`);
-
-                  // Create file record
+                  // Create DB records
                   const fileResult = db.createFile({
-                        title: title || `Capture ${new Date().toLocaleString()}`,
-                        mode: "lens",
+                        title: title || `Capture ${new Date(timestamp).toLocaleString()}`,
+                        mode: mode,
                         description: "",
                         name: fileNameWithoutExt,
                         path: filePath,
@@ -369,44 +432,44 @@ const registerIpcHandlers = () => {
 
                   db.createTranscription({
                         fileId: fileId,
-                        type: "summary",
-                        title: title || `Capture ${new Date().toLocaleString()}`,
+                        status: "pending",
+                        type: "analysis",
+                        title: title || `Capture ${new Date(timestamp).toLocaleString()}`,
                         summary: "",
                         content: "",
-                        language: "en", // Default to English or handle user language
-                        status: "pending",
+                        language: "en",
                         details: {},
                         calendarEventId: null,
                         notionPageId: null
                   });
 
-                  // Notify that a new file exists (so session list updates)
+                  const notificationData = {
+                        fileId: fileId,
+                        filePath: filePath,
+                        fileName: fileName
+                  };
+
                   if (mainWindow && !mainWindow.isDestroyed()) {
-                        mainWindow.webContents.send("recording-saved", {
-                              fileId: fileId,
-                              filePath: filePath,
-                              fileName: fileName
-                        });
+                        mainWindow.webContents.send("recording-saved", notificationData);
                   }
 
-                  // Start analysis
+                  if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                        onRecordingWindow.webContents.send("recording-saved", notificationData);
+                  }
+
+                  // Trigger Analysis
                   processImageAnalysis(fileId, filePath, mimeType || "image/png");
 
                   return {
                         success: true,
                         fileId: fileId,
-                        filePath: filePath,
-                        fileName: fileName
+                        filePath: filePath
                   };
             } catch (err) {
                   console.error("Failed to save image file:", err);
-                  return {
-                        success: false,
-                        error: err.message
-                  };
+                  return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("update-transcription", async (event, data) => {
             const { fileId, type, title, summary, content, language, status, details } = data;
 
@@ -503,4 +566,5 @@ const registerIpcHandlers = () => {
 module.exports = {
       registerIpcHandlers,
       setMainWindow,
+      setOnRecordingWindow,
 };
