@@ -199,7 +199,6 @@ async function createWindow() {
 app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
-      createCaptureScreen();
       createSelectionWindow();
 
       // Register global shortcut
