@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("electron", {
                   "recording-control",
                   "open-overlay",
                   "close-overlay",
+                  "activate-magic-lens",
+                  "selection-complete",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.send(channel, data)
@@ -32,6 +34,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "recording-paused-state",
                   "recording-saved",
                   "transcription-updated",
+                  "magic-lens-selection",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.on(channel, (event, ...args) => callback(...args))
@@ -58,6 +61,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "isInitial",
                   "request-sizeCache",
                   "save-audio-file",
+                  "save-image-file",
                   "get-session-logs",
                   "get-session",
                   "delete-session",

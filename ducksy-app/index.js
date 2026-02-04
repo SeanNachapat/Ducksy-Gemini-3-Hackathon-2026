@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell } = require("electron")
+const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell, globalShortcut } = require("electron")
 const path = require("path")
 const fs = require("fs")
 const serve = require("electron-serve")
@@ -14,6 +14,7 @@ if (isProd) {
 
 let mainWindow
 let onRecordingWindow
+let selectionWindow
 let initalized
 let captureWindow
 
@@ -65,6 +66,54 @@ async function createOnRecordingWindow() {
             onRecordingWindow = null
       })
 }
+
+async function createSelectionWindow() {
+      const primaryDisplay = screen.getPrimaryDisplay()
+      const { x, y, width, height } = primaryDisplay.bounds
+
+      selectionWindow = new BrowserWindow({
+            x,
+            y,
+            width,
+            height,
+            backgroundColor: "#00000000", // Ensure transparency
+            frame: false,
+            transparent: true,
+            alwaysOnTop: true,
+            skipTaskbar: true,
+            autoHideMenuBar: true,
+            hasShadow: false,
+            resizable: false,
+            movable: false,
+            show: false,
+            fullscreen: true, // Ensure it covers everything
+            webPreferences: {
+                  preload: path.join(__dirname, "preload.js"),
+                  nodeIntegration: false,
+                  contextIsolation: true
+            }
+      })
+
+      selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+
+      // Initially hidden until activated
+      // selectionWindow.hide() 
+      // Actually, better to not show it immediately in constructor or hide it right after. 
+      // But creating it usually shows it. We can set `show: false` in options, but let's hide it if not activated?
+      // The request says "spawn... remain hidden by default".
+      // So let's add show: false to constructor.
+
+      if (isProd) {
+            await selectionWindow.loadURL("app://./magic-lens")
+      } else {
+            await selectionWindow.loadURL("http://localhost:3000/magic-lens")
+      }
+
+      selectionWindow.on("closed", () => {
+            selectionWindow = null
+      })
+}
+
 
 async function createCaptureScreen() {
       const { width, height } = screen.getPrimaryDisplay().size;
@@ -141,9 +190,18 @@ app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
       createCaptureScreen();
+      createSelectionWindow();
+
+      // Register global shortcut
+      globalShortcut.register('Alt+S', () => {
+            console.log('Alt+S pressed - activating magic lens')
+            // Emit the event to itself or just call the logic
+            ipcMain.emit('activate-magic-lens')
+      })
 })
 
 app.on("window-all-closed", () => {
+      globalShortcut.unregisterAll()
       if (process.platform !== "darwin") {
             app.quit()
       }
@@ -339,6 +397,40 @@ ipcMain.on("open-system-preferences", (event, type) => {
 })
 
 // ─── IPC: Overlay Window ──────────────────────────────────────
+
+ipcMain.on("activate-magic-lens", async () => {
+      // Minimize main window if needed, similar to recording
+      if (mainWindow && !mainWindow.isDestroyed()) {
+            // mainWindow.minimize() // Optional: decide if we want to minimize main window
+      }
+
+      if (!selectionWindow || selectionWindow.isDestroyed()) {
+            await createSelectionWindow()
+            selectionWindow.show()
+            selectionWindow.focus()
+      } else {
+            selectionWindow.show()
+            selectionWindow.focus()
+            // Ensure it's full screen on primary display
+            const primaryDisplay = screen.getPrimaryDisplay()
+            const { x, y, width, height } = primaryDisplay.bounds
+            selectionWindow.setBounds({ x, y, width, height })
+      }
+})
+
+ipcMain.on("selection-complete", (event, selection) => {
+      console.log("Selection complete:", selection)
+      if (selectionWindow && !selectionWindow.isDestroyed()) {
+            selectionWindow.hide()
+      }
+
+      // Here you would typically send this data back to the main window or process it
+      if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("magic-lens-selection", selection)
+            mainWindow.restore()
+            mainWindow.focus()
+      }
+})
 
 ipcMain.on("open-overlay", async () => {
       // Minimize main window to tray

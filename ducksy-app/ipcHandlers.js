@@ -2,7 +2,7 @@ const { ipcMain, app } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const db = require("./utils/db");
-const { transcribeAudio } = require("./utils/gemini");
+const { transcribeAudio, analyzeImage } = require("./utils/gemini");
 require("dotenv").config();
 
 let mainWindow = null;
@@ -75,6 +75,84 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
             console.log(`Transcription completed for file ${fileId}`);
       } catch (error) {
             console.error(`Transcription failed for file ${fileId}:`, error);
+
+            const transcription = db.getTranscriptionByFileId(fileId);
+            if (transcription) {
+                  db.updateTranscription({
+                        id: transcription.id,
+                        status: "failed"
+                  });
+            }
+
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "failed",
+                        error: error.message
+                  });
+            }
+      }
+};
+
+const processImageAnalysis = async (fileId, filePath, mimeType) => {
+      if (!geminiApiKey) {
+            console.error("Gemini API key not set");
+            db.updateTranscription({
+                  id: db.getTranscriptionByFileId(fileId)?.id,
+                  status: "failed"
+            });
+            return;
+      }
+
+      try {
+            db.updateTranscription({
+                  id: db.getTranscriptionByFileId(fileId)?.id,
+                  status: "processing"
+            });
+
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "processing"
+                  });
+            }
+
+            const imageBuffer = fs.readFileSync(filePath);
+            const base64Image = imageBuffer.toString("base64");
+
+            const result = await analyzeImage(base64Image, mimeType, geminiApiKey);
+
+            const transcription = db.getTranscriptionByFileId(fileId);
+            if (transcription) {
+                  db.updateTranscription({
+                        id: transcription.id,
+                        type: result.type,
+                        title: result.title,
+                        summary: result.summary,
+                        content: result.content,
+                        language: result.language,
+                        status: "completed",
+                        details: result.details
+                  });
+
+                  db.updateFile({
+                        id: fileId,
+                        title: result.title
+                  });
+            }
+
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send("transcription-updated", {
+                        fileId: fileId,
+                        status: "completed",
+                        title: result.title,
+                        details: result.details
+                  });
+            }
+
+            console.log(`Image analysis completed for file ${fileId}`);
+      } catch (error) {
+            console.error(`Image analysis failed for file ${fileId}:`, error);
 
             const transcription = db.getTranscriptionByFileId(fileId);
             if (transcription) {
@@ -244,6 +322,84 @@ const registerIpcHandlers = () => {
                   };
             } catch (err) {
                   console.error("Failed to save audio file:", err);
+                  return {
+                        success: false,
+                        error: err.message
+                  };
+            }
+      });
+
+      ipcMain.handle("save-image-file", async (event, data) => {
+            const { buffer, mimeType, width, height, title = "" } = data;
+
+            try {
+                  const timestamp = Date.now();
+                  const fileName = `capture_${timestamp}.png`;
+                  const fileNameWithoutExt = `capture_${timestamp}`;
+
+                  const savePath = path.join(app.getPath("userData"), "captures");
+
+                  if (!fs.existsSync(savePath)) {
+                        fs.mkdirSync(savePath, { recursive: true });
+                  }
+
+                  const filePath = path.join(savePath, fileName);
+
+                  // buffer comes as base64 string from renderer
+                  const base64Data = buffer.replace(/^data:image\/\w+;base64,/, "");
+                  const imageBuffer = Buffer.from(base64Data, "base64");
+                  fs.writeFileSync(filePath, imageBuffer);
+
+                  console.log(`Image saved: ${filePath} (${width}x${height})`);
+
+                  // Create file record
+                  const fileResult = db.createFile({
+                        title: title || `Capture ${new Date().toLocaleString()}`,
+                        mode: "lens",
+                        description: "",
+                        name: fileNameWithoutExt,
+                        path: filePath,
+                        size: imageBuffer.length,
+                        type: mimeType || "image/png",
+                        isAnalyzed: 0,
+                        duration: 0
+                  });
+
+                  const fileId = fileResult.lastInsertRowid;
+
+                  db.createTranscription({
+                        fileId: fileId,
+                        type: "summary",
+                        title: title || `Capture ${new Date().toLocaleString()}`,
+                        summary: "",
+                        content: "",
+                        language: "en", // Default to English or handle user language
+                        status: "pending",
+                        details: {},
+                        calendarEventId: null,
+                        notionPageId: null
+                  });
+
+                  // Notify that a new file exists (so session list updates)
+                  if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send("recording-saved", {
+                              fileId: fileId,
+                              filePath: filePath,
+                              fileName: fileName
+                        });
+                  }
+
+                  // Start analysis
+                  processImageAnalysis(fileId, filePath, mimeType || "image/png");
+
+                  return {
+                        success: true,
+                        fileId: fileId,
+                        filePath: filePath,
+                        fileName: fileName
+                  };
+            } catch (err) {
+                  console.error("Failed to save image file:", err);
                   return {
                         success: false,
                         error: err.message

@@ -115,7 +115,10 @@ export default function OnRecordPage() {
       }
 
       const handleCameraClick = () => {
-            console.log('Camera clicked')
+            console.log('Camera clicked - activating magic lens')
+            if (typeof window !== 'undefined' && window.electron) {
+                  window.electron.send('activate-magic-lens')
+            }
       }
 
       const handleReturnToDashboard = () => {
