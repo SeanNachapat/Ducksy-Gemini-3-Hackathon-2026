@@ -40,6 +40,99 @@ export default function DashboardPage() {
       // Use the hook to fetch session logs
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
 
+      // Handle Magic Lens Selection
+      React.useEffect(() => {
+            const handleSelection = async (selection) => {
+                  if (!selection) return
+                  console.log("Received selection:", selection)
+
+                  try {
+                        // 1. Get screen sources to find the primary screen (or just capture the screen)
+                        const sources = await window.electron.invoke("get-screen-sources")
+                        if (!sources || sources.length === 0) {
+                              console.error("No screen sources found")
+                              return
+                        }
+
+                        // Assuming the first source is the primary screen or the one we want
+                        // In a real multi-monitor setup, we might need to map coordinates to screen, 
+                        // but for now, we'll iterate sources to find one that matches or just use the first/primary.
+                        // Since MagicLens overlay is on primary display (usually), we use the source that looks like 'Entire Screen' or index 0.
+                        const source = sources[0] // Simplified for hackathon
+
+                        // 2. Capture the stream
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                              audio: false,
+                              video: {
+                                    mandatory: {
+                                          chromeMediaSource: "desktop",
+                                          chromeMediaSourceId: source.id,
+                                    },
+                              },
+                        })
+
+                        // 3. Draw to canvas and crop
+                        const video = document.createElement("video")
+                        video.srcObject = stream
+                        video.onloadedmetadata = () => {
+                              video.play()
+
+                              // Wait a bit for the video to actually render a frame
+                              setTimeout(() => {
+                                    const canvas = document.createElement("canvas")
+                                    canvas.width = selection.width
+                                    canvas.height = selection.height
+                                    const ctx = canvas.getContext("2d")
+
+                                    // Draw the specific region
+                                    // source x, y, w, h -> dest x, y, w, h
+                                    // Note: selection.x/y might need to account for high DPI (devicePixelRatio) 
+                                    // or relative to the captured stream resolution.
+                                    // Usually getUserMedia returns a stream matching the screen resolution.
+                                    // Check if we need to scale.
+                                    // For simplicity, we assume 1:1 for now or rely on screen coordinates matching stream.
+
+                                    // However, high DPI screens (Retina) might have higher resolution stream than logical css pixels.
+                                    // We'll trust the browser handles 'desktop' source size reasonably well or we might grab a bit off.
+                                    // Validating exact pixel ratio is complex, so we'll proceed with direct mapping.
+
+                                    ctx.drawImage(
+                                          video,
+                                          selection.x, selection.y, selection.width, selection.height, // Source
+                                          0, 0, selection.width, selection.height // Dest
+                                    )
+
+                                    const dataUrl = canvas.toDataURL("image/png")
+
+                                    // Stop all tracks
+                                    stream.getTracks().forEach(track => track.stop())
+
+                                    // 4. Save the image
+                                    window.electron.invoke("save-image-file", {
+                                          buffer: dataUrl,
+                                          mimeType: "image/png",
+                                          width: selection.width,
+                                          height: selection.height,
+                                          title: `Magic Lens Selection`
+                                    })
+                              }, 300) // 300ms delay to ensure frame is ready and potential overlay is gone
+                        }
+                  } catch (err) {
+                        console.error("Failed to capture screen:", err)
+                  }
+            }
+
+            if (window.electron) {
+                  window.electron.receive("magic-lens-selection", handleSelection)
+            }
+
+            return () => {
+                  if (window.electron) {
+                        window.electron.removeListener("magic-lens-selection", handleSelection)
+                  }
+            }
+      }, [])
+
       const modes = [
             { id: "ghost", label: t.modes.ghost, icon: Ghost, description: t.modes.ghostDesc, color: "text-neutral-500", border: "border-neutral-800 bg-neutral-900" },
             { id: "lens", label: t.modes.lens, icon: Eye, description: t.modes.lensDesc, color: "text-amber-400", border: "border-amber-500/50 bg-amber-500/10" },
