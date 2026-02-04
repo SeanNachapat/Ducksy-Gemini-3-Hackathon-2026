@@ -111,39 +111,6 @@ async function createSelectionWindow() {
 }
 
 
-async function createCaptureScreen() {
-      if (captureWindow && !captureWindow.isDestroyed()) {
-            captureWindow.show()
-            captureWindow.focus()
-            return
-      }
-
-      const { width, height } = screen.getPrimaryDisplay().size;
-
-      captureWindow = new BrowserWindow({
-            width,
-            height,
-            titleBarStyle: "hidden",
-            autoHideMenuBar: true,
-            alwaysOnTop: true,
-            frame: false,
-            transparent: true,
-            hasShadow: false,
-            skipTaskbar: true,
-            resizable: false,
-            movable: true,
-            webPreferences: {
-                  preload: path.join(__dirname, "preload.js"),
-                  nodeIntegration: false,
-                  contextIsolation: true,
-                  defaultFontFamily: "monospace"
-            },
-      })
-
-      captureWindow.loadURL("http://localhost:3000/capture")
-
-}
-
 function closeOnRecordingWindow() {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.close()
@@ -190,7 +157,6 @@ async function createWindow() {
 app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
-      createCaptureScreen();
       createSelectionWindow();
 
       // Register global shortcut
