@@ -156,7 +156,10 @@ const processImageAnalysis = async (fileId, filePath, mimeType) => {
             const imageBuffer = fs.readFileSync(filePath);
             const base64Image = imageBuffer.toString("base64");
 
-            const result = await analyzeImage(base64Image, mimeType, geminiApiKey);
+            const fileRec = db.getFileById(fileId);
+            const metadata = fileRec && fileRec.metadata ? JSON.parse(fileRec.metadata) : null;
+
+            const result = await analyzeImage(base64Image, mimeType, geminiApiKey, null, metadata);
 
             const transcription = db.getTranscriptionByFileId(fileId);
             if (transcription) {
@@ -327,7 +330,6 @@ const registerIpcHandlers = () => {
 
                   console.log(`Audio saved: ${filePath} (${duration}s)`);
 
-                  // Create file record
                   const fileResult = db.createFile({
                         title: title || `Recording ${new Date().toLocaleString()}`,
                         mode: mode,
@@ -391,7 +393,7 @@ const registerIpcHandlers = () => {
       });
 
       ipcMain.handle("save-image-file", async (event, data) => {
-            const { buffer, mimeType, width, height, title, mode = "lens" } = data;
+            const { buffer, mimeType, width, height, title, mode = "lens", selection } = data;
 
             try {
                   const timestamp = Date.now();
@@ -406,7 +408,6 @@ const registerIpcHandlers = () => {
 
                   const filePath = path.join(savePath, fileName);
 
-                  // Handle Base64 Data URI or raw Base64
                   let base64Data = buffer;
                   if (typeof buffer === 'string' && buffer.startsWith('data:')) {
                         base64Data = buffer.replace(/^data:image\/\w+;base64,/, "");
@@ -415,7 +416,6 @@ const registerIpcHandlers = () => {
                   const imageBuffer = Buffer.from(base64Data, "base64");
                   fs.writeFileSync(filePath, imageBuffer);
 
-                  // Create DB records
                   const fileResult = db.createFile({
                         title: title || `Capture ${new Date(timestamp).toLocaleString()}`,
                         mode: mode,
@@ -425,7 +425,8 @@ const registerIpcHandlers = () => {
                         size: imageBuffer.length,
                         type: mimeType || "image/png",
                         isAnalyzed: 0,
-                        duration: 0
+                        duration: 0,
+                        metadata: selection || {}
                   });
 
                   const fileId = fileResult.lastInsertRowid;
@@ -433,7 +434,7 @@ const registerIpcHandlers = () => {
                   db.createTranscription({
                         fileId: fileId,
                         status: "pending",
-                        type: "analysis",
+                        type: "summary",
                         title: title || `Capture ${new Date(timestamp).toLocaleString()}`,
                         summary: "",
                         content: "",
@@ -457,7 +458,6 @@ const registerIpcHandlers = () => {
                         onRecordingWindow.webContents.send("recording-saved", notificationData);
                   }
 
-                  // Trigger Analysis
                   processImageAnalysis(fileId, filePath, mimeType || "image/png");
 
                   return {
@@ -491,7 +491,6 @@ const registerIpcHandlers = () => {
                         details: details
                   });
 
-                  // Also update file title if provided
                   if (title) {
                         db.updateFile({
                               id: fileId,
@@ -499,7 +498,6 @@ const registerIpcHandlers = () => {
                         });
                   }
 
-                  // Notify renderer about the update
                   if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send("transcription-updated", {
                               fileId: fileId,
@@ -516,7 +514,6 @@ const registerIpcHandlers = () => {
             }
       });
 
-      // Get all files
       ipcMain.handle("get-all-files", async () => {
             try {
                   const files = db.getAllFiles();
@@ -527,7 +524,6 @@ const registerIpcHandlers = () => {
             }
       });
 
-      // Get database size
       ipcMain.handle("get-db-size", async () => {
             try {
                   const size = await db.getSizeOfdb();

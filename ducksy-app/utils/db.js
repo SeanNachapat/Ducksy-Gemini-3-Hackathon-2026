@@ -22,7 +22,6 @@ const initializeDatabase = () => {
       db = new Database(getPath);
       console.log("Database is Initialized at click to open file" + getPath);
 
-      // Migration: Add new columns to transcriptions table if they don't exist
       const migrateTranscriptions = () => {
             try {
                   const tableInfo = db.prepare("PRAGMA table_info(transcriptions)").all();
@@ -43,12 +42,22 @@ const initializeDatabase = () => {
                         console.log("Migration: Added 'details' column to transcriptions");
                   }
             } catch (err) {
-                  // Table doesn't exist yet, will be created below
                   console.log("Migration skipped: transcriptions table not found yet");
+            }
+
+            try {
+                  const fileTableInfo = db.prepare("PRAGMA table_info(files)").all();
+                  const fileColumns = fileTableInfo.map(col => col.name);
+
+                  if (!fileColumns.includes("metadata")) {
+                        db.exec(`ALTER TABLE files ADD COLUMN metadata TEXT DEFAULT '{}'`);
+                        console.log("Migration: Added 'metadata' column to files");
+                  }
+            } catch (err) {
+                  console.log("Migration skipped: files table not found yet");
             }
       };
 
-      // Run migration first
       migrateTranscriptions();
 
       db.exec(`
@@ -82,6 +91,7 @@ const initializeDatabase = () => {
                   size INTEGER NOT NULL,
                   duration INTEGER NOT NULL,
                   type TEXT NOT NULL,
+                  metadata TEXT DEFAULT '{}',
                   isAnalyzed BOOLEAN DEFAULT 0,
                   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -112,8 +122,8 @@ const initializeDatabase = () => {
 
 const createFile = (file) => {
       const stmt = db.prepare(`
-            INSERT INTO files (title, mode, description, name, path, size, type, isAnalyzed, duration)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO files (title, mode, description, name, path, size, type, isAnalyzed, duration, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       return stmt.run(
             file.title,
@@ -124,7 +134,8 @@ const createFile = (file) => {
             file.size,
             file.type,
             file.isAnalyzed,
-            file.duration
+            file.duration,
+            JSON.stringify(file.metadata || {})
       );
 };
 
@@ -244,7 +255,6 @@ const getSessionLogs = () => {
                   details = {};
             }
 
-            // Calculate time ago
             const createdAt = new Date(file.createdAt);
             const now = new Date();
             const diffMs = now - createdAt;

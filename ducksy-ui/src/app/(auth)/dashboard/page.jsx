@@ -37,30 +37,20 @@ export default function DashboardPage() {
       const [isDeleting, setIsDeleting] = useState(false)
       const { t } = useSettings()
 
-      // Use the hook to fetch session logs
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
 
-      // Handle Magic Lens Selection
       React.useEffect(() => {
             const handleSelection = async (selection) => {
                   if (!selection) return
                   console.log("Received selection:", selection)
 
                   try {
-                        // 1. Get screen sources to find the primary screen (or just capture the screen)
                         const sources = await window.electron.invoke("get-screen-sources")
                         if (!sources || sources.length === 0) {
                               console.error("No screen sources found")
                               return
                         }
-
-                        // Assuming the first source is the primary screen or the one we want
-                        // In a real multi-monitor setup, we might need to map coordinates to screen, 
-                        // but for now, we'll iterate sources to find one that matches or just use the first/primary.
-                        // Since MagicLens overlay is on primary display (usually), we use the source that looks like 'Entire Screen' or index 0.
-                        const source = sources[0] // Simplified for hackathon
-
-                        // 2. Capture the stream
+                        const source = sources[0] 
                         const stream = await navigator.mediaDevices.getUserMedia({
                               audio: false,
                               video: {
@@ -71,48 +61,29 @@ export default function DashboardPage() {
                               },
                         })
 
-                        // 3. Draw to canvas and crop
                         const video = document.createElement("video")
                         video.srcObject = stream
                         video.onloadedmetadata = () => {
                               video.play()
 
-                              // Wait a bit for the video to actually render a frame
                               setTimeout(() => {
                                     const canvas = document.createElement("canvas")
-                                    canvas.width = selection.width
-                                    canvas.height = selection.height
+                                    canvas.width = video.videoWidth
+                                    canvas.height = video.videoHeight
                                     const ctx = canvas.getContext("2d")
-
-                                    // Draw the specific region
-                                    // source x, y, w, h -> dest x, y, w, h
-                                    // Note: selection.x/y might need to account for high DPI (devicePixelRatio) 
-                                    // or relative to the captured stream resolution.
-                                    // Usually getUserMedia returns a stream matching the screen resolution.
-                                    // Check if we need to scale.
-                                    // For simplicity, we assume 1:1 for now or rely on screen coordinates matching stream.
-
-                                    // However, high DPI screens (Retina) might have higher resolution stream than logical css pixels.
-                                    // We'll trust the browser handles 'desktop' source size reasonably well or we might grab a bit off.
-                                    // Validating exact pixel ratio is complex, so we'll proceed with direct mapping.
-
-                                    ctx.drawImage(
-                                          video,
-                                          selection.x, selection.y, selection.width, selection.height, // Source
-                                          0, 0, selection.width, selection.height // Dest
-                                    )
+                                    ctx.drawImage(video, 0, 0)
 
                                     const dataUrl = canvas.toDataURL("image/png")
 
                                     window.electron.invoke("save-image-file", {
                                           buffer: dataUrl,
                                           mimeType: "image/png",
-                                          width: selection.width,
-                                          height: selection.height,
-                                          title: `Screen Selection`
+                                          width: video.videoWidth,
+                                          height: video.videoHeight,
+                                          title: `Magic Lens Capture`,
+                                          selection: selection
                                     })
 
-                                    // Cleanup
                                     stream.getTracks().forEach(track => track.stop())
                                     video.remove()
                                     canvas.remove()
@@ -162,7 +133,6 @@ export default function DashboardPage() {
                   setSelectedSession(null)
             } else {
                   console.error("Failed to delete session:", result.error)
-                  // You could show a toast notification here
             }
             setIsDeleting(false)
       }

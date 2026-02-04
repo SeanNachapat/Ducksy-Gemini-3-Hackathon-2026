@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X } from "lucide-react"
+import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2 } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
 import { useSettings } from "@/hooks/SettingsContext"
 import { useSearchParams } from "next/navigation"
@@ -14,6 +14,7 @@ export default function OnRecordPage() {
       const [isRecording, setIsRecording] = useState(false)
       const [expanded, setExpanded] = useState(false)
       const [transcriptionResult, setTranscriptionResult] = useState(null)
+      const [isProcessing, setIsProcessing] = useState(false)
       const [deviceId, setDeviceId] = useState(null)
 
       const {
@@ -77,19 +78,38 @@ export default function OnRecordPage() {
                   }
             }
 
-            const handleEncryptionUpdate = (data) => {
-                  console.log("Transcription update:", data)
-                  if (data.status === 'completed') {
-                        setTranscriptionResult(data)
+            const handleTranscriptionUpdate = (data) => {
+                  console.log('Transcription update:', data)
+
+                  let parsedData = { ...data }
+                  if (parsedData.details && typeof parsedData.details === 'string') {
+                        try {
+                              parsedData.details = JSON.parse(parsedData.details)
+                        } catch (e) {
+                              console.error('Failed to parse details:', e)
+                              parsedData.details = {}
+                        }
+                  }
+
+                  if (parsedData.status === 'completed') {
+                        setTranscriptionResult(parsedData)
+                        setIsProcessing(false)
                         setExpanded(true)
-                        window.electron.send('resize-recording-window', { height: 600 })
+                        if (typeof window !== 'undefined' && window.electron) {
+                              window.electron.send('resize-recording-window', { height: 600 })
+                        }
+                  } else if (parsedData.status === 'failed') {
+                        setTranscriptionResult(parsedData)
+                        setIsProcessing(false)
+                  } else {
+                        setIsProcessing(true)
                   }
             }
 
             window.electron.receive('update-record-time', handleTimeUpdate)
             window.electron.receive('recording-paused-state', handlePausedState)
             window.electron.receive('recording-control-update', handleRecordingControl)
-            window.electron.receive('transcription-updated', handleEncryptionUpdate)
+            window.electron.receive('transcription-updated', handleTranscriptionUpdate)
 
             return () => {
                   window.electron.removeAllListeners?.('update-record-time')
@@ -99,7 +119,6 @@ export default function OnRecordPage() {
             }
       }, [])
 
-      // Sync with useRecorder hook
       useEffect(() => {
             setIsRecording(recorderIsRecording)
             setIsPaused(recorderIsPaused)
@@ -112,6 +131,11 @@ export default function OnRecordPage() {
             stopRecording()
             if (typeof window !== 'undefined' && window.electron) {
                   window.electron.send('recording-control', { action: 'stop' })
+            }
+            setIsProcessing(true)
+            setExpanded(true)
+            if (typeof window !== 'undefined' && window.electron) {
+                  window.electron.send('resize-recording-window', { height: 600 })
             }
       }
 
@@ -171,11 +195,11 @@ export default function OnRecordPage() {
                               {/* Glow effect */}
                               <div className={`absolute inset-0 rounded-full blur-xl opacity-50 ${isRecording ? 'bg-linear-to-r from-amber-500/20 via-red-500/20 to-amber-500/20 animate-pulse' : 'bg-linear-to-r from-amber-500/10 via-amber-500/10 to-amber-500/10'}`} />
 
-                              <div className="relative flex items-center gap-4">
+                              <div className="relative flex items-center gap-2">
                                     {isRecording ? (
                                           <>
-                                                {/* Recording Indicator */}
-                                                <div className="flex items-center gap-2">
+                                                {/* Recording Indicator & Timer */}
+                                                <div className="flex items-center gap-2 pl-1 pr-2">
                                                       <motion.div
                                                             animate={{
                                                                   scale: isPaused ? 1 : [1, 1.2, 1],
@@ -188,61 +212,49 @@ export default function OnRecordPage() {
                                                             }}
                                                             className={`w-3 h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500'} shadow-lg ${isPaused ? 'shadow-yellow-500/50' : 'shadow-red-500/50'}`}
                                                       />
-                                                      <span className={`text-sm font-mono font-bold tracking-wider ${isPaused ? 'text-yellow-400' : 'text-red-400'}`}>
-                                                            {isPaused ? t.overlay.paused : t.overlay.rec}
-                                                      </span>
+
+                                                      <div className="text-lg font-mono font-bold text-white tracking-wider">
+                                                            {formattedDuration || recordTime.formatted}
+                                                      </div>
                                                 </div>
 
-                                                {/* Timer */}
-                                                <div className="text-2xl font-mono font-bold text-white tracking-wider min-w-[80px] text-center">
-                                                      {formattedDuration || recordTime.formatted}
-                                                </div>
+                                                {/* Pause/Resume Button */}
+                                                <motion.button
+                                                      whileHover={{ scale: 1.05 }}
+                                                      whileTap={{ scale: 0.95 }}
+                                                      onClick={handlePauseResume}
+                                                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                >
+                                                      {isPaused ? (
+                                                            <Play className="w-4 h-4 text-white fill-white" strokeWidth={0} />
+                                                      ) : (
+                                                            <Pause className="w-4 h-4 text-white" strokeWidth={2} />
+                                                      )}
+                                                </motion.button>
 
-                                                {/* Divider */}
-                                                <div className="w-px h-8 bg-white/10" />
-
-                                                {/* Control Buttons */}
-                                                <div className="flex items-center gap-2">
-                                                      {/* Pause/Resume Button */}
-                                                      <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            onClick={handlePauseResume}
-                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
-                                                      >
-                                                            {isPaused ? (
-                                                                  <Play className="w-4 h-4 text-white fill-white" strokeWidth={0} />
-                                                            ) : (
-                                                                  <Pause className="w-4 h-4 text-white" strokeWidth={2} />
-                                                            )}
-                                                      </motion.button>
-
-                                                      {/* Stop Button */}
-                                                      <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            onClick={handleStop}
-                                                            className="w-10 h-10 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center transition-all group"
-                                                      >
-                                                            <Square className="w-4 h-4 text-red-400 fill-red-400" strokeWidth={0} />
-                                                      </motion.button>
-                                                </div>
+                                                {/* Stop Button */}
+                                                <motion.button
+                                                      whileHover={{ scale: 1.05 }}
+                                                      whileTap={{ scale: 0.95 }}
+                                                      onClick={handleStop}
+                                                      className="w-10 h-10 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center transition-all group"
+                                                >
+                                                      <Square className="w-4 h-4 text-red-400 fill-red-400" strokeWidth={0} />
+                                                </motion.button>
                                           </>
                                     ) : (
                                           <>
                                                 {/* Three Action Buttons */}
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-2">
                                                       {/* Voice Button */}
                                                       <motion.button
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             onClick={handleVoiceClick}
-                                                            className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all group"
+                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                            title={t.voiceRecord}
                                                       >
-                                                            <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform">
-                                                                  <Mic className="w-5 h-5 text-neutral-400 group-hover:text-white" strokeWidth={1.5} />
-                                                            </div>
-                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.voiceRecord}</span>
+                                                            <Mic className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
                                                       </motion.button>
 
                                                       {/* Screen Share Button */}
@@ -250,12 +262,10 @@ export default function OnRecordPage() {
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             onClick={handleScreenClick}
-                                                            className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all group"
+                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                            title={t.overlay.screen}
                                                       >
-                                                            <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform">
-                                                                  <Monitor className="w-5 h-5 text-neutral-400 group-hover:text-white" strokeWidth={1.5} />
-                                                            </div>
-                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.overlay.screen}</span>
+                                                            <Monitor className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
                                                       </motion.button>
 
                                                       {/* Camera Button */}
@@ -263,12 +273,10 @@ export default function OnRecordPage() {
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             onClick={handleCameraClick}
-                                                            className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all group"
+                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                            title={t.capture}
                                                       >
-                                                            <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform">
-                                                                  <Camera className="w-5 h-5 text-neutral-400 group-hover:text-white" strokeWidth={1.5} />
-                                                            </div>
-                                                            <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.capture}</span>
+                                                            <Camera className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
                                                       </motion.button>
                                                 </div>
                                           </>
@@ -286,45 +294,132 @@ export default function OnRecordPage() {
 
                   {/* Result Dropdown */}
                   <AnimatePresence>
-                        {expanded && transcriptionResult && (
+                        {expanded && (isProcessing || transcriptionResult) && (
                               <motion.div
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: "auto" }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    className="w-full max-w-sm mt-4 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+                                    className="w-full max-w-xs mt-4 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
                               >
-                                    <div className="p-4 border-b border-white/5 flex items-center justify-between">
-                                          <h3 className="text-sm font-bold text-white truncate pr-4">{transcriptionResult.title}</h3>
-                                          <button
-                                                onClick={toggleExpand}
-                                                className="p-1 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                                    {isProcessing ? (
+                                          <motion.div
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="flex flex-col items-center justify-center p-8 h-[300px]"
                                           >
-                                                <X className="w-4 h-4" />
-                                          </button>
-                                    </div>
-
-                                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar max-h-[300px]">
-                                          {transcriptionResult.details.summary && (
-                                                <div className="mb-4">
-                                                      <h4 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-2">{t.dashboardPage.summary}</h4>
-                                                      <p className="text-sm text-neutral-300 leading-relaxed font-light">{transcriptionResult.details.summary}</p>
+                                                <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
+                                                <p className="text-sm font-medium text-white">{t.processing || "Analyzing..."}</p>
+                                                <p className="text-xs text-neutral-500 mt-2 text-center">Using Gemini 1.5 Flash</p>
+                                          </motion.div>
+                                    ) : transcriptionResult ? (
+                                          <motion.div
+                                                initial="hidden"
+                                                animate="visible"
+                                                variants={{
+                                                      hidden: { opacity: 0 },
+                                                      visible: {
+                                                            opacity: 1,
+                                                            transition: {
+                                                                  staggerChildren: 0.1
+                                                            }
+                                                      }
+                                                }}
+                                                className="flex flex-col h-full"
+                                          >
+                                                <div className="p-6 border-b border-white/5 flex items-start justify-between bg-neutral-900/30">
+                                                      <div>
+                                                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                                  <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-white/5 text-neutral-400 border border-white/5">
+                                                                        {transcriptionResult.mode || "lens"}
+                                                                  </span>
+                                                                  <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                                                        {transcriptionResult.type || "summary"}
+                                                                  </span>
+                                                            </div>
+                                                            <h2 className="text-xl font-bold text-white leading-tight">{transcriptionResult.title}</h2>
+                                                            <p className="text-xs text-neutral-500 mt-1">{t.session.summary} • Now</p>
+                                                      </div>
+                                                      <button
+                                                            onClick={toggleExpand}
+                                                            className="p-2 rounded-full hover:bg-white/10 text-neutral-500 hover:text-white transition-colors"
+                                                      >
+                                                            <ChevronUp className="w-5 h-5" />
+                                                      </button>
                                                 </div>
-                                          )}
 
-                                          {transcriptionResult.details.actionItems && transcriptionResult.details.actionItems.length > 0 && (
-                                                <div>
-                                                      <h4 className="text-xs font-mono text-amber-500 uppercase tracking-widest mb-2">{t.dashboardPage.actionItems}</h4>
-                                                      <ul className="space-y-2">
-                                                            {transcriptionResult.details.actionItems.map((item, i) => (
-                                                                  <li key={i} className="flex items-start gap-2 text-xs text-neutral-300">
-                                                                        <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-                                                                        {item}
-                                                                  </li>
-                                                            ))}
-                                                      </ul>
+                                                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar max-h-[400px]">
+                                                      {/* Topic */}
+                                                      {transcriptionResult.details?.topic && (
+                                                            <motion.div
+                                                                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                                                                  className="space-y-2"
+                                                            >
+                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.session.topic}</h3>
+                                                                  <p className="text-sm text-neutral-300 leading-relaxed bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                                                                        {transcriptionResult.details.topic}
+                                                                  </p>
+                                                            </motion.div>
+                                                      )}
+
+                                                      {/* Summary */}
+                                                      {transcriptionResult.details?.summary && (
+                                                            <motion.div
+                                                                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                                                                  className="space-y-2"
+                                                            >
+                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.session.summary}</h3>
+                                                                  <p className="text-sm text-neutral-300 leading-relaxed">
+                                                                        {transcriptionResult.details.summary}
+                                                                  </p>
+                                                            </motion.div>
+                                                      )}
+
+                                                      {/* Action Items */}
+                                                      {transcriptionResult.details?.actionItems && transcriptionResult.details.actionItems.length > 0 && (
+                                                            <motion.div
+                                                                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                                                                  className="space-y-2"
+                                                            >
+                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.session.actionItems}</h3>
+                                                                  <ul className="space-y-2">
+                                                                        {transcriptionResult.details.actionItems.map((item, i) => (
+                                                                              <motion.li
+                                                                                    key={i}
+                                                                                    variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}
+                                                                                    className="flex items-start gap-3 text-sm text-neutral-300 bg-white/[0.02] p-3 rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors"
+                                                                              >
+                                                                                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                                                                                    <span>{item}</span>
+                                                                              </motion.li>
+                                                                        ))}
+                                                                  </ul>
+                                                            </motion.div>
+                                                      )}
+
+                                                      {/* Code Snippet */}
+                                                      {transcriptionResult.details?.code && (
+                                                            <motion.div
+                                                                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                                                                  className="space-y-2"
+                                                            >
+                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.session.code}</h3>
+                                                                  <div className="p-3 bg-black/30 rounded-xl border border-white/5 font-mono text-xs text-neutral-300 overflow-x-auto">
+                                                                        <pre>{transcriptionResult.details.code}</pre>
+                                                                  </div>
+                                                            </motion.div>
+                                                      )}
                                                 </div>
-                                          )}
-                                    </div>
+                                                <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-end">
+                                                      <button
+                                                            onClick={() => window.electron.send('close-overlay')}
+                                                            className="px-4 py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200 transition-colors"
+                                                      >
+                                                            Done
+                                                      </button>
+                                                </div>
+                                          </motion.div>
+                                    ) : null}
                               </motion.div>
                         )}
                   </AnimatePresence>
@@ -346,6 +441,6 @@ export default function OnRecordPage() {
                               </motion.button>
                         )}
                   </AnimatePresence>
-            </div>
+            </div >
       )
 }

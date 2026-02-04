@@ -54,6 +54,8 @@ async function createOnRecordingWindow() {
             },
       })
 
+      setOnRecordingWindow(onRecordingWindow)
+
       onRecordingWindow.setPosition(width - width_f - 20, 20)
       onRecordingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
@@ -67,8 +69,6 @@ async function createOnRecordingWindow() {
             onRecordingWindow = null
             setOnRecordingWindow(null)
       })
-
-      setOnRecordingWindow(onRecordingWindow)
 }
 
 async function createSelectionWindow() {
@@ -84,7 +84,7 @@ async function createSelectionWindow() {
             y,
             width,
             height,
-            backgroundColor: "#00000000", // Ensure transparency
+            backgroundColor: "#00000000",
             frame: false,
             transparent: true,
             alwaysOnTop: true,
@@ -94,7 +94,7 @@ async function createSelectionWindow() {
             resizable: false,
             movable: false,
             show: false,
-            fullscreen: true, // Ensure it covers everything
+            fullscreen: true,
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
@@ -103,13 +103,6 @@ async function createSelectionWindow() {
       })
 
       selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-
-      // Initially hidden until activated
-      // selectionWindow.hide() 
-      // Actually, better to not show it immediately in constructor or hide it right after. 
-      // But creating it usually shows it. We can set `show: false` in options, but let's hide it if not activated?
-      // The request says "spawn... remain hidden by default".
-      // So let's add show: false to constructor.
 
       if (isProd) {
             await selectionWindow.loadURL("app://./magic-lens")
@@ -205,10 +198,8 @@ app.whenReady().then(async () => {
       registerIpcHandlers();
       createSelectionWindow();
 
-      // Register global shortcut
       globalShortcut.register('Alt+S', () => {
             console.log('Alt+S pressed - activating magic lens')
-            // Emit the event to itself or just call the logic
             ipcMain.emit('activate-magic-lens')
       })
 })
@@ -298,11 +289,9 @@ ipcMain.on("record-audio", async (event, data) => {
       const { action } = data
 
       if (action === "start") {
-            // Minimize main window to tray
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.minimize()
             }
-            // Create the recording overlay
             await createOnRecordingWindow()
       }
 })
@@ -320,27 +309,28 @@ ipcMain.on("recording-control", (event, data) => {
             mainWindow.webContents.send("recording-control-update", data)
       }
 
-      // Update the recording overlay window based on action
-      // if (data.action === "stop") {
-      //       closeOnRecordingWindow()
-      //       // Restore main window from minimized state
       ipcMain.on("close-overlay", () => {
             closeOnRecordingWindow()
-            // Restore main window
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.restore()
                   mainWindow.focus()
             }
       })
-      // }
 
-      // For pause/resume, forward the state to the overlay window
       if (data.action === "pause" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.webContents.send("recording-paused-state", { isPaused: true })
       }
 
       if (data.action === "resume" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.webContents.send("recording-paused-state", { isPaused: false })
+      }
+})
+
+ipcMain.on("resize-recording-window", (event, { height }) => {
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            const { width } = onRecordingWindow.getBounds()
+            onRecordingWindow.setSize(width, height)
+            console.log(`Resized recording window to height: ${height}`)
       }
 })
 
@@ -422,9 +412,8 @@ ipcMain.on("open-system-preferences", (event, type) => {
 // ─── IPC: Overlay Window ──────────────────────────────────────
 
 ipcMain.on("activate-magic-lens", async () => {
-      // Minimize main window if needed, similar to recording
       if (mainWindow && !mainWindow.isDestroyed()) {
-            // mainWindow.minimize() // Optional: decide if we want to minimize main window
+            mainWindow.minimize()
       }
 
       if (!selectionWindow || selectionWindow.isDestroyed()) {
@@ -434,7 +423,6 @@ ipcMain.on("activate-magic-lens", async () => {
       } else {
             selectionWindow.show()
             selectionWindow.focus()
-            // Ensure it's full screen on primary display
             const primaryDisplay = screen.getPrimaryDisplay()
             const { x, y, width, height } = primaryDisplay.bounds
             selectionWindow.setBounds({ x, y, width, height })
@@ -447,8 +435,6 @@ ipcMain.on("selection-complete", (event, selection) => {
             selectionWindow.hide()
       }
 
-      // Here you would typically send this data back to the main window or process it
-      // Here you would typically send this data back to the main window or process it
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send("magic-lens-selection", selection)
       }
@@ -463,12 +449,9 @@ ipcMain.on("selection-complete", (event, selection) => {
 })
 
 ipcMain.on("open-overlay", async () => {
-      // Minimize main window to tray
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.minimize()
       }
-
-      // Open or show overlay
       if (!onRecordingWindow || onRecordingWindow.isDestroyed()) {
             await createOnRecordingWindow()
       } else {
@@ -479,7 +462,6 @@ ipcMain.on("open-overlay", async () => {
 
 ipcMain.on("close-overlay", () => {
       closeOnRecordingWindow()
-      // Restore main window
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.restore()
             mainWindow.focus()
@@ -488,7 +470,6 @@ ipcMain.on("close-overlay", () => {
 
 ipcMain.on("resize-recording-window", (event, { width, height }) => {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
-            // Keep current width if not provided, or default to 450
             const currentBounds = onRecordingWindow.getBounds()
             const newWidth = width || currentBounds.width
             const newHeight = height || currentBounds.height
@@ -502,7 +483,6 @@ ipcMain.on("resize-recording-window", (event, { width, height }) => {
 ipcMain.handle("request-sizeCache", async (event) => {
       var size = await db.getSizeOfdb()
 
-      // Maximum 2 GB to Percent
       var maxCacheSize = 2 * 1024 * 1024 * 1024
       var percent = (size / maxCacheSize) * 100
 

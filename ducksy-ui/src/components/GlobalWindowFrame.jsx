@@ -16,7 +16,6 @@ export default function GlobalWindowFrame({ children }) {
         }
     }, [])
 
-    // Don't show window frame for overlay
     if (isOverlay) {
         return (
             <div className="h-screen w-screen bg-transparent">

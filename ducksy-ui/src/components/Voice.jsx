@@ -20,7 +20,6 @@ const Voice = ({ t, micDevice }) => {
             resetRecording,
       } = useRecorder()
 
-      // Auto-save เมื่อ audioBlob พร้อม (หลัง stop)
       useEffect(() => {
             if (!audioBlob) return
 

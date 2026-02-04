@@ -174,16 +174,33 @@ Rules:
       }
 }
 
-export async function analyzeImage(base64Image, mimeType, apiKey, customPrompt = null) {
+export async function analyzeImage(base64Image, mimeType, apiKey, customPrompt = null, metadata = null) {
       if (!apiKey) {
             throw new Error('API Key is required')
       }
 
       const modelId = 'gemini-2.0-flash'
 
+      let cropContext = ""
+      if (metadata && metadata.width && metadata.height) {
+            cropContext = `
+IMPORTANT CONTEXT:
+The user has intentionally selected a specific region of this image for you to analyze.
+Selection Coordinates:
+- X: ${metadata.x}
+- Y: ${metadata.y}
+- Width: ${metadata.width}
+- Height: ${metadata.height}
+
+INSTRUCTION:
+Focus your analysis PRIMARILY on the content within this selected region. Use the rest of the image only as context to better understand the selected area.
+`
+      }
+
       const prompt = customPrompt || `
 You are an expert image analysis assistant.
 Analyze the provided image and generate a structured analysis.
+${cropContext}
 
 Determine:
 1. What type of content this is: "summary" (document/notes/whiteboard), "chat" (screenshot of conversation), or "debug" (code/error screenshot)
