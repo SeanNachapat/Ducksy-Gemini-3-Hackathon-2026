@@ -3,7 +3,7 @@ const path = require("path")
 const fs = require("fs")
 const serve = require("electron-serve")
 const db = require("./utils/db")
-const { registerIpcHandlers, setMainWindow } = require("./ipcHandlers")
+const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./ipcHandlers")
 require("dotenv").config();
 
 const isProd = process.env.NODE_ENV === "production"
@@ -60,7 +60,10 @@ async function createOnRecordingWindow() {
 
       onRecordingWindow.on("closed", () => {
             onRecordingWindow = null
+            setOnRecordingWindow(null)
       })
+
+      setOnRecordingWindow(onRecordingWindow)
 }
 
 async function createSelectionWindow() {
@@ -274,6 +277,21 @@ ipcMain.on("recording-control", (event, data) => {
             mainWindow.webContents.send("recording-control-update", data)
       }
 
+      // Update the recording overlay window based on action
+      // if (data.action === "stop") {
+      //       closeOnRecordingWindow()
+      //       // Restore main window from minimized state
+      ipcMain.on("close-overlay", () => {
+            closeOnRecordingWindow()
+            // Restore main window
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.restore()
+                  mainWindow.focus()
+            }
+      })
+      // }
+
+      // For pause/resume, forward the state to the overlay window
       if (data.action === "pause" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.webContents.send("recording-paused-state", { isPaused: true })
       }
@@ -415,6 +433,17 @@ ipcMain.on("close-overlay", () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.restore()
             mainWindow.focus()
+      }
+})
+
+ipcMain.on("resize-recording-window", (event, { width, height }) => {
+      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+            // Keep current width if not provided, or default to 450
+            const currentBounds = onRecordingWindow.getBounds()
+            const newWidth = width || currentBounds.width
+            const newHeight = height || currentBounds.height
+
+            onRecordingWindow.setSize(newWidth, newHeight, true)
       }
 })
 

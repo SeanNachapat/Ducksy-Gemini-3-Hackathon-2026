@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
       Mic,
@@ -104,21 +104,22 @@ export default function DashboardPage() {
 
                                     const dataUrl = canvas.toDataURL("image/png")
 
-                                    // Stop all tracks
-                                    stream.getTracks().forEach(track => track.stop())
-
-                                    // 4. Save the image
                                     window.electron.invoke("save-image-file", {
                                           buffer: dataUrl,
                                           mimeType: "image/png",
                                           width: selection.width,
                                           height: selection.height,
-                                          title: `Magic Lens Selection`
+                                          title: `Screen Selection`
                                     })
-                              }, 300) // 300ms delay to ensure frame is ready and potential overlay is gone
+
+                                    // Cleanup
+                                    stream.getTracks().forEach(track => track.stop())
+                                    video.remove()
+                                    canvas.remove()
+                              }, 100)
                         }
                   } catch (err) {
-                        console.error("Failed to capture screen:", err)
+                        console.error("Failed to capture screen selection:", err)
                   }
             }
 
@@ -127,11 +128,13 @@ export default function DashboardPage() {
             }
 
             return () => {
-                  if (window.electron) {
-                        window.electron.removeListener("magic-lens-selection", handleSelection)
+                  if (window.electron && window.electron.removeAllListeners) {
+                        window.electron.removeAllListeners("magic-lens-selection")
                   }
             }
       }, [])
+
+
 
       const modes = [
             { id: "ghost", label: t.modes.ghost, icon: Ghost, description: t.modes.ghostDesc, color: "text-neutral-500", border: "border-neutral-800 bg-neutral-900" },

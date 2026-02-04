@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "close-overlay",
                   "activate-magic-lens",
                   "selection-complete",
+                  "resize-recording-window",
                   "set-mic-device"
             ]
             if (validChannels.includes(channel)) {
@@ -59,6 +60,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "request-microphone",
                   "request-screen",
                   "get-screen-sources",
+                  "save-image-file",
                   "isInitial",
                   "request-sizeCache",
                   "save-audio-file",
