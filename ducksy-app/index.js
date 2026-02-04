@@ -72,6 +72,10 @@ async function createOnRecordingWindow() {
 }
 
 async function createSelectionWindow() {
+      if (selectionWindow && !selectionWindow.isDestroyed()) {
+            return
+      }
+
       const primaryDisplay = screen.getPrimaryDisplay()
       const { x, y, width, height } = primaryDisplay.bounds
 
