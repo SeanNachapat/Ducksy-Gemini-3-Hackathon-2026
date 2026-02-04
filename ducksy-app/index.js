@@ -17,15 +17,11 @@ let onRecordingWindow
 let selectionWindow
 let initalized
 let captureWindow
+let deviceId
 
 // ─── Recording Window ──────────────────────────────────────────────
 
 async function createOnRecordingWindow() {
-      if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
-            onRecordingWindow.show()
-            onRecordingWindow.focus()
-            return
-      }
 
       const { width } = screen.getPrimaryDisplay().workAreaSize
       const width_f = 450
@@ -116,30 +112,35 @@ async function createSelectionWindow() {
 
 
 async function createCaptureScreen() {
+      if (captureWindow && !captureWindow.isDestroyed()) {
+            captureWindow.show()
+            captureWindow.focus()
+            return
+      }
+
       const { width, height } = screen.getPrimaryDisplay().size;
 
-      // captureWindow = new BrowserWindow({
-      //       width,
-      //       height,
-      //       backgroundColor: "#0a0a0a",
-      //       titleBarStyle: "hidden",
-      //       autoHideMenuBar: true,
-      //       alwaysOnTop: true,
-      //       frame: false,
-      //       transparent: true,
-      //       hasShadow: false,
-      //       skipTaskbar: true,
-      //       resizable: false,
-      //       movable: true,
-      //       webPreferences: {
-      //             preload: path.join(__dirname, "preload.js"),
-      //             nodeIntegration: false,
-      //             contextIsolation: true,
-      //             defaultFontFamily: "monospace"
-      //       },
-      // })
+      captureWindow = new BrowserWindow({
+            width,
+            height,
+            titleBarStyle: "hidden",
+            autoHideMenuBar: true,
+            alwaysOnTop: true,
+            frame: false,
+            transparent: true,
+            hasShadow: false,
+            skipTaskbar: true,
+            resizable: false,
+            movable: true,
+            webPreferences: {
+                  preload: path.join(__dirname, "preload.js"),
+                  nodeIntegration: false,
+                  contextIsolation: true,
+                  defaultFontFamily: "monospace"
+            },
+      })
 
-      // captureWindow.loadURL("http://localhost:3000/capture")
+      captureWindow.loadURL("http://localhost:3000/capture")
 
 }
 
@@ -303,22 +304,10 @@ ipcMain.on("realtime-time-record", (event, data) => {
 ipcMain.on("recording-control", (event, data) => {
       console.log("Recording control:", data.action)
 
-      // Forward control action to the main window (renderer)
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send("recording-control-update", data)
       }
 
-      // Update the recording overlay window based on action
-      // if (data.action === "stop") {
-      //       closeOnRecordingWindow()
-      //       // Restore main window from minimized state
-      //       if (mainWindow && !mainWindow.isDestroyed()) {
-      //             mainWindow.restore()
-      //             mainWindow.focus()
-      //       }
-      // }
-
-      // For pause/resume, forward the state to the overlay window
       if (data.action === "pause" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.webContents.send("recording-paused-state", { isPaused: true })
       }
@@ -328,7 +317,14 @@ ipcMain.on("recording-control", (event, data) => {
       }
 })
 
-// ─── IPC: Onboarding / Steps ──────────────────────────────────────
+ipcMain.on("set-mic-device", (e, d) => {
+      deviceId = d
+      console.log("Mic changed to: ", d)
+})
+
+ipcMain.handle("set-mic-front", (e, d) => {
+      return deviceId;
+})
 
 ipcMain.handle("isInitial", async (event, data) => {
       const status = await db.isAlreadyFile()

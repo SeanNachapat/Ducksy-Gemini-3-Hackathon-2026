@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "close-overlay",
                   "activate-magic-lens",
                   "selection-complete",
+                  "set-mic-device"
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.send(channel, data)
@@ -71,6 +72,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "set-gemini-api-key",
                   "delete-db",
                   "retry-transcription",
+                  "set-mic-front"
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)

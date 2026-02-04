@@ -5,12 +5,14 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Square, Pause, Play, Mic, Monitor, Camera, Home } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
 import { useSettings } from "@/hooks/SettingsContext"
+import { useSearchParams } from "next/navigation"
 
 export default function OnRecordPage() {
       const { t } = useSettings()
       const [recordTime, setRecordTime] = useState({ time: 0, formatted: "00:00" })
       const [isPaused, setIsPaused] = useState(false)
       const [isRecording, setIsRecording] = useState(false)
+      const [deviceId, setDeviceId] = useState(null)
 
       const {
             isRecording: recorderIsRecording,
@@ -25,6 +27,14 @@ export default function OnRecordPage() {
             resetRecording,
       } = useRecorder()
 
+      useEffect(() => {
+            if (typeof window !== 'undefined' && window.electron) {
+                  window.electron.invoke("set-mic-front").then((d) => {
+                        setDeviceId(d)
+                        console.log(d)
+                  })
+            }
+      }, [])
 
       useEffect(() => {
             if (!audioBlob) return
@@ -104,7 +114,8 @@ export default function OnRecordPage() {
       }
 
       const handleVoiceClick = async () => {
-            await startRecording(null)
+            console.log("Record By : " + deviceId     )
+            await startRecording(deviceId)
             if (typeof window !== 'undefined' && window.electron) {
                   window.electron.send('record-audio', { action: 'start' })
             }
