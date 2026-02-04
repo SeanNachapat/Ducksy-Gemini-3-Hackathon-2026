@@ -1,5 +1,5 @@
 const Database = require("better-sqlite3");
-const { app } = require("electron");
+const { app, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -389,6 +389,39 @@ const getFileById = (id) => {
       return stmt.get(id);
 };
 
+const deleteDb = () => {
+      try {
+            if (db) {
+                  db.close();
+                  db = null;
+            }
+
+            const dbPath = getDBPath();
+            if (fs.existsSync(dbPath)) {
+                  fs.unlinkSync(dbPath);
+            }
+
+            const userDataPath = app?.getPath?.("userData") || "./data";
+            const recordingsPath = path.join(userDataPath, "recordings");
+
+            if (fs.existsSync(recordingsPath)) {
+                  fs.rmSync(recordingsPath, { recursive: true, force: true });
+                  console.log("Recordings folder deleted:", recordingsPath);
+            }
+
+            return {
+                  status: "success",
+                  message: "Database and recordings deleted successfully"
+            }
+      } catch (error) {
+            console.error("Delete error:", error);
+            return {
+                  status: "error",
+                  message: error.message
+            }
+      }
+};
+
 module.exports = {
       initializeDatabase,
       isAlreadyFile,
@@ -403,5 +436,6 @@ module.exports = {
       deleteTranscription,
       getTranscriptionByFileId,
       getFileById,
-      getSizeOfdb
+      getSizeOfdb,
+      deleteDb
 };

@@ -48,14 +48,12 @@ export default function ConfigurePage() {
         if (!window.electron) return;
 
         if (activeSection === "memory") {
-            // Reset ค่าก่อนโหลดเพื่อให้เห็น Loading State ทุกครั้งที่เข้าหน้านี้ (Option)
             setSizeCache({ status: "", percent: null, size: null })
 
             console.log("request-sizeCache")
             window.electron.invoke("request-sizeCache").then((event) => {
                 const { status, percent, size } = event
                 console.log(event)
-                // หน่วงเวลานิดหน่อยเพื่อให้เห็น Loading (ถ้า API เร็วมาก) หรือใส่ค่าทันทีก็ได้
                 setSizeCache({ status, percent, size })
             })
         }
@@ -63,10 +61,20 @@ export default function ConfigurePage() {
 
     const handleClearMemory = () => {
         setClearing(true)
-        setTimeout(() => {
-            setClearing(false)
-            alert("MEMORY_PURGED")
-        }, 1500)
+        if (window.electron) {
+            window.electron.invoke("delete-db").then((event) => {
+                console.log(event)
+                if (event?.success) {
+                    alert("ลบข้อมูลสำเร็จ! แอปจะ restart...")
+                } else {
+                    alert("Error: " + (event?.error || "Unknown error"))
+                    setClearing(false)
+                }
+            }).catch((err) => {
+                alert("Error: " + err.message)
+                setClearing(false)
+            })
+        }
     }
 
     const handleSave = () => {

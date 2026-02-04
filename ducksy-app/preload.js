@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "activate-magic-lens",
                   "selection-complete",
                   "resize-recording-window",
+                  "set-mic-device"
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.send(channel, data)
@@ -71,7 +72,9 @@ contextBridge.exposeInMainWorld("electron", {
                   "get-all-files",
                   "get-db-size",
                   "set-gemini-api-key",
+                  "delete-db",
                   "retry-transcription",
+                  "set-mic-front"
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)
