@@ -516,6 +516,8 @@ ipcMain.handle("get-screen-sources", async () => {
                   thumbnailSize: { width: 150, height: 150 },
             })
 
+            console.log("Sources:", sources)
+
             return sources.map(source => ({
                   id: source.id,
                   name: source.name,

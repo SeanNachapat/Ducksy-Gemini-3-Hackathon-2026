@@ -50,7 +50,7 @@ export default function DashboardPage() {
                               console.error("No screen sources found")
                               return
                         }
-                        const source = sources[0] 
+                        const source = sources[0]
                         const stream = await navigator.mediaDevices.getUserMedia({
                               audio: false,
                               video: {
@@ -60,6 +60,8 @@ export default function DashboardPage() {
                                     },
                               },
                         })
+
+                        console.log("Stream:", stream)
 
                         const video = document.createElement("video")
                         video.srcObject = stream
