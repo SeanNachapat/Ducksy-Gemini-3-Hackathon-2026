@@ -1,4 +1,4 @@
-const { ipcMain, app } = require("electron");
+const { ipcMain, app, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const db = require("./utils/db");
@@ -640,6 +640,12 @@ const registerIpcHandlers = () => {
                   return { success: false, error: "No active file" };
             }
             return getSessionData(latestFileId);
+      });
+
+      ipcMain.on("open-external", (event, url) => {
+            if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
+                  shell.openExternal(url);
+            }
       });
 };
 

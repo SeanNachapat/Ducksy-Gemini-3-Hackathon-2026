@@ -235,6 +235,13 @@ async function createWindow() {
       mainWindow.webContents.on("did-finish-load", () => {
             mainWindow.webContents.send("app-ready")
       })
+
+      mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+            if (url.startsWith("https:") || url.startsWith("http:")) {
+                  shell.openExternal(url);
+            }
+            return { action: "deny" };
+      });
 }
 
 // ─── App Lifecycle ─────────────────────────────────────────────────

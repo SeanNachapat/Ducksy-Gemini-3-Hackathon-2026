@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, Trash2, ExternalLink, Save, ArrowRight, Sparkles, Database, Settings, Globe, Moon, Sun, Monitor, Link2, Check, Plus, MessageSquare, Mic } from "lucide-react"
+import { ChevronLeft, Trash2, ExternalLink, Save, ArrowRight, Sparkles, Database, Settings, Globe, Moon, Sun, Monitor, Link2, Check, Plus, MessageSquare, Mic, Info, Github, Bug, Linkedin, Cpu, Twitter } from "lucide-react"
 import Link from "next/link"
 import translations from "../../../locales/translations.json"
 
@@ -18,6 +18,45 @@ export default function ConfigurePage() {
         reducedMotion: false
     })
     const [saving, setSaving] = useState(false)
+    const [showBuilders, setShowBuilders] = useState(false)
+    const [contributors, setContributors] = useState([])
+
+    useEffect(() => {
+        const fetchContributors = async () => {
+            try {
+                const response = await fetch("https://api.github.com/repos/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/contributors")
+                if (response.ok) {
+                    const data = await response.json()
+                    const detailedContributors = await Promise.all(
+                        data.slice(0, 6).map(async (contributor) => {
+                            try {
+                                const userResponse = await fetch(`https://api.github.com/users/${contributor.login}`)
+                                if (userResponse.ok) {
+                                    const userData = await userResponse.json()
+                                    return {
+                                        ...contributor,
+                                        twitter_username: userData.twitter_username,
+                                        blog: userData.blog,
+                                        bio: userData.bio,
+                                        name: userData.name
+                                    }
+                                }
+                            } catch (e) {
+                                console.error("Failed to fetch user details", e)
+                            }
+                            return contributor
+                        })
+                    )
+                    setContributors(detailedContributors)
+                }
+            } catch (error) {
+                console.error("Failed to fetch contributors", error)
+            }
+        }
+        if (showBuilders && contributors.length === 0) {
+            fetchContributors()
+        }
+    }, [showBuilders])
 
     useEffect(() => {
         const savedSettings = localStorage.getItem("ducksy_settings")
@@ -91,6 +130,7 @@ export default function ConfigurePage() {
         { id: "persona", label: t.nav.persona, desc: "Personality & Voice", icon: Sparkles },
         { id: "memory", label: t.nav.memory, desc: "Context & Storage", icon: Database },
         { id: "connections", label: t.nav.connections, desc: "Integrations & MCP", icon: Link2 },
+        { id: "info", label: "Info", desc: "System & About", icon: Info },
     ]
 
     const getStatusColor = (status) => {
@@ -457,6 +497,138 @@ export default function ConfigurePage() {
                             </motion.div>
                         )}
 
+                        {activeSection === "info" && (
+                            <motion.div
+                                key="info"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="max-w-4xl mx-auto space-y-8"
+                            >
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold text-white mb-2">Info & About</h2>
+                                    <p className="text-neutral-400">System information and application details.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="md:col-span-2 bg-gradient-to-br from-neutral-900/40 to-neutral-900/20 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-24 h-24 rounded-2xl flex items-center justify-center">
+                                                <img src="/ducksy-logo.svg" alt="Ducksy Logo" className="w-full h-full object-contain" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-white">Ducksy</h3>
+                                                <p className="text-sm text-neutral-400 font-mono mt-1">v1.2.0-alpha</p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[10px] text-neutral-500 font-mono uppercase">Electron</span>
+                                                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[10px] text-neutral-500 font-mono uppercase">React</span>
+                                                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[10px] text-neutral-500 font-mono uppercase">Gemini 3</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="hidden md:block text-right">
+                                            <p className="text-xs text-neutral-500 font-mono mb-1">BUILD ID</p>
+                                            <p className="text-sm text-white font-mono">8f314e4-aa5a</p>
+                                        </div>
+                                    </div>
+
+                                    <Link href="https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026" target="_blank" className="group bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-4 hover:bg-white/5 hover:border-white/10 transition-all">
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                                            <Github className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-semibold text-white mb-1 group-hover:text-amber-400 transition-colors">View Source</h3>
+                                            <p className="text-xs text-neutral-500">Explore the codebase on GitHub</p>
+                                        </div>
+                                    </Link>
+
+                                    <Link href="#" className="group bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-4 hover:bg-white/5 hover:border-white/10 transition-all">
+                                        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform">
+                                            <Bug className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-semibold text-white mb-1 group-hover:text-red-400 transition-colors">Report Issue</h3>
+                                            <p className="text-xs text-neutral-500">Found a bug? Let us know.</p>
+                                        </div>
+                                    </Link>
+
+                                    <div className="md:col-span-2">
+                                        <button
+                                            onClick={() => setShowBuilders(!showBuilders)}
+                                            className="w-full group relative overflow-hidden bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between hover:border-amber-500/30 transition-all text-left"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+                                            <div className="flex items-center gap-4 relative z-10">
+                                                <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500 group-hover:text-amber-400 transition-colors">
+                                                    <Sparkles className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors">Meet the Builders</h3>
+                                                    <p className="text-sm text-neutral-500">The human minds behind the AI</p>
+                                                </div>
+                                            </div>
+
+                                            <div className={`w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-neutral-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative z-10 ${showBuilders ? "rotate-90 bg-amber-500 text-black" : ""}`}>
+                                                <ArrowRight className="w-5 h-5" />
+                                            </div>
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {showBuilders && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                                    animate={{ height: "auto", opacity: 1, marginTop: 16 }}
+                                                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                                    className="overflow-hidden space-y-4"
+                                                >
+                                                    {contributors.length > 0 ? (
+                                                        contributors.map((contributor) => (
+                                                            <div key={contributor.id} className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl flex items-center gap-6">
+                                                                <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center text-2xl font-bold text-neutral-500 border border-white/5 overflow-hidden">
+                                                                    <img src={contributor.avatar_url} alt={contributor.login} className="w-full h-full object-cover" />
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <h4 className="text-base font-bold text-white">{contributor.name || contributor.login}</h4>
+                                                                        {contributor.login === "SeanNachapat" && <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full border border-amber-500/20 font-bold uppercase tracking-wide">Project Lead</span>}
+                                                                    </div>
+                                                                    <p className="text-xs text-neutral-400 mb-2">@{contributor.login}</p>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <a href={contributor.html_url} target="_blank" className="inline-flex text-neutral-500 hover:text-white transition-colors" title="GitHub"><Github className="w-4 h-4" /></a>
+                                                                        {contributor.twitter_username && (
+                                                                            <a href={`https://twitter.com/${contributor.twitter_username}`} target="_blank" className="inline-flex text-neutral-500 hover:text-sky-400 transition-colors" title="Twitter">
+                                                                                <Twitter className="w-4 h-4" />
+                                                                            </a>
+                                                                        )}
+                                                                        {contributor.blog && (
+                                                                            <a href={contributor.blog.startsWith('http') ? contributor.blog : `https://${contributor.blog}`} target="_blank" className="inline-flex text-neutral-500 hover:text-amber-400 transition-colors" title="Website">
+                                                                                <ExternalLink className="w-4 h-4" />
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="text-center text-neutral-500 text-sm py-4">Loading contributors...</div>
+                                                    )}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
+
+
+                                    <div className="md:col-span-2 text-center pt-8 pb-4 space-y-2">
+                                        <p className="text-sm text-neutral-500 font-medium">Submitted for Gemini 3 Hackathon 2026</p>
+                                        <p className="text-xs text-neutral-600">Made with ❤️ and ☕ in Thailand</p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
                         {activeSection === "general" && (
                             <motion.div
                                 key="general"
@@ -574,7 +746,7 @@ export default function ConfigurePage() {
                         )}
                     </button>
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     )
 }
