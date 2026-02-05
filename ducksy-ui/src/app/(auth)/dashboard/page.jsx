@@ -29,6 +29,8 @@ import { useSettings } from "@/hooks/SettingsContext"
 import { useSessionLogs } from "@/hooks/useSessionLogs"
 import Voice from "@/components/Voice"
 import MicDevice from "@/components/MicDevice"
+import SessionChat from "@/components/SessionChat"
+import MediaPreview from "@/components/MediaPreview"
 
 export default function DashboardPage() {
       const [mode, setMode] = useState("lens")
@@ -384,7 +386,6 @@ export default function DashboardPage() {
                                                                         >
                                                                               {log.type === 'summary' && <FileText className="w-4 h-4" strokeWidth={1.5} />}
                                                                               {log.type === 'debug' && <Bug className="w-4 h-4" strokeWidth={1.5} />}
-                                                                              {log.type === 'chat' && <MessageSquare className="w-4 h-4" strokeWidth={1.5} />}
                                                                         </div>
 
                                                                         <div className="ml-5 flex-1 min-w-0">
@@ -471,6 +472,16 @@ export default function DashboardPage() {
                                           </div>
 
                                           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                                                <div className="mb-6">
+                                                      <MediaPreview
+                                                            fileId={selectedSession.id}
+                                                            filePath={selectedSession.filePath}
+                                                            type={selectedSession.type}
+                                                            duration={selectedSession.duration}
+                                                            fileExists={true} // We need to pass this from backend, assuming true or check safely
+                                                      />
+                                                </div>
+
                                                 {selectedSession.transcriptionStatus === 'pending' && (
                                                       <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
                                                             <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4">
@@ -561,28 +572,15 @@ export default function DashboardPage() {
                                                                   </div>
                                                             )}
 
-                                                            {selectedSession.type === 'chat' && (
-                                                                  <div className="space-y-6">
-                                                                        <div className="flex gap-4">
-                                                                              <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center shrink-0 border border-white/5">
-                                                                                    <span className="text-xs">{t.you}</span>
-                                                                              </div>
-                                                                              <div className="bg-neutral-900 rounded-2xl rounded-tl-none p-4 border border-white/5 text-sm text-neutral-300 leading-relaxed max-w-[85%]">
-                                                                                    {selectedSession.details.question}
-                                                                              </div>
-                                                                        </div>
-                                                                        <div className="flex gap-4">
-                                                                              <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center shrink-0 text-black font-bold text-xs ring-2 ring-neutral-950">
-                                                                                    D
-                                                                              </div>
-                                                                              <div className="bg-amber-500/10 rounded-2xl rounded-tl-none p-4 border border-amber-500/10 text-sm text-neutral-200 leading-relaxed max-w-[85%]">
-                                                                                    {selectedSession.details.answer}
-                                                                              </div>
-                                                                        </div>
-                                                                  </div>
-                                                            )}
+
                                                       </>
                                                 )}
+                                                <div className="mt-8 pt-6 border-t border-white/5">
+                                                      <SessionChat
+                                                            fileId={selectedSession.id}
+                                                            initialHistory={selectedSession.chatHistory || []}
+                                                      />
+                                                </div>
                                           </div>
 
                                           <div className="p-6 border-t border-white/5 bg-neutral-900/30 flex gap-3">

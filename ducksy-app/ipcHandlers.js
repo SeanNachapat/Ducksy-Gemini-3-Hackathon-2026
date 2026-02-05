@@ -2,12 +2,14 @@ const { ipcMain, app } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const db = require("./utils/db");
-const { transcribeAudio, analyzeImage } = require("./utils/gemini");
+const { getSessionData } = require("./utils/sessionHelper");
+const { transcribeAudio, analyzeImage, chatWithSession } = require("./utils/gemini");
 require("dotenv").config();
 
 let mainWindow = null;
 let onRecordingWindow = null;
 let geminiApiKey = process.env.GEMINI_API_KEY;
+let latestFileId = null;
 
 const setMainWindow = (window) => {
       mainWindow = window;
@@ -21,7 +23,7 @@ const setGeminiApiKey = (apiKey) => {
       geminiApiKey = apiKey;
 };
 
-const processTranscription = async (fileId, filePath, mimeType, userLanguage = 'en') => {
+const processTranscription = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
       if (!geminiApiKey) {
             console.error("Gemini API key not set");
             db.updateTranscription({
@@ -54,7 +56,7 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
             const audioBuffer = fs.readFileSync(filePath);
             const base64Audio = audioBuffer.toString("base64");
 
-            const result = await transcribeAudio(base64Audio, mimeType, geminiApiKey, userLanguage);
+            const result = await transcribeAudio(base64Audio, mimeType, geminiApiKey, userLanguage, settings);
 
             const transcription = db.getTranscriptionByFileId(fileId);
             if (transcription) {
@@ -123,7 +125,7 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
       }
 };
 
-const processImageAnalysis = async (fileId, filePath, mimeType) => {
+const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
       if (!geminiApiKey) {
             console.error("Gemini API key not set");
             db.updateTranscription({
@@ -159,7 +161,7 @@ const processImageAnalysis = async (fileId, filePath, mimeType) => {
             const fileRec = db.getFileById(fileId);
             const metadata = fileRec && fileRec.metadata ? JSON.parse(fileRec.metadata) : null;
 
-            const result = await analyzeImage(base64Image, mimeType, geminiApiKey, null, metadata);
+            const result = await analyzeImage(base64Image, mimeType, geminiApiKey, null, metadata, userLanguage, settings);
 
             const transcription = db.getTranscriptionByFileId(fileId);
             if (transcription) {
@@ -305,7 +307,7 @@ const registerIpcHandlers = () => {
       });
 
       ipcMain.handle("save-audio-file", async (event, data) => {
-            const { buffer, mimeType, duration, mode = "lens", title = "", userLanguage = "en" } = data;
+            const { buffer, mimeType, duration, mode = "lens", title = "", userLanguage = "en", settings = {} } = data;
 
             try {
                   const ext = mimeType.includes("mp4")
@@ -330,6 +332,19 @@ const registerIpcHandlers = () => {
 
                   console.log(`Audio saved: ${filePath} (${duration}s)`);
 
+                  if (duration < 5) {
+                        try {
+                              fs.unlinkSync(filePath);
+                        } catch (e) {
+                              console.error("Failed to delete short recording:", e);
+                        }
+                        return {
+                              success: false,
+                              error: "Recording too short (min 5s)",
+                              isShort: true
+                        };
+                  }
+
                   const fileResult = db.createFile({
                         title: title || `Recording ${new Date().toLocaleString()}`,
                         mode: mode,
@@ -343,6 +358,7 @@ const registerIpcHandlers = () => {
                   });
 
                   const fileId = fileResult.lastInsertRowid;
+                  latestFileId = fileId;
 
                   db.createTranscription({
                         fileId: fileId,
@@ -373,7 +389,7 @@ const registerIpcHandlers = () => {
                         });
                   }
 
-                  processTranscription(fileId, filePath, mimeType, userLanguage);
+                  processTranscription(fileId, filePath, mimeType, userLanguage, settings);
 
                   return {
                         success: true,
@@ -393,7 +409,7 @@ const registerIpcHandlers = () => {
       });
 
       ipcMain.handle("save-image-file", async (event, data) => {
-            const { buffer, mimeType, width, height, title, mode = "lens", selection } = data;
+            const { buffer, mimeType, width, height, title, mode = "lens", selection, userLanguage = "en", settings = {} } = data;
 
             try {
                   const timestamp = Date.now();
@@ -430,6 +446,7 @@ const registerIpcHandlers = () => {
                   });
 
                   const fileId = fileResult.lastInsertRowid;
+                  latestFileId = fileId;
 
                   db.createTranscription({
                         fileId: fileId,
@@ -458,7 +475,7 @@ const registerIpcHandlers = () => {
                         onRecordingWindow.webContents.send("recording-saved", notificationData);
                   }
 
-                  processImageAnalysis(fileId, filePath, mimeType || "image/png");
+                  processImageAnalysis(fileId, filePath, mimeType || "image/png", userLanguage, settings);
 
                   return {
                         success: true,
@@ -543,19 +560,86 @@ const registerIpcHandlers = () => {
             }
       });
 
-      ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en" }) => {
+      ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en", settings = {} }) => {
             try {
                   const file = db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "File not found" };
                   }
 
-                  processTranscription(fileId, file.path, file.type, userLanguage);
+                  if (file.type.startsWith("image/")) {
+                        processImageAnalysis(fileId, file.path, file.type, userLanguage, settings);
+                  } else {
+                        processTranscription(fileId, file.path, file.type, userLanguage, settings);
+                  }
+
                   return { success: true };
             } catch (err) {
                   console.error("Failed to retry transcription:", err);
                   return { success: false, error: err.message };
             }
+      });
+
+      ipcMain.handle("chat-session", async (event, { fileId, message, settings = {} }) => {
+            if (!geminiApiKey) {
+                  return { success: false, error: "API Key not set" };
+            }
+
+            try {
+                  const file = db.getFileById(fileId);
+                  if (!file) {
+                        return { success: false, error: "Session not found" };
+                  }
+
+                  let chatHistory = [];
+                  const transcription = db.getTranscriptionByFileId(fileId);
+
+                  if (transcription && transcription.chatHistory && transcription.chatHistory !== '[]') {
+                        try {
+                              chatHistory = JSON.parse(transcription.chatHistory);
+                        } catch (e) {
+                              chatHistory = [];
+                        }
+                  }
+
+                  let details = {};
+                  try {
+                        details = transcription.details ? JSON.parse(transcription.details) : {};
+                  } catch (e) { }
+
+                  const context = {
+                        title: transcription.title,
+                        summary: transcription.summary,
+                        content: transcription.content,
+                        details: details
+                  };
+
+                  const responseText = await chatWithSession(context, chatHistory, message, geminiApiKey, settings);
+
+                  const newHistory = [
+                        ...chatHistory,
+                        { role: 'user', content: message, timestamp: Date.now() },
+                        { role: 'model', content: responseText, timestamp: Date.now() }
+                  ];
+
+                  db.updateTranscription({
+                        id: transcription.id,
+                        chatHistory: newHistory
+                  });
+
+                  return { success: true, response: responseText, history: newHistory };
+
+            } catch (err) {
+                  console.error("Chat session error:", err);
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("get-latest-file", async () => {
+            if (!latestFileId) {
+                  return { success: false, error: "No active file" };
+            }
+            return getSessionData(latestFileId);
       });
 };
 

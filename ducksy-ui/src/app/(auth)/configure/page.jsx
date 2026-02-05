@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, Trash2, ExternalLink, Save, ArrowRight, Sparkles, Database, Settings, Globe, Moon, Sun, Monitor, Link2, Check, Plus } from "lucide-react"
+import { ChevronLeft, Trash2, ExternalLink, Save, ArrowRight, Sparkles, Database, Settings, Globe, Moon, Sun, Monitor, Link2, Check, Plus, MessageSquare, Mic } from "lucide-react"
 import Link from "next/link"
 import translations from "../../../locales/translations.json"
 
@@ -22,7 +22,6 @@ export default function ConfigurePage() {
     useEffect(() => {
         const savedSettings = localStorage.getItem("ducksy_settings")
         if (savedSettings) {
-            // Ensure language is valid, fallback to en
             const parsed = JSON.parse(savedSettings)
             if (!['en', 'th', 'zh', 'ja'].includes(parsed.language)) {
                 parsed.language = 'en'
@@ -37,7 +36,6 @@ export default function ConfigurePage() {
         mcp: false
     })
 
-    // Initial state เป็น null เพื่อเช็คได้ว่า "กำลังโหลด"
     const [sizeCache, setSizeCache] = useState({
         status: "",
         percent: null,
@@ -82,7 +80,6 @@ export default function ConfigurePage() {
         setTimeout(() => {
             localStorage.setItem("ducksy_settings", JSON.stringify(settings))
             setSaving(false)
-            // Reload the app to apply changes (especially language)
             window.location.reload()
         }, 800)
     }
@@ -96,7 +93,6 @@ export default function ConfigurePage() {
         { id: "connections", label: t.nav.connections, desc: "Integrations & MCP", icon: Link2 },
     ]
 
-    // Helper สำหรับเลือกสีตาม Status (แก้ปัญหา Dynamic Class ของ Tailwind)
     const getStatusColor = (status) => {
         if (status === 'warning') return { text: 'text-amber-500', bg: 'bg-amber-500', bgSoft: 'bg-amber-500/10' };
         if (status === 'danger') return { text: 'text-red-500', bg: 'bg-red-500', bgSoft: 'bg-red-500/10' };
@@ -170,7 +166,88 @@ export default function ConfigurePage() {
                                 transition={{ duration: 0.2 }}
                                 className="max-w-4xl mx-auto space-y-8"
                             >
-                                <div className="mb-8"><h2 className="text-2xl font-bold text-white mb-2">Agent Persona</h2></div>
+                                <div className="mb-8">
+                                    <h2 className="text-2xl font-bold text-white mb-2">{t.persona.title}</h2>
+                                    <p className="text-neutral-400">{t.persona.desc}</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-6">
+                                    <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm space-y-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                                                <Sparkles className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-semibold text-white">{t.persona.personality}</h3>
+                                                <p className="text-xs text-neutral-500">{t.persona.personalityDesc}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="px-2">
+                                            <div className="flex justify-between text-xs text-neutral-400 mb-2 font-medium">
+                                                <span>{t.persona.labels.strict}</span>
+                                                <span>{t.persona.labels.creative}</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                value={settings.personality}
+                                                onChange={(e) => setSettings({ ...settings, personality: parseInt(e.target.value) })}
+                                                className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm space-y-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                                                <MessageSquare className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-semibold text-white">{t.persona.responses}</h3>
+                                                <p className="text-xs text-neutral-500">{t.persona.responsesDesc}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="px-2">
+                                            <div className="flex justify-between text-xs text-neutral-400 mb-2 font-medium">
+                                                <span>{t.persona.labels.concise}</span>
+                                                <span>{t.persona.labels.verbose}</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                value={settings.responses}
+                                                onChange={(e) => setSettings({ ...settings, responses: parseInt(e.target.value) })}
+                                                className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                                <Mic className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-semibold text-white">{t.persona.voice}</h3>
+                                                <p className="text-xs text-neutral-500">{t.persona.voiceDesc}</p>
+                                            </div>
+                                        </div>
+
+                                        <select
+                                            value={settings.voice}
+                                            onChange={(e) => setSettings({ ...settings, voice: e.target.value })}
+                                            className="bg-neutral-950 border border-white/10 text-white text-sm rounded-xl px-4 py-2 outline-none focus:border-amber-500/50 transition-colors min-w-[150px]"
+                                        >
+                                            <option value="echo">Echo</option>
+                                            <option value="alloy">Alloy</option>
+                                            <option value="shimmer">Shimmer</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </motion.div>
                         )}
 

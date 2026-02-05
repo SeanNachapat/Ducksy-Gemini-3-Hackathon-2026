@@ -41,6 +41,11 @@ const initializeDatabase = () => {
                         db.exec(`ALTER TABLE transcriptions ADD COLUMN details TEXT DEFAULT '{}'`);
                         console.log("Migration: Added 'details' column to transcriptions");
                   }
+
+                  if (!columns.includes("chatHistory")) {
+                        db.exec(`ALTER TABLE transcriptions ADD COLUMN chatHistory TEXT DEFAULT '[]'`);
+                        console.log("Migration: Added 'chatHistory' column to transcriptions");
+                  }
             } catch (err) {
                   console.log("Migration skipped: transcriptions table not found yet");
             }
@@ -109,6 +114,7 @@ const initializeDatabase = () => {
                   language TEXT NOT NULL,
                   status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
                   details TEXT DEFAULT '{}',
+                  chatHistory TEXT DEFAULT '[]',
                   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                   calendarEventId TEXT,
@@ -204,6 +210,11 @@ const updateTranscription = (transcription) => {
             values.push(JSON.stringify(transcription.details));
       }
 
+      if (transcription.chatHistory !== undefined) {
+            fields.push("chatHistory = ?");
+            values.push(JSON.stringify(transcription.chatHistory));
+      }
+
       if (transcription.calendarEventId !== undefined) {
             fields.push("calendarEventId = ?");
             values.push(transcription.calendarEventId);
@@ -233,6 +244,7 @@ const getAllFiles = () => {
                   t.content as transcriptionContent, 
                   t.language as transcriptionLanguage, 
                   t.details as transcriptionDetails,
+                  t.chatHistory as transcriptionChatHistory,
                   t.calendarEventId, 
                   t.notionPageId, 
                   t.createdAt as transcriptionCreatedAt, 
@@ -253,6 +265,13 @@ const getSessionLogs = () => {
                   details = file.transcriptionDetails ? JSON.parse(file.transcriptionDetails) : {};
             } catch (e) {
                   details = {};
+            }
+
+            let chatHistory = [];
+            try {
+                  chatHistory = file.transcriptionChatHistory ? JSON.parse(file.transcriptionChatHistory) : [];
+            } catch (e) {
+                  chatHistory = [];
             }
 
             const createdAt = new Date(file.createdAt);
@@ -278,7 +297,7 @@ const getSessionLogs = () => {
             }
 
             const type = file.transcriptionType || details.type || "summary";
-            const subtitlePrefix = type === "chat" ? "Standard Chat" : type === "debug" ? "Debug Session" : "Meeting Summary";
+            const subtitlePrefix = type === "debug" ? "Debug Session" : "Meeting Summary";
 
             return {
                   id: file.id,
@@ -298,6 +317,7 @@ const getSessionLogs = () => {
                         fix: details.fix || "",
                         code: details.code || ""
                   },
+                  chatHistory: chatHistory,
                   transcriptionStatus: file.transcriptionStatus,
                   duration: file.duration,
                   filePath: file.path,
@@ -390,6 +410,7 @@ const getFileById = (id) => {
                   t.content as transcriptionContent, 
                   t.language as transcriptionLanguage, 
                   t.details as transcriptionDetails,
+                  t.chatHistory as transcriptionChatHistory,
                   t.calendarEventId, 
                   t.notionPageId
             FROM files f

@@ -65,6 +65,22 @@
             "connections": "Connections",
             "general": "General"
         },
+        "persona": {
+            "title": "Agent Persona",
+            "desc": "Customize the agent's personality and voice.",
+            "personality": "Personality",
+            "personalityDesc": "Adjust how strict or creative the agent behaves.",
+            "responses": "Response Length",
+            "responsesDesc": "Control the verbosity of the agent's replies.",
+            "voice": "Voice",
+            "voiceDesc": "Select the agent's voice.",
+            "labels": {
+                "strict": "Strict",
+                "creative": "Creative",
+                "concise": "Concise",
+                "verbose": "Verbose"
+            }
+        },
         "general": {
             "title": "General Settings",
             "desc": "Manage application appearance and localization.",
@@ -195,6 +211,22 @@
             "memory": "メモリ",
             "connections": "接続",
             "general": "一般"
+        },
+        "persona": {
+            "title": "エージェントペルソナ",
+            "desc": "エージェントの性格と声をカスタマイズします。",
+            "personality": "性格",
+            "personalityDesc": "エージェントの厳格さや創造性を調整します。",
+            "responses": "応答の長さ",
+            "responsesDesc": "エージェントの応答の冗長さを制御します。",
+            "voice": "声",
+            "voiceDesc": "エージェントの声を選択します。",
+            "labels": {
+                "strict": "厳格",
+                "creative": "創造的",
+                "concise": "簡潔",
+                "verbose": "詳細"
+            }
         },
         "general": {
             "title": "一般設定",
@@ -327,6 +359,22 @@
             "connections": "การเชื่อมต่อ",
             "general": "ทั่วไป"
         },
+        "persona": {
+            "title": "ตัวตนเอเจนต์",
+            "desc": "ปรับแต่งบุคลิกและเสียงของเอเจนต์",
+            "personality": "บุคลิกภาพ",
+            "personalityDesc": "ปรับความเข้มงวดหรือความคิดสร้างสรรค์ของเอเจนต์",
+            "responses": "ความยาวการตอบกลับ",
+            "responsesDesc": "ควบคุมความละเอียดของคำตอบ",
+            "voice": "เสียง",
+            "voiceDesc": "เลือกเสียงของเอเจนต์",
+            "labels": {
+                "strict": "จริงจัง",
+                "creative": "สร้างสรรค์",
+                "concise": "กระชับ",
+                "verbose": "ละเอียด"
+            }
+        },
         "general": {
             "title": "การตั้งค่าทั่วไป",
             "desc": "จัดการรูปลักษณ์และภาษาของแอปพลิเคชัน",
@@ -457,6 +505,22 @@
             "memory": "记忆模块",
             "connections": "连接",
             "general": "通用"
+        },
+        "persona": {
+            "title": "代理角色",
+            "desc": "自定义代理的个性和声音。",
+            "personality": "个性",
+            "personalityDesc": "调整代理的严谨度或创造力。",
+            "responses": "回复长度",
+            "responsesDesc": "控制代理回复的详细程度。",
+            "voice": "声音",
+            "voiceDesc": "选择代理的声音。",
+            "labels": {
+                "strict": "严谨",
+                "creative": "创意",
+                "concise": "简洁",
+                "verbose": "详细"
+            }
         },
         "general": {
             "title": "通用设置",

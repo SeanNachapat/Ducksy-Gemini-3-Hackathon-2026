@@ -163,6 +163,7 @@ export function useRecorder() {
                         if (savedSettings) {
                               const settings = JSON.parse(savedSettings)
                               userLanguage = settings.language || 'en'
+                              var userSettings = settings
                         }
                   } catch (err) {
                         console.warn('Failed to get language setting:', err)
@@ -173,7 +174,8 @@ export function useRecorder() {
                               buffer: base64,
                               mimeType: actualMimeType,
                               duration: duration,
-                              userLanguage: userLanguage
+                              userLanguage: userLanguage,
+                              settings: userSettings || {}
                         })
                         return result
                   }

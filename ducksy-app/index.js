@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell, globalShortcut } = require("electron")
+const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell, globalShortcut, Tray, Menu, nativeImage } = require("electron")
 const path = require("path")
 const fs = require("fs")
 const serve = require("electron-serve")
@@ -18,6 +18,7 @@ let selectionWindow
 let initalized
 let captureWindow
 let deviceId
+let tray = null
 
 // ─── Recording Window ──────────────────────────────────────────────
 
@@ -157,6 +158,51 @@ function closeOnRecordingWindow() {
       }
 }
 
+// ─── System Tray ───────────────────────────────────────────────────
+
+function createTray() {
+      const iconPath = path.join(__dirname, "assets", "icon-32x32.png")
+      const icon = nativeImage.createFromPath(iconPath)
+      tray = new Tray(icon)
+
+      const contextMenu = Menu.buildFromTemplate([
+            {
+                  label: "Show Dashboard",
+                  click: () => {
+                        if (mainWindow) {
+                              mainWindow.show()
+                              mainWindow.setSkipTaskbar(false)
+                              mainWindow.focus()
+                        }
+                        closeOnRecordingWindow()
+                        if (selectionWindow) selectionWindow.hide()
+                  }
+            },
+            { type: "separator" },
+            {
+                  label: "Quit Ducksy",
+                  click: () => {
+                        app.quit()
+                  }
+            }
+      ])
+
+      tray.setToolTip("Ducksy")
+      tray.setContextMenu(contextMenu)
+
+      tray.on("click", () => {
+            if (mainWindow) {
+                  if (mainWindow.isVisible()) {
+                        mainWindow.hide()
+                  } else {
+                        mainWindow.show()
+                        mainWindow.setSkipTaskbar(false)
+                        mainWindow.focus()
+                  }
+            }
+      })
+}
+
 // ─── Main Window ───────────────────────────────────────────────────
 
 async function createWindow() {
@@ -197,6 +243,7 @@ app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
       createSelectionWindow();
+      createTray();
 
       globalShortcut.register('Alt+S', () => {
             console.log('Alt+S pressed - activating magic lens')
@@ -290,7 +337,7 @@ ipcMain.on("record-audio", async (event, data) => {
 
       if (action === "start") {
             if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.minimize()
+                  mainWindow.hide()
             }
             await createOnRecordingWindow()
       }
@@ -413,7 +460,7 @@ ipcMain.on("open-system-preferences", (event, type) => {
 
 ipcMain.on("activate-magic-lens", async () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.minimize()
+            mainWindow.hide()
       }
 
       if (!selectionWindow || selectionWindow.isDestroyed()) {
@@ -450,7 +497,7 @@ ipcMain.on("selection-complete", (event, selection) => {
 
 ipcMain.on("open-overlay", async () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.minimize()
+            mainWindow.hide()
       }
       if (!onRecordingWindow || onRecordingWindow.isDestroyed()) {
             await createOnRecordingWindow()
@@ -463,7 +510,8 @@ ipcMain.on("open-overlay", async () => {
 ipcMain.on("close-overlay", () => {
       closeOnRecordingWindow()
       if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.restore()
+            mainWindow.show()
+            mainWindow.setSkipTaskbar(false)
             mainWindow.focus()
       }
 })
