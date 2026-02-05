@@ -560,14 +560,19 @@ const registerIpcHandlers = () => {
             }
       });
 
-      ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en" }) => {
+      ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en", settings = {} }) => {
             try {
                   const file = db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "File not found" };
                   }
 
-                  processTranscription(fileId, file.path, file.type, userLanguage);
+                  if (file.type.startsWith("image/")) {
+                        processImageAnalysis(fileId, file.path, file.type, userLanguage, settings);
+                  } else {
+                        processTranscription(fileId, file.path, file.type, userLanguage, settings);
+                  }
+
                   return { success: true };
             } catch (err) {
                   console.error("Failed to retry transcription:", err);

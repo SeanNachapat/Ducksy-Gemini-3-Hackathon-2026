@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2 } from "lucide-react"
+import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
 import SessionChat from "@/components/SessionChat"
 import { useSettings } from "@/hooks/SettingsContext"
@@ -200,6 +200,26 @@ export default function OnRecordPage() {
             }
       }
 
+      const handleRetry = async () => {
+            if (!transcriptionResult?.fileId) return
+
+            setIsProcessing(true)
+            if (typeof window !== 'undefined' && window.electron) {
+                  try {
+                        const result = await window.electron.invoke('retry-transcription', {
+                              fileId: transcriptionResult.fileId
+                        })
+                        if (!result.success) {
+                              console.error("Retry failed:", result.error)
+                              setIsProcessing(false)
+                        }
+                  } catch (e) {
+                        console.error("Retry error:", e)
+                        setIsProcessing(false)
+                  }
+            }
+      }
+
       const toggleExpand = () => {
             const newExpanded = !expanded
             setExpanded(newExpanded)
@@ -337,6 +357,31 @@ export default function OnRecordPage() {
                                                 <p className="text-sm font-medium text-white">{t.processing || "Analyzing..."}</p>
                                                 <p className="text-xs text-neutral-500 mt-2 text-center">Using Gemini 1.5 Flash</p>
                                           </motion.div>
+                                    ) : transcriptionResult?.status === 'failed' ? (
+                                          <motion.div
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                className="flex flex-col items-center justify-center p-8 h-[250px]"
+                                          >
+                                                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                                                      <X className="w-6 h-6 text-red-500" />
+                                                </div>
+                                                <p className="text-sm font-medium text-white mb-1">{t.error || "Analysis Failed"}</p>
+                                                <p className="text-xs text-neutral-500 text-center px-4 mb-6">
+                                                      {transcriptionResult.error || "Something went wrong during analysis."}
+                                                </p>
+
+                                                <motion.button
+                                                      whileHover={{ scale: 1.05 }}
+                                                      whileTap={{ scale: 0.95 }}
+                                                      onClick={handleRetry}
+                                                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200 transition-colors"
+                                                >
+                                                      <RefreshCw className="w-4 h-4" />
+                                                      Retry Analysis
+                                                </motion.button>
+                                          </motion.div>
                                     ) : transcriptionResult ? (
                                           <motion.div
                                                 initial="hidden"
@@ -454,11 +499,9 @@ export default function OnRecordPage() {
                                           </motion.div>
                                     ) : null}
                               </motion.div>
-                        )
-                        }
+                        )}
                   </AnimatePresence >
 
-                  {/* Return to Dashboard Button */}
                   < AnimatePresence >
                         {!isRecording && (
                               <motion.button

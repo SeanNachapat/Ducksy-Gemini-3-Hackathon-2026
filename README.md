@@ -30,6 +30,8 @@
 - **Full Localization:** Complete UI translation for **English 🇺🇸, Thai 🇹🇭, Japanese 🇯🇵, and Chinese 🇨🇳**.
 - **Modern Typography:** Implemented hybrid font stack: **Geist** for English and **Prompt** for modern Thai rendering.
 - **Enhanced Dashboard:** New **Ghost** (Monitoring) and **Lens** (Capture) modes with localized descriptions.
+- **System Tray Support:** App runs in background; Dashboard hides to tray when Overlay is active.
+- **Robust Error Handling:** Added **Retry Mechanism** for failed audio/image analysis.
 - **Improved UX:** 
   - Settings changes apply instantly with auto-reload.
   - Custom "General" settings section as default.
@@ -42,7 +44,7 @@
 - [x] **Permission Handling:** System-level permission requests for Microphone and Screen Recording.
 - [x] **Gemini 3 Integration:** Connected to Gemini API for real-time transcription and translation.
 - [x] **Audio Processing:** Implemented voice recording, saving, and multilingual transcription.
-- [ ] **Screen Context:** utilizing `desktopCapturer` for visual context (In Progress).
+- [x] **Screen Context:** utilizing `desktopCapturer` for visual context (Magic Lens implemented).
 - [ ] **Interactive Avatar:** Enhanced idle and reactive animations for Ducksy.
 
 ## Tech Stack
@@ -72,11 +74,6 @@ The project is divided into two parts: `ducksy-ui` (The renderer) and `ducksy-ap
     This project uses a root `package.json` to manage workspaces or concurrent scripts.
     ```bash
     npm install
-    ```
-    *Alternatively, install individually:*
-    ```bash
-    cd ducksy-ui && npm install
-    cd ../ducksy-app && npm install
     ```
 
 ### Running Development Environment
