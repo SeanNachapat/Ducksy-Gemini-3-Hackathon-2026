@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
+import { useSettings } from "../../hooks/SettingsContext"
 import translations from "../../locales/translations.json"
 
 const languages = [
@@ -15,8 +16,8 @@ const languages = [
 ]
 
 export default function Home() {
+  const { settings, updateSettings, t } = useSettings()
   const [currentStep, setCurrentStep] = useState(0)
-  const [lang, setLang] = useState("en")
   const [isElectron, setIsElectron] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isInitialDb, setIsInitialDb] = useState(false)
@@ -25,12 +26,10 @@ export default function Home() {
     screen: "unknown",
   })
 
-  const t = translations[lang]
   const router = useRouter();
 
   useEffect(() => {
     setIsElectron(!!window.electron)
-
     if (window.electron) {
       window.electron.receive("app-ready", () => {
         console.log("Electron app is ready")
@@ -74,7 +73,7 @@ export default function Home() {
   }
 
   const handleFinish = () => {
-    window.electron?.send("onboarding-complete", { language: lang })
+    window.electron?.send("onboarding-complete", { language: settings.language })
     router.push("/dashboard")
   }
 
@@ -190,13 +189,14 @@ export default function Home() {
         }}
       />
 
-      <div className="fixed top-6 right-6 z-50">
+      <div className="fixed top-6 left-6 z-50">
         <select
-          value={lang}
-          onChange={e => setLang(e.target.value)}
+          value={settings?.language || 'en'}
+          onChange={e => updateSettings({ language: e.target.value })}
           className="bg-neutral-900/80 backdrop-blur border border-neutral-800 text-neutral-300 
                      text-sm px-3 py-2 rounded-lg cursor-pointer outline-none
-                     hover:border-neutral-700 transition-colors"
+                     hover:border-neutral-700 transition-colors appearance-none pr-8"
+          style={{ backgroundImage: 'none' }}
         >
           {languages.map(l => (
             <option key={l.code} value={l.code}>
@@ -204,6 +204,9 @@ export default function Home() {
             </option>
           ))}
         </select>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 text-xs">
+          ▼
+        </div>
       </div>
 
       <div className="fixed top-6 left-1/2 -translate-x-1/2 flex gap-2 z-50">

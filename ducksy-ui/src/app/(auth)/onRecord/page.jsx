@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2 } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
+import SessionChat from "@/components/SessionChat"
 import { useSettings } from "@/hooks/SettingsContext"
 import { useSearchParams } from "next/navigation"
 
@@ -53,6 +54,58 @@ export default function OnRecordPage() {
             save()
       }, [audioBlob, saveRecording, resetRecording])
 
+      const handleTranscriptionUpdate = (data) => {
+            console.log('Transcription update:', data)
+
+            let parsedData = { ...data }
+            if (parsedData.details && typeof parsedData.details === 'string') {
+                  try {
+                        parsedData.details = JSON.parse(parsedData.details)
+                  } catch (e) {
+                        console.error('Failed to parse details:', e)
+                        parsedData.details = {}
+                  }
+            }
+
+            if (parsedData.status === 'completed') {
+                  setTranscriptionResult(parsedData)
+                  setIsProcessing(false)
+                  setExpanded(true)
+                  if (typeof window !== 'undefined' && window.electron) {
+                        window.electron.send('resize-recording-window', { height: 600 })
+                  }
+            } else if (parsedData.status === 'failed') {
+                  setTranscriptionResult(parsedData)
+                  setIsProcessing(false)
+            } else {
+                  setIsProcessing(true)
+            }
+      }
+
+      useEffect(() => {
+            const checkLatestFile = async () => {
+                  if (typeof window !== 'undefined' && window.electron) {
+                        try {
+                              const result = await window.electron.invoke('get-latest-file')
+                              if (result && result.success && result.data) {
+                                    console.log('Found latest file on mount:', result.data)
+                                    handleTranscriptionUpdate({
+                                          fileId: result.data.fileId,
+                                          status: result.data.transcriptionStatus,
+                                          title: result.data.title,
+                                          details: result.data.details,
+                                          chatHistory: result.data.chatHistory
+                                    })
+                              }
+                        } catch (e) {
+                              console.error("Failed to check latest file:", e)
+                        }
+                  }
+            }
+
+            checkLatestFile()
+      }, [])
+
       useEffect(() => {
             document.body.style.backgroundColor = 'transparent'
             document.documentElement.style.backgroundColor = 'transparent'
@@ -75,34 +128,6 @@ export default function OnRecordPage() {
                   if (data.action === 'stop') {
                         setIsRecording(false)
                         setRecordTime({ time: 0, formatted: "00:00" })
-                  }
-            }
-
-            const handleTranscriptionUpdate = (data) => {
-                  console.log('Transcription update:', data)
-
-                  let parsedData = { ...data }
-                  if (parsedData.details && typeof parsedData.details === 'string') {
-                        try {
-                              parsedData.details = JSON.parse(parsedData.details)
-                        } catch (e) {
-                              console.error('Failed to parse details:', e)
-                              parsedData.details = {}
-                        }
-                  }
-
-                  if (parsedData.status === 'completed') {
-                        setTranscriptionResult(parsedData)
-                        setIsProcessing(false)
-                        setExpanded(true)
-                        if (typeof window !== 'undefined' && window.electron) {
-                              window.electron.send('resize-recording-window', { height: 600 })
-                        }
-                  } else if (parsedData.status === 'failed') {
-                        setTranscriptionResult(parsedData)
-                        setIsProcessing(false)
-                  } else {
-                        setIsProcessing(true)
                   }
             }
 
@@ -409,6 +434,14 @@ export default function OnRecordPage() {
                                                                   </div>
                                                             </motion.div>
                                                       )}
+
+
+                                                      <div className="pt-4 border-t border-white/5">
+                                                            <SessionChat
+                                                                  fileId={transcriptionResult.fileId || transcriptionResult.id}
+                                                                  initialHistory={transcriptionResult.chatHistory || []}
+                                                            />
+                                                      </div>
                                                 </div>
                                                 <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-end">
                                                       <button
@@ -421,11 +454,12 @@ export default function OnRecordPage() {
                                           </motion.div>
                                     ) : null}
                               </motion.div>
-                        )}
-                  </AnimatePresence>
+                        )
+                        }
+                  </AnimatePresence >
 
                   {/* Return to Dashboard Button */}
-                  <AnimatePresence>
+                  < AnimatePresence >
                         {!isRecording && (
                               <motion.button
                                     initial={{ opacity: 0, y: -10 }}
@@ -440,7 +474,7 @@ export default function OnRecordPage() {
                                     <span className="text-xs font-medium text-neutral-400 group-hover:text-amber-400">{t.overlay.returnDashboard}</span>
                               </motion.button>
                         )}
-                  </AnimatePresence>
+                  </AnimatePresence >
             </div >
       )
 }

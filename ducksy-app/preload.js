@@ -74,7 +74,9 @@ contextBridge.exposeInMainWorld("electron", {
                   "set-gemini-api-key",
                   "delete-db",
                   "retry-transcription",
-                  "set-mic-front"
+                  "chat-session",
+                  "set-mic-front",
+                  "get-latest-file"
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)
