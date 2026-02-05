@@ -476,9 +476,8 @@ export default function DashboardPage() {
                                                       <MediaPreview
                                                             fileId={selectedSession.id}
                                                             filePath={selectedSession.filePath}
-                                                            type={selectedSession.type}
+                                                            mimeType={selectedSession.mimeType}
                                                             duration={selectedSession.duration}
-                                                            fileExists={true} // We need to pass this from backend, assuming true or check safely
                                                       />
                                                 </div>
 
@@ -525,12 +524,41 @@ export default function DashboardPage() {
                                                                         <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                                                                               <h4 className="text-xs font-mono text-amber-400 uppercase tracking-widest mb-3">{t.dashboardPage.actionItems}</h4>
                                                                               <ul className="space-y-2">
-                                                                                    {selectedSession.details.actionItems?.map((item, i) => (
-                                                                                          <li key={i} className="flex items-center gap-2 text-sm text-neutral-300">
-                                                                                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50" />
-                                                                                                {item}
-                                                                                          </li>
-                                                                                    ))}
+                                                                                    {selectedSession.details.actionItems?.map((item, i) => {
+                                                                                          const isObject = typeof item === 'object' && item !== null;
+                                                                                          const text = isObject ? item.description : item;
+                                                                                          const tool = isObject ? item.tool : null;
+                                                                                          const params = isObject ? item.parameters : {};
+
+                                                                                          return (
+                                                                                                <li key={i} className="flex items-start gap-3 text-sm text-neutral-300 bg-black/20 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+                                                                                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50 mt-1.5 shrink-0" />
+                                                                                                      <div className="flex-1">
+                                                                                                            <p className="leading-relaxed">{text}</p>
+                                                                                                            {tool && (
+                                                                                                                  <div className="mt-2 flex gap-2">
+                                                                                                                        <button
+                                                                                                                              onClick={(e) => {
+                                                                                                                                    e.stopPropagation();
+                                                                                                                                    if (window.electron) {
+                                                                                                                                          window.electron.invoke('execute-tool', { tool, params })
+                                                                                                                                                .then(res => {
+                                                                                                                                                      if (res.success) alert("Action Executed!");
+                                                                                                                                                      else alert("Error: " + res.error);
+                                                                                                                                                });
+                                                                                                                                    }
+                                                                                                                              }}
+                                                                                                                              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
+                                                                                                                        >
+                                                                                                                              <Zap className="w-3 h-3" />
+                                                                                                                              Execute
+                                                                                                                        </button>
+                                                                                                                  </div>
+                                                                                                            )}
+                                                                                                      </div>
+                                                                                                </li>
+                                                                                          );
+                                                                                    })}
                                                                                     {(!selectedSession.details.actionItems || selectedSession.details.actionItems.length === 0) && (
                                                                                           <li className="text-sm text-neutral-500 italic">{t.dashboardPage.noActionItems}</li>
                                                                                     )}

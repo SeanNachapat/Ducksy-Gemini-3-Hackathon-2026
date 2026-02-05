@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
 import SessionChat from "@/components/SessionChat"
+import MediaPreview from "@/components/MediaPreview"
 import { useSettings } from "@/hooks/SettingsContext"
 import { useSearchParams } from "next/navigation"
 
@@ -17,6 +18,7 @@ export default function OnRecordPage() {
       const [transcriptionResult, setTranscriptionResult] = useState(null)
       const [isProcessing, setIsProcessing] = useState(false)
       const [deviceId, setDeviceId] = useState(null)
+      const [capturedFile, setCapturedFile] = useState(null) // { filePath, mimeType }
 
       const {
             isRecording: recorderIsRecording,
@@ -89,6 +91,15 @@ export default function OnRecordPage() {
                               const result = await window.electron.invoke('get-latest-file')
                               if (result && result.success && result.data) {
                                     console.log('Found latest file on mount:', result.data)
+
+                                    // Set captured file for preview
+                                    if (result.data.filePath && result.data.mimeType) {
+                                          setCapturedFile({
+                                                filePath: result.data.filePath,
+                                                mimeType: result.data.mimeType
+                                          })
+                                    }
+
                                     handleTranscriptionUpdate({
                                           fileId: result.data.fileId,
                                           status: result.data.transcriptionStatus,
@@ -131,16 +142,39 @@ export default function OnRecordPage() {
                   }
             }
 
+            const handleRecordingSaved = async (data) => {
+                  console.log('Recording saved:', data)
+                  if (data.filePath) {
+                        // Get the file info to determine mimeType
+                        try {
+                              const result = await window.electron.invoke('get-latest-file')
+                              if (result && result.success && result.data) {
+                                    setCapturedFile({
+                                          filePath: result.data.filePath,
+                                          mimeType: result.data.mimeType
+                                    })
+                              }
+                        } catch (e) {
+                              console.error("Failed to get file info:", e)
+                        }
+                  }
+                  setIsProcessing(true)
+                  setExpanded(true)
+                  window.electron.send('resize-recording-window', { height: 600 })
+            }
+
             window.electron.receive('update-record-time', handleTimeUpdate)
             window.electron.receive('recording-paused-state', handlePausedState)
             window.electron.receive('recording-control-update', handleRecordingControl)
             window.electron.receive('transcription-updated', handleTranscriptionUpdate)
+            window.electron.receive('recording-saved', handleRecordingSaved)
 
             return () => {
                   window.electron.removeAllListeners?.('update-record-time')
                   window.electron.removeAllListeners?.('recording-paused-state')
                   window.electron.removeAllListeners?.('recording-control-update')
                   window.electron.removeAllListeners?.('transcription-updated')
+                  window.electron.removeAllListeners?.('recording-saved')
             }
       }, [])
 
@@ -351,11 +385,26 @@ export default function OnRecordPage() {
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0 }}
-                                                className="flex flex-col items-center justify-center p-8 h-[300px]"
+                                                className="flex flex-col items-center p-6"
                                           >
-                                                <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
-                                                <p className="text-sm font-medium text-white">{t.processing || "Analyzing..."}</p>
-                                                <p className="text-xs text-neutral-500 mt-2 text-center">Using Gemini 1.5 Flash</p>
+                                                {/* Show captured image preview if it's an image */}
+                                                {capturedFile?.mimeType?.startsWith('image') && (
+                                                      <div className="w-full mb-4 rounded-xl overflow-hidden border border-white/10">
+                                                            <MediaPreview
+                                                                  filePath={capturedFile.filePath}
+                                                                  mimeType={capturedFile.mimeType}
+                                                                  duration={0}
+                                                            />
+                                                      </div>
+                                                )}
+
+                                                <div className="flex items-center gap-3 py-4">
+                                                      <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                                                      <div className="text-left">
+                                                            <p className="text-sm font-medium text-white">{t.processing || "Analyzing..."}</p>
+                                                            <p className="text-xs text-neutral-500">Using Gemini 2.0 Flash</p>
+                                                      </div>
+                                                </div>
                                           </motion.div>
                                     ) : transcriptionResult?.status === 'failed' ? (
                                           <motion.div

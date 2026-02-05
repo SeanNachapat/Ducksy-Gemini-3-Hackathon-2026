@@ -76,7 +76,8 @@ contextBridge.exposeInMainWorld("electron", {
                   "retry-transcription",
                   "chat-session",
                   "set-mic-front",
-                  "get-latest-file"
+                  "get-latest-file",
+                  "read-file-as-base64"
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)

@@ -45,6 +45,7 @@ const getSessionData = (fileId) => {
             transcriptionStatus: file.transcriptionStatus,
             duration: file.duration,
             filePath: file.path,
+            mimeType: file.type,
             fileExists: fileExists,
             createdAt: file.createdAt
         };

@@ -102,7 +102,7 @@ export default function ConfigurePage() {
             window.electron.invoke("delete-db").then((event) => {
                 console.log(event)
                 if (event?.success) {
-                    alert("ลบข้อมูลสำเร็จ! แอปจะ restart...")
+                    alert("Memory cleared successfully! The app will restart...")
                 } else {
                     alert("Error: " + (event?.error || "Unknown error"))
                     setClearing(false)

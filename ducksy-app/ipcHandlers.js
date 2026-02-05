@@ -642,6 +642,23 @@ const registerIpcHandlers = () => {
             return getSessionData(latestFileId);
       });
 
+      ipcMain.handle("read-file-as-base64", async (event, { filePath, mimeType }) => {
+            try {
+                  if (!filePath || !fs.existsSync(filePath)) {
+                        return { success: false, error: "File not found" };
+                  }
+
+                  const buffer = fs.readFileSync(filePath);
+                  const base64 = buffer.toString("base64");
+                  const dataUrl = `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
+
+                  return { success: true, dataUrl };
+            } catch (err) {
+                  console.error("Failed to read file as base64:", err);
+                  return { success: false, error: err.message };
+            }
+      });
+
       ipcMain.on("open-external", (event, url) => {
             if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
                   shell.openExternal(url);

@@ -321,6 +321,7 @@ const getSessionLogs = () => {
                   transcriptionStatus: file.transcriptionStatus,
                   duration: file.duration,
                   filePath: file.path,
+                  mimeType: file.type,
                   createdAt: file.createdAt,
                   updatedAt: file.updatedAt
             };
