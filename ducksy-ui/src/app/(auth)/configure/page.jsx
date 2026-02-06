@@ -21,6 +21,13 @@ export default function ConfigurePage() {
     const [showBuilders, setShowBuilders] = useState(false)
     const [contributors, setContributors] = useState([])
 
+    const [mcpStatus, setMcpStatus] = useState({
+        google_calendar: { connected: false, loading: false },
+        notion: { connected: false, loading: false, databases: [], selectedDatabase: null }
+    })
+    const [googleSetup, setGoogleSetup] = useState({ show: false, clientId: "", clientSecret: "", authUrl: "", code: "" })
+    const [notionSetup, setNotionSetup] = useState({ show: false, accessToken: "" })
+
     useEffect(() => {
         const fetchContributors = async () => {
             try {
@@ -69,12 +76,6 @@ export default function ConfigurePage() {
         }
     }, [])
 
-    const [connections, setConnections] = useState({
-        notion: false,
-        google: true,
-        mcp: false
-    })
-
     const [sizeCache, setSizeCache] = useState({
         status: "",
         percent: null,
@@ -94,6 +95,31 @@ export default function ConfigurePage() {
                 setSizeCache({ status, percent, size })
             })
         }
+    }, [activeSection])
+
+    useEffect(() => {
+        if (!window.electron || activeSection !== "connections") return;
+
+        const fetchMcpStatus = async () => {
+            try {
+                const result = await window.electron.invoke("mcp-get-status");
+                if (result.success) {
+                    setMcpStatus({
+                        google_calendar: { connected: result.google_calendar.connected, loading: false },
+                        notion: {
+                            connected: result.notion.connected,
+                            loading: false,
+                            databases: result.notion.databases || [],
+                            selectedDatabase: result.notion.selectedDatabase
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch MCP status:", err);
+            }
+        };
+
+        fetchMcpStatus();
     }, [activeSection])
 
     const handleClearMemory = () => {
@@ -407,92 +433,191 @@ export default function ConfigurePage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">
-                                    <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex items-center justify-between group hover:border-white/10 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-black font-bold text-xl">
-                                                N
-                                            </div>
-                                            <div>
-                                                <h3 className="text-base font-semibold text-white">Notion</h3>
-                                                <p className="text-xs text-neutral-500">Workspace & Page Access</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setConnections(prev => ({ ...prev, notion: !prev.notion }))}
-                                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${connections.notion
-                                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20"
-                                                : "bg-white/5 border-white/5 text-white hover:bg-white/10"
-                                                }`}
-                                        >
-                                            {connections.notion ? "Connected" : "Connect"}
-                                        </button>
-                                    </div>
-
-                                    <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex items-center justify-between group hover:border-white/10 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-black font-bold text-xl overflow-hidden p-2">
-                                                <svg viewBox="0 0 24 24" className="w-full h-full">
-                                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <h3 className="text-base font-semibold text-white">Google Workspace</h3>
-                                                <p className="text-xs text-neutral-500">Drive, Calendar, & Mail</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setConnections(prev => ({ ...prev, google: !prev.google }))}
-                                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${connections.google
-                                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20"
-                                                : "bg-white/5 border-white/5 text-white hover:bg-white/10"
-                                                }`}
-                                        >
-                                            {connections.google ? "Connected" : "Connect"}
-                                        </button>
-                                    </div>
-
-
-                                    <div className="bg-neutral-900/40 border border-amber-500/20 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-6 relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                                            <Settings className="w-24 h-24 text-amber-500" />
-                                        </div>
-
-                                        <div className="flex items-center justify-between z-10">
+                                    {/* Google Calendar Integration */}
+                                    <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm group hover:border-white/10 transition-colors">
+                                        <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-                                                    <Link2 className="w-6 h-6" />
+                                                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-black font-bold text-xl overflow-hidden p-2">
+                                                    <svg viewBox="0 0 24 24" className="w-full h-full">
+                                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                                    </svg>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-base font-semibold text-white">Add MCP Server</h3>
-                                                    <p className="text-xs text-neutral-500">Model Context Protocol</p>
+                                                    <h3 className="text-base font-semibold text-white">Google Calendar</h3>
+                                                    <p className="text-xs text-neutral-500">Sync sessions to your calendar</p>
                                                 </div>
                                             </div>
-                                            <button className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-black hover:bg-amber-400 transition-colors">
-                                                <Plus className="w-5 h-5" />
-                                            </button>
+                                            {mcpStatus.google_calendar.connected ? (
+                                                <button
+                                                    onClick={async () => {
+                                                        await window.electron.invoke("mcp-google-disconnect");
+                                                        setMcpStatus(prev => ({ ...prev, google_calendar: { connected: false, loading: false } }));
+                                                    }}
+                                                    className="px-4 py-2 rounded-xl text-sm font-medium transition-colors border bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500"
+                                                >
+                                                    Connected
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setGoogleSetup({ show: true, clientId: "", clientSecret: "", authUrl: "", code: "" })}
+                                                    className="px-4 py-2 rounded-xl text-sm font-medium transition-colors border bg-white/5 border-white/5 text-white hover:bg-white/10"
+                                                >
+                                                    Connect
+                                                </button>
+                                            )}
                                         </div>
 
-                                        <div className="space-y-3 z-10">
-                                            <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                                    <span className="text-sm font-mono text-neutral-300">std-io:filesystem-server</span>
-                                                </div>
-                                                <span className="text-[10px] bg-white/5 px-2 py-1 rounded text-neutral-500 font-mono">ACTIVE</span>
+                                        {googleSetup.show && !mcpStatus.google_calendar.connected && (
+                                            <div className="mt-4 p-4 bg-black/20 rounded-xl border border-white/5 space-y-4">
+                                                {!googleSetup.authUrl ? (
+                                                    <>
+                                                        <p className="text-xs text-neutral-400">Enter your Google OAuth credentials from <a href="https://console.cloud.google.com" target="_blank" className="text-amber-500 hover:underline">Google Cloud Console</a></p>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Client ID"
+                                                            value={googleSetup.clientId}
+                                                            onChange={(e) => setGoogleSetup(prev => ({ ...prev, clientId: e.target.value }))}
+                                                            className="w-full bg-neutral-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50"
+                                                        />
+                                                        <input
+                                                            type="password"
+                                                            placeholder="Client Secret"
+                                                            value={googleSetup.clientSecret}
+                                                            onChange={(e) => setGoogleSetup(prev => ({ ...prev, clientSecret: e.target.value }))}
+                                                            className="w-full bg-neutral-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50"
+                                                        />
+                                                        <button
+                                                            onClick={async () => {
+                                                                const result = await window.electron.invoke("mcp-google-get-auth-url", { clientId: googleSetup.clientId, clientSecret: googleSetup.clientSecret });
+                                                                if (result.success) {
+                                                                    setGoogleSetup(prev => ({ ...prev, authUrl: result.url }));
+                                                                    window.electron.send("open-external", result.url);
+                                                                }
+                                                            }}
+                                                            disabled={!googleSetup.clientId || !googleSetup.clientSecret}
+                                                            className="w-full px-4 py-2 bg-amber-500 text-black font-semibold rounded-lg hover:bg-amber-400 transition-colors disabled:opacity-50"
+                                                        >
+                                                            Get Auth URL
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <p className="text-xs text-neutral-400">Paste the authorization code from Google:</p>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Authorization Code"
+                                                            value={googleSetup.code}
+                                                            onChange={(e) => setGoogleSetup(prev => ({ ...prev, code: e.target.value }))}
+                                                            className="w-full bg-neutral-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50"
+                                                        />
+                                                        <button
+                                                            onClick={async () => {
+                                                                const result = await window.electron.invoke("mcp-google-exchange-code", { code: googleSetup.code });
+                                                                if (result.success) {
+                                                                    setMcpStatus(prev => ({ ...prev, google_calendar: { connected: true, loading: false } }));
+                                                                    setGoogleSetup({ show: false, clientId: "", clientSecret: "", authUrl: "", code: "" });
+                                                                }
+                                                            }}
+                                                            disabled={!googleSetup.code}
+                                                            className="w-full px-4 py-2 bg-emerald-500 text-black font-semibold rounded-lg hover:bg-emerald-400 transition-colors disabled:opacity-50"
+                                                        >
+                                                            Connect
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
-                                            <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between opacity-50">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                                                    <span className="text-sm font-mono text-neutral-300">http:slack-context-server</span>
-                                                </div>
-                                                <span className="text-[10px] bg-red-500/10 px-2 py-1 rounded text-red-500 border border-red-500/20 font-mono">OFFLINE</span>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
 
+                                    {/* Notion Integration */}
+                                    <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm group hover:border-white/10 transition-colors">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-black font-bold text-xl">
+                                                    N
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-base font-semibold text-white">Notion</h3>
+                                                    <p className="text-xs text-neutral-500">Save notes to your workspace</p>
+                                                </div>
+                                            </div>
+                                            {mcpStatus.notion.connected ? (
+                                                <button
+                                                    onClick={async () => {
+                                                        await window.electron.invoke("mcp-notion-disconnect");
+                                                        setMcpStatus(prev => ({ ...prev, notion: { connected: false, loading: false, databases: [], selectedDatabase: null } }));
+                                                    }}
+                                                    className="px-4 py-2 rounded-xl text-sm font-medium transition-colors border bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500"
+                                                >
+                                                    Connected
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setNotionSetup({ show: true, accessToken: "" })}
+                                                    className="px-4 py-2 rounded-xl text-sm font-medium transition-colors border bg-white/5 border-white/5 text-white hover:bg-white/10"
+                                                >
+                                                    Connect
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {notionSetup.show && !mcpStatus.notion.connected && (
+                                            <div className="mt-4 p-4 bg-black/20 rounded-xl border border-white/5 space-y-4">
+                                                <p className="text-xs text-neutral-400">Enter your Notion integration token from <a href="https://www.notion.so/my-integrations" target="_blank" className="text-amber-500 hover:underline">Notion Integrations</a></p>
+                                                <input
+                                                    type="password"
+                                                    placeholder="Internal Integration Token"
+                                                    value={notionSetup.accessToken}
+                                                    onChange={(e) => setNotionSetup(prev => ({ ...prev, accessToken: e.target.value }))}
+                                                    className="w-full bg-neutral-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50"
+                                                />
+                                                <button
+                                                    onClick={async () => {
+                                                        const result = await window.electron.invoke("mcp-notion-connect", { accessToken: notionSetup.accessToken });
+                                                        if (result.success) {
+                                                            const status = await window.electron.invoke("mcp-get-status");
+                                                            setMcpStatus(prev => ({
+                                                                ...prev,
+                                                                notion: {
+                                                                    connected: true,
+                                                                    loading: false,
+                                                                    databases: status.notion?.databases || [],
+                                                                    selectedDatabase: status.notion?.selectedDatabase
+                                                                }
+                                                            }));
+                                                            setNotionSetup({ show: false, accessToken: "" });
+                                                        }
+                                                    }}
+                                                    disabled={!notionSetup.accessToken}
+                                                    className="w-full px-4 py-2 bg-amber-500 text-black font-semibold rounded-lg hover:bg-amber-400 transition-colors disabled:opacity-50"
+                                                >
+                                                    Connect
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {mcpStatus.notion.connected && mcpStatus.notion.databases.length > 0 && (
+                                            <div className="mt-4 p-4 bg-black/20 rounded-xl border border-white/5 space-y-3">
+                                                <p className="text-xs text-neutral-400">Select database for notes:</p>
+                                                <select
+                                                    value={mcpStatus.notion.selectedDatabase || ""}
+                                                    onChange={async (e) => {
+                                                        await window.electron.invoke("mcp-notion-set-database", { databaseId: e.target.value });
+                                                        setMcpStatus(prev => ({ ...prev, notion: { ...prev.notion, selectedDatabase: e.target.value } }));
+                                                    }}
+                                                    className="w-full bg-neutral-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-500/50"
+                                                >
+                                                    <option value="">Select a database...</option>
+                                                    {mcpStatus.notion.databases.map(db => (
+                                                        <option key={db.id} value={db.id}>{db.icon} {db.title}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </motion.div>
                         )}

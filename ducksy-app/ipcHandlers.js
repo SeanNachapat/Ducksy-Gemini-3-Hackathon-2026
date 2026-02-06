@@ -4,6 +4,8 @@ const fs = require("fs");
 const db = require("./utils/db");
 const { getSessionData } = require("./utils/sessionHelper");
 const { transcribeAudio, analyzeImage, chatWithSession } = require("./utils/gemini");
+const googleCalendar = require("./utils/mcp/googleCalendar");
+const notion = require("./utils/mcp/notion");
 require("dotenv").config();
 
 let mainWindow = null;
@@ -673,6 +675,119 @@ const registerIpcHandlers = () => {
       ipcMain.on("open-external", (event, url) => {
             if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
                   shell.openExternal(url);
+            }
+      });
+
+      ipcMain.handle("mcp-get-status", async () => {
+            try {
+                  const googleConnected = await googleCalendar.isConnected();
+                  const notionConnected = await notion.isConnected();
+                  const notionDatabases = notionConnected ? await notion.getDatabases().catch(() => []) : [];
+                  const selectedDb = notionConnected ? await notion.getSelectedDatabase() : null;
+
+                  return {
+                        success: true,
+                        google_calendar: { connected: googleConnected },
+                        notion: { connected: notionConnected, databases: notionDatabases, selectedDatabase: selectedDb }
+                  };
+            } catch (err) {
+                  console.error("MCP status error:", err);
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-google-get-auth-url", async (event, { clientId, clientSecret }) => {
+            try {
+                  const url = await googleCalendar.getAuthUrl(clientId, clientSecret);
+                  return { success: true, url };
+            } catch (err) {
+                  console.error("Google auth URL error:", err);
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-google-exchange-code", async (event, { code }) => {
+            try {
+                  await googleCalendar.exchangeCodeForTokens(code);
+                  return { success: true };
+            } catch (err) {
+                  console.error("Google token exchange error:", err);
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-google-disconnect", async () => {
+            try {
+                  await googleCalendar.disconnect();
+                  return { success: true };
+            } catch (err) {
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-notion-connect", async (event, { accessToken, workspaceInfo }) => {
+            try {
+                  await notion.saveAccessToken(accessToken, workspaceInfo);
+                  return { success: true };
+            } catch (err) {
+                  console.error("Notion connect error:", err);
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-notion-disconnect", async () => {
+            try {
+                  await notion.disconnect();
+                  return { success: true };
+            } catch (err) {
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-notion-set-database", async (event, { databaseId }) => {
+            try {
+                  await notion.setSelectedDatabase(databaseId);
+                  return { success: true };
+            } catch (err) {
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-sync-session", async (event, { fileId, providers }) => {
+            try {
+                  const sessionResult = await getSessionData(fileId);
+                  if (!sessionResult.success) {
+                        return { success: false, error: "Session not found" };
+                  }
+
+                  const results = {};
+
+                  if (providers.includes("google_calendar")) {
+                        try {
+                              const event = await googleCalendar.createCalendarEvent(sessionResult.data);
+                              results.google_calendar = { success: true, eventId: event.id };
+                              await db.updateTranscription({ id: sessionResult.data.transcriptionId, calendarEventId: event.id });
+                        } catch (err) {
+                              results.google_calendar = { success: false, error: err.message };
+                        }
+                  }
+
+                  if (providers.includes("notion")) {
+                        try {
+                              const dbId = await notion.getSelectedDatabase();
+                              if (!dbId) throw new Error("No Notion database selected");
+                              const page = await notion.createPage(dbId, sessionResult.data);
+                              results.notion = { success: true, pageId: page.id };
+                              await db.updateTranscription({ id: sessionResult.data.transcriptionId, notionPageId: page.id });
+                        } catch (err) {
+                              results.notion = { success: false, error: err.message };
+                        }
+                  }
+
+                  return { success: true, results };
+            } catch (err) {
+                  console.error("MCP sync error:", err);
+                  return { success: false, error: err.message };
             }
       });
 };

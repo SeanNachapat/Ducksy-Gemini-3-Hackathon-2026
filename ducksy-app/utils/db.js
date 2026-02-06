@@ -462,6 +462,62 @@ const deleteDb = async () => {
       }
 };
 
+const getMcpCredential = async (provider) => {
+      const db = await getDb();
+      return db.get(`SELECT * FROM mcp_credentials WHERE provider = ?`, [provider]);
+};
+
+const saveMcpCredential = async (provider, tokens) => {
+      const db = await getDb();
+      const existing = await getMcpCredential(provider);
+
+      if (existing) {
+            const fields = ["updatedAt = CURRENT_TIMESTAMP"];
+            const values = [];
+
+            if (tokens.access_token !== undefined) {
+                  fields.push("access_token = ?");
+                  values.push(tokens.access_token);
+            }
+            if (tokens.refresh_token !== undefined) {
+                  fields.push("refresh_token = ?");
+                  values.push(tokens.refresh_token);
+            }
+            if (tokens.client_id !== undefined) {
+                  fields.push("client_id = ?");
+                  values.push(tokens.client_id);
+            }
+            if (tokens.client_secret !== undefined) {
+                  fields.push("client_secret = ?");
+                  values.push(tokens.client_secret);
+            }
+            if (tokens.additional_info !== undefined) {
+                  fields.push("additional_info = ?");
+                  values.push(JSON.stringify(tokens.additional_info));
+            }
+
+            values.push(provider);
+            return db.run(`UPDATE mcp_credentials SET ${fields.join(", ")} WHERE provider = ?`, values);
+      } else {
+            return db.run(`
+                  INSERT INTO mcp_credentials (provider, access_token, refresh_token, client_id, client_secret, additional_info)
+                  VALUES (?, ?, ?, ?, ?, ?)
+            `, [
+                  provider,
+                  tokens.access_token || null,
+                  tokens.refresh_token || null,
+                  tokens.client_id || null,
+                  tokens.client_secret || null,
+                  JSON.stringify(tokens.additional_info || {})
+            ]);
+      }
+};
+
+const deleteMcpCredential = async (provider) => {
+      const db = await getDb();
+      return db.run(`DELETE FROM mcp_credentials WHERE provider = ?`, [provider]);
+};
+
 module.exports = {
       initializeDatabase,
       isAlreadyFile,
@@ -477,5 +533,8 @@ module.exports = {
       getTranscriptionByFileId,
       getFileById,
       getSizeOfdb,
-      deleteDb
+      deleteDb,
+      getMcpCredential,
+      saveMcpCredential,
+      deleteMcpCredential
 };
