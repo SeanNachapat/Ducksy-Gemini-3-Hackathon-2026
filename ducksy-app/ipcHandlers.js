@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const db = require("./utils/db");
 const { getSessionData } = require("./utils/sessionHelper");
-const { transcribeAudio, analyzeImage, chatWithSession } = require("./utils/gemini");
+const { transcribeAudio, analyzeImage, chatWithSession, getMetrics } = require("./utils/gemini");
 require("dotenv").config();
 
 let mainWindow = null;
@@ -287,6 +287,7 @@ const registerIpcHandlers = () => {
                         transcriptionStatus: file.transcriptionStatus,
                         duration: file.duration,
                         filePath: file.path,
+                        mimeType: file.type,
                         createdAt: file.createdAt
                   };
 
@@ -578,7 +579,16 @@ const registerIpcHandlers = () => {
                         return { success: false, error: "File not found" };
                   }
 
-                  if (file.type.startsWith("image/")) {
+                  const transcription = await db.getTranscriptionByFileId(fileId);
+                  if (transcription) {
+                        await db.updateTranscription({
+                              id: transcription.id,
+                              status: "processing"
+                        });
+                  }
+
+                  console.log(`Retrying transcription for file: ${fileId}`);
+                  if (file.type && file.type.startsWith("image/")) {
                         processImageAnalysis(fileId, file.path, file.type, userLanguage, settings);
                   } else {
                         processTranscription(fileId, file.path, file.type, userLanguage, settings);
@@ -666,6 +676,16 @@ const registerIpcHandlers = () => {
                   return { success: true, dataUrl };
             } catch (err) {
                   console.error("Failed to read file as base64:", err);
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("get-system-metrics", async () => {
+            try {
+                  const metrics = getMetrics();
+                  return { success: true, data: metrics };
+            } catch (err) {
+                  console.error("Failed to get system metrics:", err);
                   return { success: false, error: err.message };
             }
       });

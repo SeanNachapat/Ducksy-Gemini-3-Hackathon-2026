@@ -30,7 +30,7 @@ const getSessionData = async (fileId) => {
             transcriptionId: file.transcriptionId,
             type: file.transcriptionType || details.type || "summary",
             title: file.transcriptionTitle || file.title,
-            mode: file.mode === "ghost" ? "Ghost Mode 👻" : "Lens Mode 🕶️",
+            mode: file.mode === "ghost" ? "Ghost Mode" : "Lens Mode",
             details: {
                 topic: details.topic || file.title,
                 summary: file.transcriptionSummary || "",

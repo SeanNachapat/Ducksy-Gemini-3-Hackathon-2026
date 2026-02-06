@@ -18,7 +18,7 @@ export default function OnRecordPage() {
       const [transcriptionResult, setTranscriptionResult] = useState(null)
       const [isProcessing, setIsProcessing] = useState(false)
       const [deviceId, setDeviceId] = useState(null)
-      const [capturedFile, setCapturedFile] = useState(null) // { filePath, mimeType }
+      const [capturedFile, setCapturedFile] = useState(null)
 
       const {
             isRecording: recorderIsRecording,
@@ -92,7 +92,6 @@ export default function OnRecordPage() {
                               if (result && result.success && result.data) {
                                     console.log('Found latest file on mount:', result.data)
 
-                                    // Set captured file for preview
                                     if (result.data.filePath && result.data.mimeType) {
                                           setCapturedFile({
                                                 filePath: result.data.filePath,
@@ -145,7 +144,6 @@ export default function OnRecordPage() {
             const handleRecordingSaved = async (data) => {
                   console.log('Recording saved:', data)
                   if (data.filePath) {
-                        // Get the file info to determine mimeType
                         try {
                               const result = await window.electron.invoke('get-latest-file')
                               if (result && result.success && result.data) {
@@ -269,15 +267,12 @@ export default function OnRecordPage() {
                         animate={{ scale: 1, opacity: 1 }}
                         className="relative"
                   >
-                        {/* Capsule Container */}
-                        <div className="relative bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-2xl shadow-black/50">
-                              {/* Glow effect */}
+                        <div className="relative bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-2xl shadow-black/50 draggable">
                               <div className={`absolute inset-0 rounded-full blur-xl opacity-50 ${isRecording ? 'bg-linear-to-r from-amber-500/20 via-red-500/20 to-amber-500/20 animate-pulse' : 'bg-linear-to-r from-amber-500/10 via-amber-500/10 to-amber-500/10'}`} />
 
                               <div className="relative flex items-center gap-2">
                                     {isRecording ? (
                                           <>
-                                                {/* Recording Indicator & Timer */}
                                                 <div className="flex items-center gap-2 pl-1 pr-2">
                                                       <motion.div
                                                             animate={{
@@ -289,7 +284,7 @@ export default function OnRecordPage() {
                                                                   repeat: Infinity,
                                                                   ease: "easeInOut"
                                                             }}
-                                                            className={`w-3 h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500'} shadow-lg ${isPaused ? 'shadow-yellow-500/50' : 'shadow-red-500/50'}`}
+                                                            className={`w-3 h-3 rounded-full ${isPaused ? 'bg-[#eab308]' : 'bg-[#ef4444]'} shadow-lg ${isPaused ? 'shadow-yellow-500/50' : 'shadow-red-500/50'}`}
                                                       />
 
                                                       <div className="text-lg font-mono font-bold text-white tracking-wider">
@@ -297,12 +292,11 @@ export default function OnRecordPage() {
                                                       </div>
                                                 </div>
 
-                                                {/* Pause/Resume Button */}
                                                 <motion.button
                                                       whileHover={{ scale: 1.05 }}
                                                       whileTap={{ scale: 0.95 }}
                                                       onClick={handlePauseResume}
-                                                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                      className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group non-draggable"
                                                 >
                                                       {isPaused ? (
                                                             <Play className="w-4 h-4 text-white fill-white" strokeWidth={0} />
@@ -311,48 +305,43 @@ export default function OnRecordPage() {
                                                       )}
                                                 </motion.button>
 
-                                                {/* Stop Button */}
                                                 <motion.button
                                                       whileHover={{ scale: 1.05 }}
                                                       whileTap={{ scale: 0.95 }}
                                                       onClick={handleStop}
-                                                      className="w-10 h-10 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center transition-all group"
+                                                      className="w-10 h-10 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 hover:border-red-500/50 flex items-center justify-center transition-all group non-draggable"
                                                 >
                                                       <Square className="w-4 h-4 text-red-400 fill-red-400" strokeWidth={0} />
                                                 </motion.button>
                                           </>
                                     ) : (
                                           <>
-                                                {/* Three Action Buttons */}
                                                 <div className="flex items-center gap-2">
-                                                      {/* Voice Button */}
                                                       <motion.button
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             onClick={handleVoiceClick}
-                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group non-draggable"
                                                             title={t.voiceRecord}
                                                       >
                                                             <Mic className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
                                                       </motion.button>
 
-                                                      {/* Screen Share Button */}
                                                       <motion.button
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             onClick={handleScreenClick}
-                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group non-draggable"
                                                             title={t.overlay.screen}
                                                       >
                                                             <Monitor className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
                                                       </motion.button>
 
-                                                      {/* Camera Button */}
                                                       <motion.button
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             onClick={handleCameraClick}
-                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group"
+                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group non-draggable"
                                                             title={t.capture}
                                                       >
                                                             <Camera className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
@@ -363,7 +352,6 @@ export default function OnRecordPage() {
                               </div>
                         </div>
 
-                        {/* Drag Handle Indicator */}
                         <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex gap-1 p-2 cursor-move" style={{ WebkitAppRegion: 'drag' }}>
                               <div className="w-1 h-1 rounded-full bg-white/20" />
                               <div className="w-1 h-1 rounded-full bg-white/20" />
@@ -371,7 +359,6 @@ export default function OnRecordPage() {
                         </div>
                   </motion.div>
 
-                  {/* Result Dropdown */}
                   <AnimatePresence>
                         {expanded && (isProcessing || transcriptionResult) && (
                               <motion.div
@@ -387,7 +374,6 @@ export default function OnRecordPage() {
                                                 exit={{ opacity: 0 }}
                                                 className="flex flex-col items-center p-6"
                                           >
-                                                {/* Show captured image preview if it's an image */}
                                                 {capturedFile?.mimeType?.startsWith('image') && (
                                                       <div className="w-full mb-4 rounded-xl overflow-hidden border border-white/10">
                                                             <MediaPreview
@@ -468,7 +454,6 @@ export default function OnRecordPage() {
                                                 </div>
 
                                                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar max-h-[400px]">
-                                                      {/* Topic */}
                                                       {transcriptionResult.details?.topic && (
                                                             <motion.div
                                                                   variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
@@ -481,7 +466,6 @@ export default function OnRecordPage() {
                                                             </motion.div>
                                                       )}
 
-                                                      {/* Summary */}
                                                       {transcriptionResult.details?.summary && (
                                                             <motion.div
                                                                   variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
@@ -494,7 +478,6 @@ export default function OnRecordPage() {
                                                             </motion.div>
                                                       )}
 
-                                                      {/* Action Items */}
                                                       {transcriptionResult.details?.actionItems && transcriptionResult.details.actionItems.length > 0 && (
                                                             <motion.div
                                                                   variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
@@ -515,8 +498,6 @@ export default function OnRecordPage() {
                                                                   </ul>
                                                             </motion.div>
                                                       )}
-
-                                                      {/* Code Snippet */}
                                                       {transcriptionResult.details?.code && (
                                                             <motion.div
                                                                   variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
@@ -537,7 +518,38 @@ export default function OnRecordPage() {
                                                             />
                                                       </div>
                                                 </div>
-                                                <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-end">
+                                                <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-between items-center">
+                                                      <button
+                                                            onClick={async () => {
+                                                                  if (typeof window !== 'undefined' && window.electron) {
+                                                                        try {
+                                                                              const result = await window.electron.invoke('get-latest-file')
+                                                                              if (result && result.success && result.data) {
+                                                                                    if (result.data.filePath && result.data.mimeType) {
+                                                                                          setCapturedFile({
+                                                                                                filePath: result.data.filePath,
+                                                                                                mimeType: result.data.mimeType
+                                                                                          })
+                                                                                    }
+                                                                                    handleTranscriptionUpdate({
+                                                                                          fileId: result.data.fileId,
+                                                                                          status: result.data.transcriptionStatus,
+                                                                                          title: result.data.title,
+                                                                                          details: result.data.details,
+                                                                                          chatHistory: result.data.chatHistory
+                                                                                    })
+                                                                              }
+                                                                        } catch (e) {
+                                                                              console.error("Refresh failed:", e)
+                                                                        }
+                                                                  }
+                                                            }}
+                                                            className="flex items-center gap-2 px-3 py-2 bg-white/5 text-neutral-400 text-xs font-medium rounded-lg hover:bg-white/10 hover:text-white transition-colors border border-white/10"
+                                                            title={t.sessionsPage?.refresh || "Refresh"}
+                                                      >
+                                                            <RefreshCw className="w-4 h-4" />
+                                                            {t.sessionsPage?.refresh || "Refresh"}
+                                                      </button>
                                                       <button
                                                             onClick={() => window.electron.send('close-overlay')}
                                                             className="px-4 py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200 transition-colors"

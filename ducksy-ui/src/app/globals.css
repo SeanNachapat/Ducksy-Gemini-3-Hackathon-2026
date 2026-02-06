@@ -19,8 +19,20 @@
   }
 }
 
+html, body {
+  background-color: transparent !important;
+}
+
+/* Draggable regions */
+.draggable {
+  -webkit-app-region: drag;
+}
+
+.non-draggable {
+  -webkit-app-region: no-drag;
+}
+
 body {
-  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }

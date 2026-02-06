@@ -286,7 +286,11 @@ const getSessionLogs = async () => {
                   chatHistory = [];
             }
 
-            const createdAt = new Date(file.createdAt);
+            let createdAtStr = file.createdAt;
+            if (createdAtStr && !createdAtStr.includes('Z') && !createdAtStr.includes('+') && !createdAtStr.includes('-', 10)) {
+                  createdAtStr = createdAtStr.replace(' ', 'T') + 'Z';
+            }
+            const createdAt = new Date(createdAtStr);
             const now = new Date();
             const diffMs = now - createdAt;
             const diffMinutes = Math.floor(diffMs / (1000 * 60));

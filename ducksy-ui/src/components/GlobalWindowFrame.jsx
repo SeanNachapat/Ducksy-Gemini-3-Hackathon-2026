@@ -7,7 +7,7 @@ export default function GlobalWindowFrame({ children }) {
     const [platform, setPlatform] = useState("mac")
     const pathname = usePathname()
     const isLanding = pathname === "/"
-    const isOverlay = pathname === "/onRecord"
+    const isOverlay = pathname?.startsWith("/onRecord")
 
     useEffect(() => {
         const userAgent = window.navigator.userAgent.toLowerCase()

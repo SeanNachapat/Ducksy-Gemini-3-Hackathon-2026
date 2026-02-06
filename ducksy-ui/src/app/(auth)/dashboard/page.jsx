@@ -32,6 +32,89 @@ import MicDevice from "@/components/MicDevice"
 import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
 
+function LiveSystemMetrics() {
+      const [metrics, setMetrics] = useState({
+            latency: 0,
+            tokensUsed: 0,
+            tokensTotal: 1000000,
+            mcpConnected: false,
+            lastUpdated: 0
+      })
+
+      useEffect(() => {
+            const fetchMetrics = async () => {
+                  if (typeof window !== 'undefined' && window.electron) {
+                        try {
+                              const result = await window.electron.invoke('get-system-metrics')
+                              if (result.success && result.data) {
+                                    setMetrics(result.data)
+                              }
+                        } catch (err) {
+                              console.error('Failed to fetch metrics:', err)
+                        }
+                  }
+            }
+
+            fetchMetrics()
+            const interval = setInterval(fetchMetrics, 3000) 
+            return () => clearInterval(interval)
+      }, [])
+
+      const formatTokens = (num) => {
+            if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
+            if (num >= 1000) return `${(num / 1000).toFixed(1)}k`
+            return num.toString()
+      }
+
+      const isStale = Date.now() - metrics.lastUpdated > 60000
+
+      return (
+            <div className="flex items-center gap-3 font-mono text-xs bg-neutral-900/70 px-4 py-2.5 rounded-xl border border-white/5 backdrop-blur-md">
+                  <div className="flex items-center gap-2">
+                        <span className="text-neutral-500 uppercase tracking-wider text-[10px]">LAT</span>
+                        <span className={`font-bold tabular-nums ${metrics.latency === 0 ? 'text-neutral-500' :
+                              metrics.latency < 500 ? 'text-green-400' :
+                                    metrics.latency < 1000 ? 'text-yellow-400' : 'text-red-400'
+                              }`}>
+                              {metrics.latency === 0 ? '--' : `${metrics.latency}ms`}
+                        </span>
+                  </div>
+
+                  <span className="w-px h-4 bg-white/10" />
+
+                  <div className="flex items-center gap-2">
+                        <span className="text-neutral-500 uppercase tracking-wider text-[10px]">TKN</span>
+                        <span className="font-bold tabular-nums">
+                              <span className={metrics.tokensUsed > 800000 ? 'text-yellow-400' : 'text-green-400'}>
+                                    {formatTokens(metrics.tokensUsed)}
+                              </span>
+                              <span className="text-neutral-600">/</span>
+                              <span className="text-neutral-500">1M</span>
+                        </span>
+                  </div>
+
+                  <span className="w-px h-4 bg-white/10" />
+
+                  <div className="flex items-center gap-2">
+                        <span className="text-neutral-500 uppercase tracking-wider text-[10px]">MCP</span>
+                        <div className="flex items-center gap-1.5">
+                              <div className={`w-2 h-2 rounded-full ${metrics.mcpConnected
+                                    ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse'
+                                    : isStale
+                                          ? 'bg-neutral-500'
+                                          : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                                    }`} />
+                              <span className={`font-bold uppercase text-[10px] ${metrics.mcpConnected ? 'text-green-400' : isStale ? 'text-neutral-500' : 'text-red-400'
+                                    }`}>
+                                    {metrics.mcpConnected ? 'LINK' : isStale ? 'IDLE' : 'ERR'}
+                              </span>
+                        </div>
+                  </div>
+            </div>
+      )
+}
+
+
 export default function DashboardPage() {
       const [mode, setMode] = useState("lens")
       const [selectedSession, setSelectedSession] = useState(null)
@@ -243,17 +326,7 @@ export default function DashboardPage() {
                               </div>
 
                               <div className="flex items-center gap-6">
-                                    <div className="flex items-center gap-4 text-xs font-medium text-neutral-500 bg-neutral-900/50 px-4 py-2 rounded-full border border-white/5 backdrop-blur-md">
-                                          <span className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                                {t.dashboardPage.localFiles}
-                                          </span>
-                                          <span className="w-px h-3 bg-white/10" />
-                                          <span className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-rose-500/50" />
-                                                {t.dashboardPage.gCalendar}
-                                          </span>
-                                    </div>
+                                    <LiveSystemMetrics />
 
                                     <MicDevice setMicDevice={setMicDevice} micDevice={micDevice} />
                               </div>
@@ -343,9 +416,11 @@ export default function DashboardPage() {
                                                             >
                                                                   <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                                                             </button>
-                                                            <button className="text-[10px] font-mono font-bold text-neutral-500 hover:text-white transition-colors uppercase tracking-[0.2em] border border-white/5 px-3 py-1.5 rounded-full hover:bg-white/5">
-                                                                  {t.viewAll}
-                                                            </button>
+                                                            <Link href="/sessions">
+                                                                  <button className="text-[10px] font-mono font-bold text-neutral-500 hover:text-white transition-colors uppercase tracking-[0.2em] border border-white/5 px-3 py-1.5 rounded-full hover:bg-white/5">
+                                                                        {t.viewAll}
+                                                                  </button>
+                                                            </Link>
                                                       </div>
                                                 </div>
 
@@ -457,7 +532,7 @@ export default function DashboardPage() {
                                                       </div>
                                                       <h2 className="text-xl font-bold text-white leading-tight">{selectedSession.title}</h2>
                                                       <p className="text-xs text-neutral-500 mt-1">{selectedSession.subtitle}</p>
-                                                      {selectedSession.duration && (
+                                                      {selectedSession.duration > 0 && (
                                                             <p className="text-xs text-neutral-600 mt-1">
                                                                   {t.session.duration}: {Math.floor(selectedSession.duration / 60)}m {selectedSession.duration % 60}s
                                                             </p>
@@ -505,7 +580,31 @@ export default function DashboardPage() {
                                                                   <X className="w-6 h-6 text-red-500" />
                                                             </div>
                                                             <p className="text-sm font-medium text-red-400">{t.session.failedTitle}</p>
-                                                            <p className="text-xs mt-1 text-neutral-600">{t.session.failedDesc}</p>
+                                                            <p className="text-xs mt-1 text-neutral-600 mb-4">{t.session.failedDesc}</p>
+                                                            <button
+                                                                  onClick={async () => {
+                                                                        if (window.electron && selectedSession) {
+                                                                              try {
+                                                                                    const result = await window.electron.invoke('retry-transcription', {
+                                                                                          fileId: selectedSession.fileId || selectedSession.id
+                                                                                    })
+                                                                                    if (result.success) {
+                                                                                          setSelectedSession(prev => ({
+                                                                                                ...prev,
+                                                                                                transcriptionStatus: 'processing'
+                                                                                          }))
+                                                                                          refetch()
+                                                                                    }
+                                                                              } catch (e) {
+                                                                                    console.error("Retry failed:", e)
+                                                                              }
+                                                                        }
+                                                                  }}
+                                                                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-black text-xs font-bold rounded-lg hover:bg-amber-400 transition-colors"
+                                                            >
+                                                                  <RefreshCw className="w-4 h-4" />
+                                                                  {t.session?.retryAnalysis || "Retry Analysis"}
+                                                            </button>
                                                       </div>
                                                 )}
 
@@ -614,6 +713,21 @@ export default function DashboardPage() {
                                           <div className="p-6 border-t border-white/5 bg-neutral-900/30 flex gap-3">
                                                 <button className="flex-1 py-3 rounded-xl bg-white/5 border border-white/5 text-sm font-medium hover:bg-white/10 hover:text-white text-neutral-300 transition-colors flex items-center justify-center gap-2">
                                                       <ExternalLink className="w-4 h-4" /> {t.dashboardPage.openOverlay}
+                                                </button>
+                                                <button
+                                                      onClick={async () => {
+                                                            if (window.electron && selectedSession) {
+                                                                  const result = await window.electron.invoke('get-session', { fileId: selectedSession.fileId || selectedSession.id })
+                                                                  if (result.success && result.data) {
+                                                                        setSelectedSession(result.data)
+                                                                  }
+                                                                  refetch()
+                                                            }
+                                                      }}
+                                                      className="py-3 px-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                                                      title={t.sessionsPage?.refresh || "Refresh"}
+                                                >
+                                                      <RefreshCw className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                       onClick={handleDeleteSession}

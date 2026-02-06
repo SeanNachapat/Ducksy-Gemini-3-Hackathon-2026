@@ -1,5 +1,15 @@
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
+const metrics = {
+      latency: 0,
+      tokensUsed: 0,
+      tokensTotal: 1000000,
+      mcpConnected: true,
+      lastUpdated: Date.now()
+};
+
+const getMetrics = () => ({ ...metrics });
+
 const LANGUAGE_NAMES = {
       'en': 'English',
       'th': 'Thai',
@@ -62,6 +72,8 @@ Rules:
 `;
 
 async function generateContent(apiKey, modelId, contents, generationConfig = {}) {
+      const startTime = Date.now();
+
       const response = await fetch(
             `${GEMINI_API_URL}/${modelId}:generateContent?key=${apiKey}`,
             {
@@ -80,13 +92,24 @@ async function generateContent(apiKey, modelId, contents, generationConfig = {})
             }
       )
 
+      metrics.latency = Date.now() - startTime;
+      metrics.lastUpdated = Date.now();
+      metrics.mcpConnected = response.ok;
+
       if (!response.ok) {
+            metrics.mcpConnected = false;
             const errorData = await response.json().catch(() => ({}))
             const errorMessage = errorData.error?.message || `HTTP ${response.status}: Failed to generate content`
             throw new Error(errorMessage)
       }
 
       const result = await response.json()
+
+      if (result.usageMetadata) {
+            const totalTokens = result.usageMetadata.totalTokenCount || 0;
+            metrics.tokensUsed += totalTokens;
+      }
+
       const text = result.candidates?.[0]?.content?.parts?.[0]?.text
 
       if (!text) {
@@ -299,5 +322,6 @@ module.exports = {
       transcribeAudio,
       analyzeImage,
       chatWithSession,
-      analyzeMedia
+      analyzeMedia,
+      getMetrics
 }

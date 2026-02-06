@@ -8,6 +8,8 @@ require("dotenv").config();
 
 const isProd = app.isPackaged
 
+app.commandLine.appendSwitch('enable-transparent-visuals')
+
 const loadURL = serve({ directory: 'out' });
 
 function getAppPath(page = '') {
@@ -47,13 +49,14 @@ async function createOnRecordingWindow() {
             minWidth: width_f,
             minHeight: height_f,
             backgroundColor: "#00000000",
+            title: "", // Start with no title
             autoHideMenuBar: true,
             alwaysOnTop: true,
             frame: false,
             transparent: true,
             hasShadow: false,
             skipTaskbar: true,
-            resizable: false,
+            resizable: true, // Sometimes resizable: false forces a frame on Windows
             movable: true,
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),
@@ -73,6 +76,10 @@ async function createOnRecordingWindow() {
       } else {
             await onRecordingWindow.loadURL("http://localhost:3000/onRecord")
       }
+
+      onRecordingWindow.on("page-title-updated", (e) => {
+            e.preventDefault()
+      })
 
       onRecordingWindow.on("closed", () => {
             onRecordingWindow = null

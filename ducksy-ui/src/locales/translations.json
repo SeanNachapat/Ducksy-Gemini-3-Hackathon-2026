@@ -97,6 +97,9 @@
             "configureAgent": "Configure Agent",
             "localFiles": "Local Files",
             "gCalendar": "G-Calendar",
+            "totalSessions": "Sessions",
+            "summaries": "Summaries",
+            "debugSessions": "Debug",
             "commander": "Commander",
             "online": "ONLINE",
             "goInvisible": "GO INVISIBLE",
@@ -112,6 +115,22 @@
             "reportedBug": "Reported Bug",
             "solutionApplied": "Solution applied",
             "openOverlay": "Open Overlay"
+        },
+        "sessionsPage": {
+            "title": "All Sessions",
+            "sessionsFound": "sessions found",
+            "searchPlaceholder": "Search sessions...",
+            "filterAll": "All",
+            "filterSummary": "Summary",
+            "filterDebug": "Debug",
+            "viewDetails": "View Details",
+            "justNow": "Just now",
+            "minuteAgo": "minute ago",
+            "minutesAgo": "minutes ago",
+            "hourAgo": "hour ago",
+            "hoursAgo": "hours ago",
+            "daysAgo": "days ago",
+            "refresh": "Refresh"
         },
         "modes": {
             "ghost": "Ghost",
@@ -260,6 +279,22 @@
             "solutionApplied": "適用された解決策",
             "openOverlay": "オーバーレイを開く"
         },
+        "sessionsPage": {
+            "title": "すべてのセッション",
+            "sessionsFound": "件のセッション",
+            "searchPlaceholder": "セッションを検索...",
+            "filterAll": "すべて",
+            "filterSummary": "要約",
+            "filterDebug": "デバッグ",
+            "viewDetails": "詳細を見る",
+            "justNow": "たった今",
+            "minuteAgo": "分前",
+            "minutesAgo": "分前",
+            "hourAgo": "時間前",
+            "hoursAgo": "時間前",
+            "daysAgo": "日前",
+            "refresh": "再読み込み"
+        },
         "modes": {
             "ghost": "Ghost",
             "lens": "Lens",
@@ -391,6 +426,9 @@
             "configureAgent": "ตั้งค่าเอเจนต์",
             "localFiles": "ไฟล์ในเครื่อง",
             "gCalendar": "G-ปฏิทิน",
+            "totalSessions": "เซสชัน",
+            "summaries": "สรุป",
+            "debugSessions": "ดีบัก",
             "commander": "ผู้บัญชาการ",
             "online": "ออนไลน์",
             "goInvisible": "ซ่อนตัว",
@@ -406,6 +444,22 @@
             "reportedBug": "บั๊กที่รายงาน",
             "solutionApplied": "วิธีแก้ปัญหาที่ใช้",
             "openOverlay": "เปิดการซ้อนทับ"
+        },
+        "sessionsPage": {
+            "title": "เซสชันทั้งหมด",
+            "sessionsFound": "เซสชันที่พบ",
+            "searchPlaceholder": "ค้นหาเซสชัน...",
+            "filterAll": "ทั้งหมด",
+            "filterSummary": "สรุป",
+            "filterDebug": "ดีบัก",
+            "viewDetails": "ดูรายละเอียด",
+            "justNow": "เมื่อสักครู่",
+            "minuteAgo": "นาทีที่แล้ว",
+            "minutesAgo": "นาทีที่แล้ว",
+            "hourAgo": "ชั่วโมงที่แล้ว",
+            "hoursAgo": "ชั่วโมงที่แล้ว",
+            "daysAgo": "วันที่แล้ว",
+            "refresh": "รีเฟรช"
         },
         "modes": {
             "ghost": "Ghost",
@@ -553,6 +607,22 @@
             "reportedBug": "报告的错误",
             "solutionApplied": "已应用的解决方案",
             "openOverlay": "打开覆盖"
+        },
+        "sessionsPage": {
+            "title": "所有会话",
+            "sessionsFound": "个会话",
+            "searchPlaceholder": "搜索会话...",
+            "filterAll": "全部",
+            "filterSummary": "摘要",
+            "filterDebug": "调试",
+            "viewDetails": "查看详情",
+            "justNow": "刚刚",
+            "minuteAgo": "分钟前",
+            "minutesAgo": "分钟前",
+            "hourAgo": "小时前",
+            "hoursAgo": "小时前",
+            "daysAgo": "天前",
+            "refresh": "刷新"
         },
         "modes": {
             "ghost": "Ghost",
