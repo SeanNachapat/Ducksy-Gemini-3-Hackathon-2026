@@ -256,7 +256,7 @@ app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
 
-      await createSelectionWindow();
+      // await createSelectionWindow();
       createTray();
 
       globalShortcut.register('Alt+S', () => {

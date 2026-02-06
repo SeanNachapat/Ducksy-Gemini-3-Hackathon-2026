@@ -368,7 +368,7 @@ const registerIpcHandlers = () => {
                         duration: duration
                   });
 
-                  const fileId = fileResult.lastInsertRowid;
+                  const fileId = fileResult.lastID;
                   latestFileId = fileId;
 
                   await db.createTranscription({
@@ -456,7 +456,7 @@ const registerIpcHandlers = () => {
                         metadata: selection || {}
                   });
 
-                  const fileId = fileResult.lastInsertRowid;
+                  const fileId = fileResult.lastID;
                   latestFileId = fileId;
 
                   await db.createTranscription({
