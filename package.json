@@ -11,9 +11,13 @@
       },
       "devDependencies": {
             "concurrently": "^9.2.1",
-            "dotenv": "^17.2.3"
+            "dotenv": "^17.2.3",
+            "electron-serve": "^3.0.1"
       },
       "dependencies": {
-            "better-sqlite3": "^12.6.2"
+            "electron-serve": "^3.0.1",
+            "dotenv": "^17.2.3",
+            "sqlite": "^5.1.1",
+            "sqlite3": "^5.1.7"
       }
 }

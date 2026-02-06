@@ -1,15 +1,25 @@
 const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell, globalShortcut, Tray, Menu, nativeImage } = require("electron")
 const path = require("path")
 const fs = require("fs")
-const serve = require("electron-serve")
+const serve = require("electron-serve").default
 const db = require("./utils/db")
 const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./ipcHandlers")
 require("dotenv").config();
 
-const isProd = process.env.NODE_ENV === "production"
+const isProd = app.isPackaged
 
-if (isProd) {
-      serve({ directory: "out" })
+const loadURL = serve({ directory: 'out' });
+
+function getAppPath(page = '') {
+      if (isProd) {
+            if (page === '' || page === 'index' || page === 'index.html') {
+                  const filePath = path.join(__dirname, 'out', 'index.html')
+                  return filePath
+            }
+            const filePath = path.join(__dirname, 'out', page, 'index.html')
+            return filePath
+      }
+      return null
 }
 
 let mainWindow
@@ -19,8 +29,6 @@ let initalized
 let captureWindow
 let deviceId
 let tray = null
-
-// ─── Recording Window ──────────────────────────────────────────────
 
 async function createOnRecordingWindow() {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
@@ -61,7 +69,7 @@ async function createOnRecordingWindow() {
       onRecordingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
       if (isProd) {
-            await onRecordingWindow.loadURL("app://./onRecord")
+            await onRecordingWindow.loadURL("app://-/onRecord");
       } else {
             await onRecordingWindow.loadURL("http://localhost:3000/onRecord")
       }
@@ -73,6 +81,7 @@ async function createOnRecordingWindow() {
 }
 
 async function createSelectionWindow() {
+      console.log("Create Page")
       if (selectionWindow && !selectionWindow.isDestroyed()) {
             return
       }
@@ -95,7 +104,8 @@ async function createSelectionWindow() {
             resizable: false,
             movable: false,
             show: false,
-            fullscreen: true,
+            fullscreen: process.platform !== 'darwin',
+            simpleFullscreen: process.platform === 'darwin',
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
@@ -103,10 +113,12 @@ async function createSelectionWindow() {
             }
       })
 
-      selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+      if (process.platform !== 'darwin') {
+            selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+      }
 
       if (isProd) {
-            await selectionWindow.loadURL("app://./magic-lens")
+            await selectionWindow.loadURL("app://-/magic-lens")
       } else {
             await selectionWindow.loadURL("http://localhost:3000/magic-lens")
       }
@@ -158,8 +170,6 @@ function closeOnRecordingWindow() {
       }
 }
 
-// ─── System Tray ───────────────────────────────────────────────────
-
 function createTray() {
       const iconPath = path.join(__dirname, "assets", "icon-32x32.png")
       const icon = nativeImage.createFromPath(iconPath)
@@ -203,8 +213,6 @@ function createTray() {
       })
 }
 
-// ─── Main Window ───────────────────────────────────────────────────
-
 async function createWindow() {
       mainWindow = new BrowserWindow({
             width: 1200,
@@ -226,7 +234,7 @@ async function createWindow() {
 
       setMainWindow(mainWindow);
       if (isProd) {
-            await mainWindow.loadURL("app://./index.html")
+            await loadURL(mainWindow);
       } else {
             await mainWindow.loadURL("http://localhost:3000")
             mainWindow.webContents.openDevTools()
@@ -244,12 +252,11 @@ async function createWindow() {
       });
 }
 
-// ─── App Lifecycle ─────────────────────────────────────────────────
-
 app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
-      createSelectionWindow();
+
+      await createSelectionWindow();
       createTray();
 
       globalShortcut.register('Alt+S', () => {
@@ -270,8 +277,6 @@ app.on("activate", () => {
             createWindow()
       }
 })
-
-// ─── Permissions ───────────────────────────────────────────────────
 
 async function checkPermissions() {
       const permissions = {
@@ -334,8 +339,6 @@ function openSystemPreferences(type) {
             }
       }
 }
-
-// ─── IPC: Recording ────────────────────────────────────────────────
 
 ipcMain.on("record-audio", async (event, data) => {
       console.log("Record audio:", data.action)
@@ -411,8 +414,6 @@ ipcMain.on("onboarding-complete", (event, data) => {
       console.log("Onboarding complete:", data)
 })
 
-// ─── IPC: Permissions ──────────────────────────────────────────────
-
 ipcMain.on("request-permissions", async (event) => {
       console.log("Requesting permissions...")
 
@@ -463,23 +464,31 @@ ipcMain.on("open-system-preferences", (event, type) => {
       openSystemPreferences(type)
 })
 
-// ─── IPC: Overlay Window ──────────────────────────────────────
-
 ipcMain.on("activate-magic-lens", async () => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.hide()
-      }
+      console.log("Activate Magic Lens")
+      try {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.hide()
+            }
 
-      if (!selectionWindow || selectionWindow.isDestroyed()) {
-            await createSelectionWindow()
+            console.log("Selection Window exists:", !!selectionWindow, selectionWindow ? !selectionWindow.isDestroyed() : "N/A")
+
+            if (!selectionWindow || selectionWindow.isDestroyed()) {
+                  console.log("Creating new selection window...")
+                  await createSelectionWindow()
+                  console.log("Selection window created, showing it...")
+            } else {
+                  console.log("Selection window already exists, updating bounds...")
+                  const primaryDisplay = screen.getPrimaryDisplay()
+                  const { x, y, width, height } = primaryDisplay.bounds
+                  selectionWindow.setBounds({ x, y, width, height })
+            }
+
             selectionWindow.show()
             selectionWindow.focus()
-      } else {
-            selectionWindow.show()
-            selectionWindow.focus()
-            const primaryDisplay = screen.getPrimaryDisplay()
-            const { x, y, width, height } = primaryDisplay.bounds
-            selectionWindow.setBounds({ x, y, width, height })
+            console.log("Selection window should now be visible")
+      } catch (e) {
+            console.error("Error in activate-magic-lens:", e)
       }
 })
 
@@ -533,8 +542,6 @@ ipcMain.on("resize-recording-window", (event, { width, height }) => {
       }
 })
 
-// ─── IPC: Cache ────────────────────────────────────────────────────
-
 ipcMain.handle("request-sizeCache", async (event) => {
       var size = await db.getSizeOfdb()
 
@@ -562,8 +569,6 @@ ipcMain.handle("request-sizeCache", async (event) => {
       return status
 })
 
-// ─── IPC: Screen Sources ──────────────────────────────────────────
-
 ipcMain.handle("get-screen-sources", async () => {
       try {
             const sources = await desktopCapturer.getSources({
@@ -584,8 +589,6 @@ ipcMain.handle("get-screen-sources", async () => {
       }
 })
 
-// ─── IPC: Window Controls ─────────────────────────────────────────
-
 ipcMain.on("app-minimize", () => {
       mainWindow?.minimize()
 })
@@ -601,8 +604,6 @@ ipcMain.on("app-maximize", () => {
 ipcMain.on("app-close", () => {
       mainWindow?.close()
 })
-
-// ─── IPC: Settings ────────────────────────────────────────────────
 
 ipcMain.handle("get-settings", async () => {
       return {

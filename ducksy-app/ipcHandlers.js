@@ -26,18 +26,24 @@ const setGeminiApiKey = (apiKey) => {
 const processTranscription = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
       if (!geminiApiKey) {
             console.error("Gemini API key not set");
-            db.updateTranscription({
-                  id: db.getTranscriptionByFileId(fileId)?.id,
-                  status: "failed"
-            });
+            const transcription = await db.getTranscriptionByFileId(fileId);
+            if (transcription) {
+                  await db.updateTranscription({
+                        id: transcription.id,
+                        status: "failed"
+                  });
+            }
             return;
       }
 
       try {
-            db.updateTranscription({
-                  id: db.getTranscriptionByFileId(fileId)?.id,
-                  status: "processing"
-            });
+            const transcription = await db.getTranscriptionByFileId(fileId);
+            if (transcription) {
+                  await db.updateTranscription({
+                        id: transcription.id,
+                        status: "processing"
+                  });
+            }
 
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
@@ -58,10 +64,10 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
 
             const result = await transcribeAudio(base64Audio, mimeType, geminiApiKey, userLanguage, settings);
 
-            const transcription = db.getTranscriptionByFileId(fileId);
-            if (transcription) {
-                  db.updateTranscription({
-                        id: transcription.id,
+            const updatedTranscription = await db.getTranscriptionByFileId(fileId);
+            if (updatedTranscription) {
+                  await db.updateTranscription({
+                        id: updatedTranscription.id,
                         type: result.type,
                         title: result.title,
                         summary: result.summary,
@@ -71,7 +77,7 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         details: result.details
                   });
 
-                  db.updateFile({
+                  await db.updateFile({
                         id: fileId,
                         title: result.title
                   });
@@ -99,9 +105,9 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
       } catch (error) {
             console.error(`Transcription failed for file ${fileId}:`, error);
 
-            const transcription = db.getTranscriptionByFileId(fileId);
+            const transcription = await db.getTranscriptionByFileId(fileId);
             if (transcription) {
-                  db.updateTranscription({
+                  await db.updateTranscription({
                         id: transcription.id,
                         status: "failed"
                   });
@@ -128,18 +134,24 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
 const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
       if (!geminiApiKey) {
             console.error("Gemini API key not set");
-            db.updateTranscription({
-                  id: db.getTranscriptionByFileId(fileId)?.id,
-                  status: "failed"
-            });
+            const transcription = await db.getTranscriptionByFileId(fileId);
+            if (transcription) {
+                  await db.updateTranscription({
+                        id: transcription.id,
+                        status: "failed"
+                  });
+            }
             return;
       }
 
       try {
-            db.updateTranscription({
-                  id: db.getTranscriptionByFileId(fileId)?.id,
-                  status: "processing"
-            });
+            const transcription = await db.getTranscriptionByFileId(fileId);
+            if (transcription) {
+                  await db.updateTranscription({
+                        id: transcription.id,
+                        status: "processing"
+                  });
+            }
 
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
@@ -158,15 +170,15 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
             const imageBuffer = fs.readFileSync(filePath);
             const base64Image = imageBuffer.toString("base64");
 
-            const fileRec = db.getFileById(fileId);
+            const fileRec = await db.getFileById(fileId);
             const metadata = fileRec && fileRec.metadata ? JSON.parse(fileRec.metadata) : null;
 
             const result = await analyzeImage(base64Image, mimeType, geminiApiKey, null, metadata, userLanguage, settings);
 
-            const transcription = db.getTranscriptionByFileId(fileId);
-            if (transcription) {
-                  db.updateTranscription({
-                        id: transcription.id,
+            const updatedTranscription = await db.getTranscriptionByFileId(fileId);
+            if (updatedTranscription) {
+                  await db.updateTranscription({
+                        id: updatedTranscription.id,
                         type: result.type,
                         title: result.title,
                         summary: result.summary,
@@ -176,7 +188,7 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         details: result.details
                   });
 
-                  db.updateFile({
+                  await db.updateFile({
                         id: fileId,
                         title: result.title
                   });
@@ -204,9 +216,9 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
       } catch (error) {
             console.error(`Image analysis failed for file ${fileId}:`, error);
 
-            const transcription = db.getTranscriptionByFileId(fileId);
+            const transcription = await db.getTranscriptionByFileId(fileId);
             if (transcription) {
-                  db.updateTranscription({
+                  await db.updateTranscription({
                         id: transcription.id,
                         status: "failed"
                   });
@@ -230,11 +242,10 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
       }
 };
 
-
 const registerIpcHandlers = () => {
       ipcMain.handle("get-session-logs", async () => {
             try {
-                  const sessionLogs = db.getSessionLogs();
+                  const sessionLogs = await db.getSessionLogs();
                   return { success: true, data: sessionLogs };
             } catch (err) {
                   console.error("Failed to get session logs:", err);
@@ -244,7 +255,7 @@ const registerIpcHandlers = () => {
 
       ipcMain.handle("get-session", async (event, { fileId }) => {
             try {
-                  const file = db.getFileById(fileId);
+                  const file = await db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "Session not found" };
                   }
@@ -288,14 +299,14 @@ const registerIpcHandlers = () => {
 
       ipcMain.handle("delete-session", async (event, { fileId }) => {
             try {
-                  const file = db.getFileById(fileId);
+                  const file = await db.getFileById(fileId);
 
                   if (file) {
                         if (file.path && fs.existsSync(file.path)) {
                               fs.unlinkSync(file.path);
                               console.log(`Deleted audio file: ${file.path}`);
                         }
-                        db.deleteFile(fileId);
+                        await db.deleteFile(fileId);
                         console.log(`Deleted session: ${fileId}`);
                   }
 
@@ -345,7 +356,7 @@ const registerIpcHandlers = () => {
                         };
                   }
 
-                  const fileResult = db.createFile({
+                  const fileResult = await db.createFile({
                         title: title || `Recording ${new Date().toLocaleString()}`,
                         mode: mode,
                         description: "",
@@ -360,7 +371,7 @@ const registerIpcHandlers = () => {
                   const fileId = fileResult.lastInsertRowid;
                   latestFileId = fileId;
 
-                  db.createTranscription({
+                  await db.createTranscription({
                         fileId: fileId,
                         type: "summary",
                         title: title || `Recording ${new Date().toLocaleString()}`,
@@ -432,7 +443,7 @@ const registerIpcHandlers = () => {
                   const imageBuffer = Buffer.from(base64Data, "base64");
                   fs.writeFileSync(filePath, imageBuffer);
 
-                  const fileResult = db.createFile({
+                  const fileResult = await db.createFile({
                         title: title || `Capture ${new Date(timestamp).toLocaleString()}`,
                         mode: mode,
                         description: "",
@@ -448,7 +459,7 @@ const registerIpcHandlers = () => {
                   const fileId = fileResult.lastInsertRowid;
                   latestFileId = fileId;
 
-                  db.createTranscription({
+                  await db.createTranscription({
                         fileId: fileId,
                         status: "pending",
                         type: "summary",
@@ -491,13 +502,13 @@ const registerIpcHandlers = () => {
             const { fileId, type, title, summary, content, language, status, details } = data;
 
             try {
-                  const transcription = db.getTranscriptionByFileId(fileId);
+                  const transcription = await db.getTranscriptionByFileId(fileId);
 
                   if (!transcription) {
                         return { success: false, error: "Transcription not found" };
                   }
 
-                  db.updateTranscription({
+                  await db.updateTranscription({
                         id: transcription.id,
                         type: type,
                         title: title,
@@ -509,7 +520,7 @@ const registerIpcHandlers = () => {
                   });
 
                   if (title) {
-                        db.updateFile({
+                        await db.updateFile({
                               id: fileId,
                               title: title
                         });
@@ -533,7 +544,7 @@ const registerIpcHandlers = () => {
 
       ipcMain.handle("get-all-files", async () => {
             try {
-                  const files = db.getAllFiles();
+                  const files = await db.getAllFiles();
                   return { success: true, data: files };
             } catch (err) {
                   console.error("Failed to get files:", err);
@@ -562,7 +573,7 @@ const registerIpcHandlers = () => {
 
       ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en", settings = {} }) => {
             try {
-                  const file = db.getFileById(fileId);
+                  const file = await db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "File not found" };
                   }
@@ -586,13 +597,13 @@ const registerIpcHandlers = () => {
             }
 
             try {
-                  const file = db.getFileById(fileId);
+                  const file = await db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "Session not found" };
                   }
 
                   let chatHistory = [];
-                  const transcription = db.getTranscriptionByFileId(fileId);
+                  const transcription = await db.getTranscriptionByFileId(fileId);
 
                   if (transcription && transcription.chatHistory && transcription.chatHistory !== '[]') {
                         try {
@@ -622,7 +633,7 @@ const registerIpcHandlers = () => {
                         { role: 'model', content: responseText, timestamp: Date.now() }
                   ];
 
-                  db.updateTranscription({
+                  await db.updateTranscription({
                         id: transcription.id,
                         chatHistory: newHistory
                   });
@@ -639,7 +650,7 @@ const registerIpcHandlers = () => {
             if (!latestFileId) {
                   return { success: false, error: "No active file" };
             }
-            return getSessionData(latestFileId);
+            return await getSessionData(latestFileId);
       });
 
       ipcMain.handle("read-file-as-base64", async (event, { filePath, mimeType }) => {

@@ -1,9 +1,9 @@
 const db = require("./db");
 const fs = require("fs");
 
-const getSessionData = (fileId) => {
+const getSessionData = async (fileId) => {
     try {
-        const file = db.getFileById(fileId);
+        const file = await db.getFileById(fileId);
         if (!file) {
             return { success: false, error: "Session not found" };
         }

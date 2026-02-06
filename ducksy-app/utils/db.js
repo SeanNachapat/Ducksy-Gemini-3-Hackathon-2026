@@ -1,7 +1,10 @@
-const Database = require("better-sqlite3");
+const sqlite3 = require("sqlite3");
+const { open } = require("sqlite");
 const { app, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
+
+let dbPromise = null;
 
 const getDBPath = () => {
       const dbPath = app?.getPath?.("userData") || "./data";
@@ -13,125 +16,134 @@ const isAlreadyFile = async () => {
       return fs.existsSync(getPath);
 };
 
-let db = null;
+const initializeDatabase = async () => {
+      if (dbPromise) return dbPromise;
 
-const initializeDatabase = () => {
-      if (db) return db;
+      const dbPath = getDBPath();
+      const dbDir = path.dirname(dbPath);
+      if (!fs.existsSync(dbDir)) {
+            fs.mkdirSync(dbDir, { recursive: true });
+      }
 
-      const getPath = getDBPath();
-      db = new Database(getPath);
-      console.log("Database is Initialized at click to open file" + getPath);
+      dbPromise = open({
+            filename: dbPath,
+            driver: sqlite3.Database
+      }).then(async (db) => {
+            console.log("Database initialized at " + dbPath);
+            await runMigrations(db);
+            return db;
+      });
 
-      const migrateTranscriptions = () => {
-            try {
-                  const tableInfo = db.prepare("PRAGMA table_info(transcriptions)").all();
-                  const columns = tableInfo.map(col => col.name);
-
-                  if (!columns.includes("type")) {
-                        db.exec(`ALTER TABLE transcriptions ADD COLUMN type TEXT DEFAULT 'summary' CHECK(type IN ('summary', 'chat', 'debug'))`);
-                        console.log("Migration: Added 'type' column to transcriptions");
-                  }
-
-                  if (!columns.includes("title")) {
-                        db.exec(`ALTER TABLE transcriptions ADD COLUMN title TEXT DEFAULT ''`);
-                        console.log("Migration: Added 'title' column to transcriptions");
-                  }
-
-                  if (!columns.includes("details")) {
-                        db.exec(`ALTER TABLE transcriptions ADD COLUMN details TEXT DEFAULT '{}'`);
-                        console.log("Migration: Added 'details' column to transcriptions");
-                  }
-
-                  if (!columns.includes("chatHistory")) {
-                        db.exec(`ALTER TABLE transcriptions ADD COLUMN chatHistory TEXT DEFAULT '[]'`);
-                        console.log("Migration: Added 'chatHistory' column to transcriptions");
-                  }
-            } catch (err) {
-                  console.log("Migration skipped: transcriptions table not found yet");
-            }
-
-            try {
-                  const fileTableInfo = db.prepare("PRAGMA table_info(files)").all();
-                  const fileColumns = fileTableInfo.map(col => col.name);
-
-                  if (!fileColumns.includes("metadata")) {
-                        db.exec(`ALTER TABLE files ADD COLUMN metadata TEXT DEFAULT '{}'`);
-                        console.log("Migration: Added 'metadata' column to files");
-                  }
-            } catch (err) {
-                  console.log("Migration skipped: files table not found yet");
-            }
-      };
-
-      migrateTranscriptions();
-
-      db.exec(`
-            CREATE TABLE IF NOT EXISTS mcp_credentials (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  provider TEXT NOT NULL CHECK(provider IN ('google_calendar', 'notion')),
-                  access_token TEXT,
-                  refresh_token TEXT,
-                  client_id TEXT,
-                  client_secret TEXT,
-                  additional_info TEXT,
-                  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-      `);
-
-      db.exec(`
-            CREATE TABLE IF NOT EXISTS settings (
-                  key TEXT PRIMARY KEY,
-                  value TEXT
-            )
-      `);
-
-      db.exec(`
-            CREATE TABLE IF NOT EXISTS files (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  title TEXT NOT NULL,
-                  mode TEXT NOT NULL CHECK(mode IN ('ghost', 'lens')),
-                  description TEXT DEFAULT '',
-                  name TEXT NOT NULL,
-                  path TEXT NOT NULL,
-                  size INTEGER NOT NULL,
-                  duration INTEGER NOT NULL,
-                  type TEXT NOT NULL,
-                  metadata TEXT DEFAULT '{}',
-                  isAnalyzed BOOLEAN DEFAULT 0,
-                  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            )      
-      `);
-
-      db.exec(`
-            CREATE TABLE IF NOT EXISTS transcriptions (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  fileId INTEGER NOT NULL,
-                  type TEXT NOT NULL DEFAULT 'summary' CHECK(type IN ('summary', 'chat', 'debug')),
-                  title TEXT NOT NULL DEFAULT '',
-                  summary TEXT DEFAULT '',
-                  content TEXT NOT NULL,
-                  language TEXT NOT NULL,
-                  status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
-                  details TEXT DEFAULT '{}',
-                  chatHistory TEXT DEFAULT '[]',
-                  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  calendarEventId TEXT,
-                  notionPageId TEXT,
-                  FOREIGN KEY (fileId) REFERENCES files(id) ON DELETE CASCADE
-            )
-      `);
-
-      return db;
+      return dbPromise;
 };
 
-const createFile = (file) => {
-      const stmt = db.prepare(`
-            INSERT INTO files (title, mode, description, name, path, size, type, isAnalyzed, duration, metadata)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      return stmt.run(
+const getDb = async () => {
+      if (!dbPromise) await initializeDatabase();
+      return dbPromise;
+};
+
+const runMigrations = async (db) => {
+      try {
+            const tableInfo = await db.all("PRAGMA table_info(transcriptions)");
+            const columns = tableInfo.map(col => col.name);
+
+            if (!columns.includes("type")) {
+                  await db.exec(`ALTER TABLE transcriptions ADD COLUMN type TEXT DEFAULT 'summary' CHECK(type IN ('summary', 'chat', 'debug'))`);
+                  console.log("Migration: Added 'type' column to transcriptions");
+            }
+            if (!columns.includes("title")) {
+                  await db.exec(`ALTER TABLE transcriptions ADD COLUMN title TEXT DEFAULT ''`);
+                  console.log("Migration: Added 'title' column to transcriptions");
+            }
+            if (!columns.includes("details")) {
+                  await db.exec(`ALTER TABLE transcriptions ADD COLUMN details TEXT DEFAULT '{}'`);
+                  console.log("Migration: Added 'details' column to transcriptions");
+            }
+            if (!columns.includes("chatHistory")) {
+                  await db.exec(`ALTER TABLE transcriptions ADD COLUMN chatHistory TEXT DEFAULT '[]'`);
+                  console.log("Migration: Added 'chatHistory' column to transcriptions");
+            }
+      } catch (err) {
+            console.log("Migration skipped: transcriptions table issue or not ready", err.message);
+      }
+
+      try {
+            const fileTableInfo = await db.all("PRAGMA table_info(files)");
+            const fileColumns = fileTableInfo.map(col => col.name);
+
+            if (!fileColumns.includes("metadata")) {
+                  await db.exec(`ALTER TABLE files ADD COLUMN metadata TEXT DEFAULT '{}'`);
+                  console.log("Migration: Added 'metadata' column to files");
+            }
+      } catch (err) {
+            console.log("Migration skipped: files table issue or not ready", err.message);
+      }
+
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS mcp_credentials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            provider TEXT NOT NULL CHECK(provider IN ('google_calendar', 'notion')),
+            access_token TEXT,
+            refresh_token TEXT,
+            client_id TEXT,
+            client_secret TEXT,
+            additional_info TEXT,
+            updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    `);
+
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            mode TEXT NOT NULL CHECK(mode IN ('ghost', 'lens')),
+            description TEXT DEFAULT '',
+            name TEXT NOT NULL,
+            path TEXT NOT NULL,
+            size INTEGER NOT NULL,
+            duration INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            metadata TEXT DEFAULT '{}',
+            isAnalyzed BOOLEAN DEFAULT 0,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )      
+    `);
+
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS transcriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fileId INTEGER NOT NULL,
+            type TEXT NOT NULL DEFAULT 'summary' CHECK(type IN ('summary', 'chat', 'debug')),
+            title TEXT NOT NULL DEFAULT '',
+            summary TEXT DEFAULT '',
+            content TEXT NOT NULL,
+            language TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
+            details TEXT DEFAULT '{}',
+            chatHistory TEXT DEFAULT '[]',
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            calendarEventId TEXT,
+            notionPageId TEXT,
+            FOREIGN KEY (fileId) REFERENCES files(id) ON DELETE CASCADE
+        )
+    `);
+};
+
+const createFile = async (file) => {
+      const db = await getDb();
+      const result = await db.run(`
+        INSERT INTO files (title, mode, description, name, path, size, type, isAnalyzed, duration, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
             file.title,
             file.mode,
             file.description,
@@ -142,22 +154,28 @@ const createFile = (file) => {
             file.isAnalyzed,
             file.duration,
             JSON.stringify(file.metadata || {})
-      );
+      ]);
+      return result;
 };
 
 const getSizeOfdb = async () => {
       const getPath = getDBPath();
-      const size = fs.statSync(getPath).size;
-      const mb = size / 1024 / 1024;
-      return mb;
+      try {
+            if (!fs.existsSync(getPath)) return 0;
+            const size = fs.statSync(getPath).size;
+            const mb = size / 1024 / 1024;
+            return mb;
+      } catch (e) {
+            return 0;
+      }
 };
 
-const createTranscription = (transcription) => {
-      const stmt = db.prepare(`
-            INSERT INTO transcriptions (fileId, type, title, summary, content, language, status, details, calendarEventId, notionPageId)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      return stmt.run(
+const createTranscription = async (transcription) => {
+      const db = await getDb();
+      const result = await db.run(`
+        INSERT INTO transcriptions (fileId, type, title, summary, content, language, status, details, calendarEventId, notionPageId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
             transcription.fileId,
             transcription.type || "summary",
             transcription.title || "",
@@ -168,10 +186,11 @@ const createTranscription = (transcription) => {
             JSON.stringify(transcription.details || {}),
             transcription.calendarEventId || null,
             transcription.notionPageId || null
-      );
+      ]);
+      return result;
 };
 
-const updateTranscription = (transcription) => {
+const updateTranscription = async (transcription) => {
       const fields = [];
       const values = [];
 
@@ -179,47 +198,38 @@ const updateTranscription = (transcription) => {
             fields.push("type = ?");
             values.push(transcription.type);
       }
-
       if (transcription.title !== undefined) {
             fields.push("title = ?");
             values.push(transcription.title);
       }
-
       if (transcription.summary !== undefined) {
             fields.push("summary = ?");
             values.push(transcription.summary);
       }
-
       if (transcription.content !== undefined) {
             fields.push("content = ?");
             values.push(transcription.content);
       }
-
       if (transcription.language !== undefined) {
             fields.push("language = ?");
             values.push(transcription.language);
       }
-
       if (transcription.status !== undefined) {
             fields.push("status = ?");
             values.push(transcription.status);
       }
-
       if (transcription.details !== undefined) {
             fields.push("details = ?");
             values.push(JSON.stringify(transcription.details));
       }
-
       if (transcription.chatHistory !== undefined) {
             fields.push("chatHistory = ?");
             values.push(JSON.stringify(transcription.chatHistory));
       }
-
       if (transcription.calendarEventId !== undefined) {
             fields.push("calendarEventId = ?");
             values.push(transcription.calendarEventId);
       }
-
       if (transcription.notionPageId !== undefined) {
             fields.push("notionPageId = ?");
             values.push(transcription.notionPageId);
@@ -228,36 +238,38 @@ const updateTranscription = (transcription) => {
       fields.push("updatedAt = CURRENT_TIMESTAMP");
       values.push(transcription.id);
 
-      const stmt = db.prepare(`UPDATE transcriptions SET ${fields.join(", ")} WHERE id = ?`);
-      return stmt.run(...values);
+      const db = await getDb();
+      const result = await db.run(`UPDATE transcriptions SET ${fields.join(", ")} WHERE id = ?`, values);
+      return result;
 };
 
-const getAllFiles = () => {
-      const stmt = db.prepare(`
-            SELECT 
-                  f.*, 
-                  t.id as transcriptionId, 
-                  t.type as transcriptionType,
-                  t.title as transcriptionTitle,
-                  t.status as transcriptionStatus, 
-                  t.summary as transcriptionSummary, 
-                  t.content as transcriptionContent, 
-                  t.language as transcriptionLanguage, 
-                  t.details as transcriptionDetails,
-                  t.chatHistory as transcriptionChatHistory,
-                  t.calendarEventId, 
-                  t.notionPageId, 
-                  t.createdAt as transcriptionCreatedAt, 
-                  t.updatedAt as transcriptionUpdatedAt
-            FROM files f
-            LEFT JOIN transcriptions t ON f.id = t.fileId
-            ORDER BY f.createdAt DESC
-      `);
-      return stmt.all();
+const getAllFiles = async () => {
+      const db = await getDb();
+      const rows = await db.all(`
+        SELECT 
+            f.*, 
+            t.id as transcriptionId, 
+            t.type as transcriptionType,
+            t.title as transcriptionTitle,
+            t.status as transcriptionStatus, 
+            t.summary as transcriptionSummary, 
+            t.content as transcriptionContent, 
+            t.language as transcriptionLanguage, 
+            t.details as transcriptionDetails,
+            t.chatHistory as transcriptionChatHistory,
+            t.calendarEventId, 
+            t.notionPageId, 
+            t.createdAt as transcriptionCreatedAt, 
+            t.updatedAt as transcriptionUpdatedAt
+        FROM files f
+        LEFT JOIN transcriptions t ON f.id = t.fileId
+        ORDER BY f.createdAt DESC
+    `);
+      return rows;
 };
 
-const getSessionLogs = () => {
-      const files = getAllFiles();
+const getSessionLogs = async () => {
+      const files = await getAllFiles();
 
       return files.map((file) => {
             let details = {};
@@ -328,12 +340,13 @@ const getSessionLogs = () => {
       });
 };
 
-const getAllTranscriptions = () => {
-      const stmt = db.prepare(`SELECT * FROM transcriptions`);
-      return stmt.all();
+const getAllTranscriptions = async () => {
+      const db = await getDb();
+      const rows = await db.all(`SELECT * FROM transcriptions`);
+      return rows;
 };
 
-const updateFile = (value) => {
+const updateFile = async (value) => {
       const fields = [];
       const values = [];
 
@@ -341,37 +354,30 @@ const updateFile = (value) => {
             fields.push("title = ?");
             values.push(value.title);
       }
-
       if (value.description) {
             fields.push("description = ?");
             values.push(value.description);
       }
-
       if (value.name) {
             fields.push("name = ?");
             values.push(value.name);
       }
-
       if (value.path) {
             fields.push("path = ?");
             values.push(value.path);
       }
-
       if (value.size) {
             fields.push("size = ?");
             values.push(value.size);
       }
-
       if (value.type) {
             fields.push("type = ?");
             values.push(value.type);
       }
-
       if (value.isAnalyzed !== undefined) {
             fields.push("isAnalyzed = ?");
             values.push(value.isAnalyzed);
       }
-
       if (value.mode) {
             fields.push("mode = ?");
             values.push(value.mode);
@@ -380,52 +386,54 @@ const updateFile = (value) => {
       fields.push("updatedAt = CURRENT_TIMESTAMP");
       values.push(value.id);
 
-      const stmt = db.prepare(`UPDATE files SET ${fields.join(", ")} WHERE id = ?`);
-      return stmt.run(...values);
+      const db = await getDb();
+      const result = await db.run(`UPDATE files SET ${fields.join(", ")} WHERE id = ?`, values);
+      return result;
 };
 
-const deleteFile = (id) => {
-      const stmt = db.prepare(`DELETE FROM files WHERE id = ?`);
-      return stmt.run(id);
+const deleteFile = async (id) => {
+      const db = await getDb();
+      return db.run(`DELETE FROM files WHERE id = ?`, [id]);
 };
 
-const deleteTranscription = (id) => {
-      const stmt = db.prepare(`DELETE FROM transcriptions WHERE id = ?`);
-      return stmt.run(id);
+const deleteTranscription = async (id) => {
+      const db = await getDb();
+      return db.run(`DELETE FROM transcriptions WHERE id = ?`, [id]);
 };
 
-const getTranscriptionByFileId = (fileId) => {
-      const stmt = db.prepare(`SELECT * FROM transcriptions WHERE fileId = ?`);
-      return stmt.get(fileId);
+const getTranscriptionByFileId = async (fileId) => {
+      const db = await getDb();
+      return db.get(`SELECT * FROM transcriptions WHERE fileId = ?`, [fileId]);
 };
 
-const getFileById = (id) => {
-      const stmt = db.prepare(`
-            SELECT 
-                  f.*, 
-                  t.id as transcriptionId, 
-                  t.type as transcriptionType,
-                  t.title as transcriptionTitle,
-                  t.status as transcriptionStatus, 
-                  t.summary as transcriptionSummary, 
-                  t.content as transcriptionContent, 
-                  t.language as transcriptionLanguage, 
-                  t.details as transcriptionDetails,
-                  t.chatHistory as transcriptionChatHistory,
-                  t.calendarEventId, 
-                  t.notionPageId
-            FROM files f
-            LEFT JOIN transcriptions t ON f.id = t.fileId
-            WHERE f.id = ?
-      `);
-      return stmt.get(id);
+const getFileById = async (id) => {
+      const db = await getDb();
+      return db.get(`
+        SELECT 
+            f.*, 
+            t.id as transcriptionId, 
+            t.type as transcriptionType,
+            t.title as transcriptionTitle,
+            t.status as transcriptionStatus, 
+            t.summary as transcriptionSummary, 
+            t.content as transcriptionContent, 
+            t.language as transcriptionLanguage, 
+            t.details as transcriptionDetails,
+            t.chatHistory as transcriptionChatHistory,
+            t.calendarEventId, 
+            t.notionPageId
+        FROM files f
+        LEFT JOIN transcriptions t ON f.id = t.fileId
+        WHERE f.id = ?
+    `, [id]);
 };
 
-const deleteDb = () => {
+const deleteDb = async () => {
       try {
-            if (db) {
-                  db.close();
-                  db = null;
+            if (dbPromise) {
+                  const db = await dbPromise;
+                  await db.close();
+                  dbPromise = null;
             }
 
             const dbPath = getDBPath();
@@ -444,13 +452,13 @@ const deleteDb = () => {
             return {
                   status: "success",
                   message: "Database and recordings deleted successfully"
-            }
+            };
       } catch (error) {
             console.error("Delete error:", error);
             return {
                   status: "error",
                   message: error.message
-            }
+            };
       }
 };
 

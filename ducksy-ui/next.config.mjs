@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  output: 'export',
+  distDir: '../ducksy-app/out',
+  images: {
+    unoptimized: true,
+  },
+  // Disable server-side features for Electron
+  trailingSlash: true,
 };
 
 export default nextConfig;
