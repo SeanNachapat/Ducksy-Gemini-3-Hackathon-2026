@@ -5,10 +5,14 @@ const router = express.Router();
 const tokens = new Map();
 
 const getGoogleClient = () => {
+      const redirectUri = process.env.NODE_ENV === 'production'
+            ? 'https://ducksy-gemini-3-hackathon-2026.onrender.com/auth/google/callback'
+            : 'http://localhost:8080/auth/google/callback';
+
       return new OAuth2Client(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
-            process.env.GOOGLE_REDIRECT_URI
+            redirectUri
       );
 };
 
@@ -38,7 +42,10 @@ router.get('/google/callback', async (req, res) => {
             setTimeout(() => tokens.delete(tokenId), 60000);
 
             // Redirect to a URL that the Electron BrowserWindow can intercept
-            const callbackUrl = `http://localhost:8080/auth/success?provider=google_calendar&token_id=${tokenId}`;
+            const baseUrl = process.env.NODE_ENV === 'production'
+                  ? 'https://ducksy-gemini-3-hackathon-2026.onrender.com'
+                  : 'http://localhost:8080';
+            const callbackUrl = `${baseUrl}/auth/success?provider=google_calendar&token_id=${tokenId}`;
             res.redirect(callbackUrl);
       } catch (error) {
             console.error('Google OAuth error:', error);

@@ -6,9 +6,8 @@ const { getSessionData } = require("./utils/sessionHelper");
 const { transcribeAudio, analyzeImage, chatWithSession, getMetrics } = require("./utils/gemini");
 require("dotenv").config();
 
-const SERVER_URL = 'http://localhost:8080';
+const SERVER_URL = 'https://ducksy-gemini-3-hackathon-2026.onrender.com';
 
-// OAuth window helper - opens OAuth in a popup and intercepts the callback
 async function openOAuthWindow(authUrl, provider) {
       return new Promise((resolve, reject) => {
             const authWindow = new BrowserWindow({

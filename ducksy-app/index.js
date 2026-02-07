@@ -7,7 +7,7 @@ const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./
 require("dotenv").config();
 
 const PROTOCOL_SCHEME = 'ducksy'
-const SERVER_URL = 'http://localhost:8080'
+const SERVER_URL = 'https://ducksy-gemini-3-hackathon-2026.onrender.com'
 
 const isProd = app.isPackaged
 
