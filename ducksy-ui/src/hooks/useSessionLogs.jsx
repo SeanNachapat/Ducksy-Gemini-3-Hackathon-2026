@@ -82,7 +82,8 @@ export function useSessionLogs() {
                                           details: {
                                                 ...log.details,
                                                 ...data.details
-                                          }
+                                          },
+                                          calendarEvent: data.calendarEvent || log.calendarEvent
                                     }
                               }
                               return log

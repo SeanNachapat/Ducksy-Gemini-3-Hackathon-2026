@@ -55,45 +55,50 @@ Output Format: JSON object with this exact structure:
     "content": "Full transcription/extracted text translated to ${outputLanguage}...",
     "details": {
         "topic": "Main topic/subject translated to ${outputLanguage}",
-        "actionItems": ["Action item 1 translated to ${outputLanguage}", "Action item 2 translated to ${outputLanguage}"],
+        "actionItems": [
+            {
+                "text": "Descriptive title for the action item",
+                "type": "event" | "task",
+                "isActionable": true,
+                "calendarEvent": {
+                    "detected": true,
+                    "title": "Short event title",
+                    "description": "Short event description",
+                    "dateTime": "ISO 8601 format datetime",
+                    "duration": 60,
+                    "confidence": "high" | "medium" | "low"
+                }
+            }
+        ],
         "bug": "Bug description if debug type translated to ${outputLanguage}",
         "fix": "Solution description if debug type translated to ${outputLanguage}",
         "code": "Code snippet if any (keep in original programming language)"
     },
     "calendarEvent": {
         "detected": true | false,
-        "title": "Event title extracted from content",
-        "description": "Event description/details",
-        "dateTime": "ISO 8601 format datetime (e.g., 2026-02-07T17:00:00)",
+        "title": "Event title",
+        "description": "Event description",
+        "dateTime": "ISO 8601 format datetime",
         "duration": 60,
         "confidence": "high" | "medium" | "low"
     }
 }
 
 Rules:
-- "type" must be exactly one of: "summary", "debug"
-- "actionItems" should be an array (empty array [] if none)
-- "language" must be "${userLanguage}"
-- ALL text fields (title, summary, content, topic, actionItems, bug, fix) MUST be translated to ${outputLanguage}
-- Code snippets should remain in their original programming language
-- Return ONLY the JSON object, no markdown code blocks
+- "type": exactly one of "summary", "debug"
+- "actionItems": ONLY include items that require user confirmation or action (e.g., "Schedule meeting", "Send email", "Complete task").
+- CRITICAL: Extract ALL detected events/tasks and create a separate object in the "actionItems" array for each one.
+- DO NOT include general information, notes, or facts in "actionItems".
+- ALL text fields MUST be translated to ${outputLanguage}.
+- Code snippets remain in original language.
+- Return ONLY the JSON object.
 
 CALENDAR EVENT DETECTION RULES:
-- Set "calendarEvent.detected" to true if the content mentions ANY of these:
-  * Specific time (e.g., "5 PM", "17:00", "ห้าโมง", "五点")
-  * Specific date (e.g., "tomorrow", "next Monday", "พรุ่งนี้", "February 10")
-  * Meeting, appointment, reminder, deadline, event mentions
-  * Phrases like "remind me", "don't forget", "schedule", "นัดหมาย"
-- For dateTime: Convert relative times to absolute ISO format based on current datetime: ${new Date().toISOString()}
-  * "5 PM tonight" → today at 17:00
-  * "tomorrow morning" → next day at 09:00
-  * "next week Monday" → calculate actual date
-- For duration: Estimate in minutes (default 60 if not specified)
-- Confidence levels:
-  * "high": Explicit time AND date mentioned
-  * "medium": Only time OR only date mentioned
-  * "low": Implied scheduling (e.g., "we should meet")
-- If no calendar event detected, set: { "detected": false, "title": "", "description": "", "dateTime": "", "duration": 0, "confidence": "" }
+- Identify EVERY specific event, appointment, or deadline mentioned.
+- For EACH event, create an entry in "actionItems" with type="event" and populate "calendarEvent".
+- Set Root "calendarEvent" to the first/most important event detected.
+- dateTime: Convert relative to ISO based on: ${new Date().toISOString()}
+- Confidence: "high" (date+time), "medium" (date/time), "low" (implied).
 `;
 
 async function generateContent(apiKey, modelId, contents, generationConfig = {}) {
@@ -170,10 +175,62 @@ function normalizeResponseData(data, defaultType = 'summary') {
             data.type = defaultType
       }
 
-      if (!Array.isArray(data.details?.actionItems)) {
-            data.details = data.details || {}
-            data.details.actionItems = []
+      data.details = data.details || {}
+
+      // Handle legacy string action items or ensure new structured items have description
+      let processedActionItems = []
+      if (Array.isArray(data.details.actionItems)) {
+            processedActionItems = data.details.actionItems.map(item => {
+                  if (typeof item === 'string') {
+                        return {
+                              text: item,
+                              type: 'task',
+                              isActionable: true,
+                              calendarEvent: null
+                        };
+                  }
+                  // Map "text" to "description" for frontend consistency if needed, 
+                  // Add calendar icon for events
+                  const baseText = item.text || item.description || 'Action Required';
+                  const formattedText = (item.type === 'event' && !baseText.includes('🗓️'))
+                        ? `🗓️ ${baseText}`
+                        : baseText;
+
+                  return {
+                        ...item,
+                        text: formattedText,
+                        description: item.description || item.text || ''
+                  };
+            });
       }
+
+      // Filter out non-actionable items if any slipped through
+      processedActionItems = processedActionItems.filter(item => item.isActionable !== false);
+
+      // If Root calendarEvent is missing but we have event items, pick the first one
+      if (!data.calendarEvent?.detected) {
+            const firstEventItem = processedActionItems.find(i => i.calendarEvent?.detected);
+            if (firstEventItem) {
+                  data.calendarEvent = { ...firstEventItem.calendarEvent };
+            }
+      }
+
+      // Root level event normalization for consistency
+      const rootEvent = data.calendarEvent?.detected ? {
+            detected: true,
+            title: data.calendarEvent.title || data.title || '',
+            description: data.calendarEvent.description || data.summary || '',
+            dateTime: data.calendarEvent.dateTime || '',
+            duration: data.calendarEvent.duration || 60,
+            confidence: data.calendarEvent.confidence || 'low'
+      } : {
+            detected: false,
+            title: '',
+            description: '',
+            dateTime: '',
+            duration: 0,
+            confidence: ''
+      };
 
       return {
             type: data.type,
@@ -182,29 +239,15 @@ function normalizeResponseData(data, defaultType = 'summary') {
             language: data.language || 'en',
             content: data.content || '',
             details: {
-                  topic: data.details?.topic || data.title || '',
-                  actionItems: data.details?.actionItems || [],
-                  question: data.details?.question || '',
-                  answer: data.details?.answer || '',
-                  bug: data.details?.bug || '',
-                  fix: data.details?.fix || '',
-                  code: data.details?.code || ''
+                  topic: data.details.topic || data.title || '',
+                  actionItems: processedActionItems,
+                  question: data.details.question || '',
+                  answer: data.details.answer || '',
+                  bug: data.details.bug || '',
+                  fix: data.details.fix || '',
+                  code: data.details.code || ''
             },
-            calendarEvent: data.calendarEvent?.detected ? {
-                  detected: true,
-                  title: data.calendarEvent.title || data.title || '',
-                  description: data.calendarEvent.description || data.summary || '',
-                  dateTime: data.calendarEvent.dateTime || '',
-                  duration: data.calendarEvent.duration || 60,
-                  confidence: data.calendarEvent.confidence || 'low'
-            } : {
-                  detected: false,
-                  title: '',
-                  description: '',
-                  dateTime: '',
-                  duration: 0,
-                  confidence: ''
-            }
+            calendarEvent: rootEvent
       }
 }
 

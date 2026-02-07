@@ -52,19 +52,19 @@ const Voice = ({ t, micDevice }) => {
       }
 
       return (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 w-full">
                   {error && (
                         <span className="text-red-400 text-[10px] font-medium px-2 text-center">
                               {error}
                         </span>
                   )}
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full">
                         {isRecording && (
                               <button
                                     onClick={handlePauseResume}
                                     className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300
-                                          bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
+                                          bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 shrink-0"
                               >
                                     {isPaused ? (
                                           <Play className="w-4 h-4 text-neutral-300 fill-current" strokeWidth={0} />
@@ -77,10 +77,10 @@ const Voice = ({ t, micDevice }) => {
                         {/* Main Record/Stop Button */}
                         <button
                               onClick={handleVoiceRecord}
-                              className={`flex flex-col items-center justify-center gap-2 h-20 rounded-2xl border transition-all group duration-300
+                              className={`flex flex-col items-center justify-center gap-2 h-20 rounded-2xl border transition-all group duration-300 flex-1
                                     ${isRecording
-                                          ? "bg-red-500/10 border-red-500/20 hover:bg-red-500/20 px-6"
-                                          : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20 px-8"
+                                          ? "bg-red-500/10 border-red-500/20 hover:bg-red-500/20"
+                                          : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20"
                                     }
                               `}
                         >

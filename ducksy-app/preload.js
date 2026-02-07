@@ -85,7 +85,8 @@ contextBridge.exposeInMainWorld("electron", {
                   "mcp-open-google-auth",
                   "mcp-open-notion-auth",
                   "mcp-disconnect",
-                  "calendar-create-event"
+                  "calendar-create-event",
+                  "calendar-dismiss-event"
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)

@@ -465,7 +465,7 @@ export default function OnRecordPage() {
                                                                   variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
                                                                   className="space-y-2"
                                                             >
-                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.session.topic}</h3>
+                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage?.meetingTopic || "Meeting Topic"}</h3>
                                                                   <p className="text-sm text-neutral-300 leading-relaxed bg-white/[0.02] p-3 rounded-xl border border-white/5">
                                                                         {transcriptionResult.details.topic}
                                                                   </p>
@@ -477,7 +477,7 @@ export default function OnRecordPage() {
                                                                   variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
                                                                   className="space-y-2"
                                                             >
-                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.session.summary}</h3>
+                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage?.summary || "Summary"}</h3>
                                                                   <p className="text-sm text-neutral-300 leading-relaxed">
                                                                         {transcriptionResult.details.summary}
                                                                   </p>
@@ -489,19 +489,115 @@ export default function OnRecordPage() {
                                                                   variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
                                                                   className="space-y-2"
                                                             >
-                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.session.actionItems}</h3>
-                                                                  <ul className="space-y-2">
-                                                                        {transcriptionResult.details.actionItems.map((item, i) => (
-                                                                              <motion.li
-                                                                                    key={i}
-                                                                                    variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}
-                                                                                    className="flex items-start gap-3 text-sm text-neutral-300 bg-white/[0.02] p-3 rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors"
-                                                                              >
-                                                                                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                                                                                    <span>{item}</span>
-                                                                              </motion.li>
-                                                                        ))}
-                                                                  </ul>
+                                                                  <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage?.actionItems || "Action Items"}</h3>
+                                                                  <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                                                        <ul className="space-y-2">
+                                                                              {transcriptionResult.details.actionItems.map((item, i) => {
+                                                                                    const isObject = typeof item === 'object' && item !== null;
+                                                                                    const text = isObject ? (item.text || item.description || "") : String(item);
+                                                                                    const tool = isObject ? item.tool : null;
+                                                                                    const params = isObject ? item.parameters : {};
+
+                                                                                    return (
+                                                                                          <motion.li
+                                                                                                key={i}
+                                                                                                variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}
+                                                                                                className="flex items-start justify-between gap-4 text-sm text-neutral-300 bg-white/[0.02] p-3 rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors group/item"
+                                                                                          >
+                                                                                                <div className="flex items-start gap-3 flex-1">
+                                                                                                      <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                                                                                                      <p className="leading-relaxed">{text}</p>
+                                                                                                </div>
+
+                                                                                                <div className="flex gap-2 shrink-0 mt-0.5">
+                                                                                                      <button
+                                                                                                            onClick={(e) => {
+                                                                                                                  e.stopPropagation()
+                                                                                                                  if (item?.confirmed || item?.dismissed) return;
+
+                                                                                                                  let eventData = {};
+
+                                                                                                                  // Use the specific calendar event data if available on the item
+                                                                                                                  if (item.calendarEvent) {
+                                                                                                                        eventData = {
+                                                                                                                              ...item.calendarEvent,
+                                                                                                                              detected: true
+                                                                                                                        };
+                                                                                                                  } else {
+                                                                                                                        // Fallback default: 1 hour from now
+                                                                                                                        const now = new Date()
+                                                                                                                        now.setHours(now.getHours() + 1)
+                                                                                                                        eventData = {
+                                                                                                                              title: text,
+                                                                                                                              description: `Action item from session: ${transcriptionResult.title}`,
+                                                                                                                              dateTime: now.toISOString(),
+                                                                                                                              detected: true
+                                                                                                                        };
+                                                                                                                  }
+
+                                                                                                                  // Reuse existing dashboard logic for calendar if needed, or just open the modal with this data
+                                                                                                                  setEventDate(eventData.dateTime?.split('T')[0] || new Date().toISOString().split('T')[0]);
+                                                                                                                  setEventTime(eventData.dateTime?.split('T')[1]?.substring(0, 5) || '12:00');
+                                                                                                                  setShowCalendarModal(true);
+                                                                                                            }}
+                                                                                                            disabled={item?.confirmed || item?.dismissed}
+                                                                                                            title={item?.confirmed ? "Confirmed" : item?.dismissed ? "Rejected" : "Add to Calendar"}
+                                                                                                            className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all ${item?.confirmed
+                                                                                                                  ? 'bg-amber-500 border-amber-500 text-neutral-950 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                                                                                                                  : item?.dismissed
+                                                                                                                        ? 'bg-neutral-800/50 border-neutral-800 text-neutral-600 cursor-not-allowed'
+                                                                                                                        : 'bg-transparent border-neutral-600 text-neutral-400 hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/10'
+                                                                                                                  }`}
+                                                                                                      >
+                                                                                                            {item?.dismissed ? (
+                                                                                                                  <Check className="w-4 h-4" />
+                                                                                                            ) : (
+                                                                                                                  <CalendarPlus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
+                                                                                                            )}
+                                                                                                      </button>
+
+                                                                                                      <button
+                                                                                                            onClick={async (e) => {
+                                                                                                                  e.stopPropagation();
+                                                                                                                  if (item?.confirmed || item?.dismissed) return;
+                                                                                                                  if (window.electron) {
+                                                                                                                        await window.electron.invoke('calendar-dismiss-event', {
+                                                                                                                              fileId: transcriptionResult.fileId || transcriptionResult.id,
+                                                                                                                              index: i
+                                                                                                                        });
+                                                                                                                  }
+                                                                                                            }}
+                                                                                                            disabled={item?.confirmed || item?.dismissed}
+                                                                                                            title="Reject Suggestion"
+                                                                                                            className="w-7 h-7 rounded-md border border-neutral-600 text-neutral-400 hover:border-red-500 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
+                                                                                                      >
+                                                                                                            <X className="w-4 h-4" />
+                                                                                                      </button>
+
+                                                                                                      {tool && (
+                                                                                                            <button
+                                                                                                                  onClick={(e) => {
+                                                                                                                        e.stopPropagation();
+                                                                                                                        if (window.electron) {
+                                                                                                                              window.electron.invoke('execute-tool', { tool, params })
+                                                                                                                                    .then(res => {
+                                                                                                                                          if (res.success) alert("Action Executed!");
+                                                                                                                                          else alert("Error: " + res.error);
+                                                                                                                                    });
+                                                                                                                        }
+                                                                                                                  }}
+                                                                                                                  className="h-7 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
+                                                                                                            >
+                                                                                                                  <Monitor className="w-3 h-3" />
+                                                                                                                  Execute
+                                                                                                            </button>
+                                                                                                      )}
+                                                                                                </div>
+                                                                                          </motion.li>
+                                                                                    );
+                                                                              })}
+                                                                        </ul>
+                                                                  </div>
                                                             </motion.div>
                                                       )}
                                                       {transcriptionResult.details?.code && (
@@ -527,6 +623,7 @@ export default function OnRecordPage() {
                                                 <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-between items-center gap-2">
                                                       <button
                                                             onClick={async () => {
+                                                                  setIsProcessing(true)
                                                                   if (typeof window !== 'undefined' && window.electron) {
                                                                         try {
                                                                               const result = await window.electron.invoke('get-latest-file')
@@ -548,7 +645,10 @@ export default function OnRecordPage() {
                                                                               }
                                                                         } catch (e) {
                                                                               console.error("Refresh failed:", e)
+                                                                              setIsProcessing(false)
                                                                         }
+                                                                  } else {
+                                                                        setIsProcessing(false)
                                                                   }
                                                             }}
                                                             className="flex items-center gap-2 px-3 py-2 bg-white/5 text-neutral-400 text-xs font-medium rounded-lg hover:bg-white/10 hover:text-white transition-colors border border-white/10"
@@ -558,33 +658,7 @@ export default function OnRecordPage() {
                                                             {t.sessionsPage?.refresh || "Refresh"}
                                                       </button>
 
-                                                      <button
-                                                            onClick={() => {
-                                                                  // If AI detected calendar event, use that date/time
-                                                                  if (transcriptionResult?.calendarEvent?.detected && transcriptionResult?.calendarEvent?.dateTime) {
-                                                                        const dt = new Date(transcriptionResult.calendarEvent.dateTime)
-                                                                        setEventDate(dt.toISOString().split('T')[0])
-                                                                        setEventTime(dt.toTimeString().slice(0, 5))
-                                                                  } else {
-                                                                        // Fallback to now + 1 hour
-                                                                        const now = new Date()
-                                                                        now.setHours(now.getHours() + 1)
-                                                                        setEventDate(now.toISOString().split('T')[0])
-                                                                        setEventTime(now.toTimeString().slice(0, 5))
-                                                                  }
-                                                                  setCalendarSuccess(false)
-                                                                  setShowCalendarModal(true)
-                                                            }}
-                                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${transcriptionResult?.calendarEvent?.detected
-                                                                  ? 'bg-amber-500/20 text-amber-400 border-2 border-amber-500/50 hover:bg-amber-500/30'
-                                                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'}`}
-                                                            title={transcriptionResult?.calendarEvent?.detected
-                                                                  ? `Add: ${transcriptionResult.calendarEvent.title} @ ${new Date(transcriptionResult.calendarEvent.dateTime).toLocaleString()}`
-                                                                  : "Add to Calendar"}
-                                                      >
-                                                            <CalendarPlus className="w-4 h-4" />
-                                                            Calendar
-                                                      </button>
+
 
                                                       <button
                                                             onClick={() => window.electron.send('close-overlay')}

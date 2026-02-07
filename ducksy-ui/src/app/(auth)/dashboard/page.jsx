@@ -19,6 +19,7 @@ import {
       Layers,
       SlidersHorizontal,
       X,
+      Check,
       Copy,
       Trash2,
       ExternalLink,
@@ -32,6 +33,8 @@ import Voice from "@/components/Voice"
 import MicDevice from "@/components/MicDevice"
 import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
+import CalendarEventCard from "@/components/CalendarEventCard"
+import EditableEventModal from "@/components/EditableEventModal"
 
 function LiveSystemMetrics() {
       const [metrics, setMetrics] = useState({
@@ -126,9 +129,87 @@ export default function DashboardPage() {
       const [eventTime, setEventTime] = useState('')
       const [calendarLoading, setCalendarLoading] = useState(false)
       const [calendarSuccess, setCalendarSuccess] = useState(false)
+      const [editingEvent, setEditingEvent] = useState(null)
       const { t } = useSettings()
 
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
+
+      // Flatten and extract all AI-detected calendar events from actionItems
+      const suggestedEvents = sessionLogs.reduce((acc, log) => {
+            if (log.transcriptionStatus !== 'completed' || !log.details?.actionItems) return acc;
+
+            const events = log.details.actionItems
+                  .map((item, index) => ({ item, index, parentFileId: log.fileId || log.id }))
+                  .filter(({ item }) =>
+                        item.type === 'event' &&
+                        item.calendarEvent?.detected &&
+                        !item.dismissed
+                  )
+                  .map(({ item, index, parentFileId }) => ({
+                        ...item.calendarEvent,
+                        id: `${parentFileId}-${index}`,
+                        parentFileId,
+                        actionItemIndex: index,
+                        // Context for confirming
+                        originalSession: log
+                  }));
+
+            return [...acc, ...events];
+      }, []);
+
+
+      const handleDismissCalendarEvent = async (fileId, index) => {
+            if (!window.electron) return
+
+            try {
+                  const result = await window.electron.invoke('calendar-dismiss-event', { fileId, index })
+                  if (result.success) {
+                        refetch()
+                  } else {
+                        console.error("Failed to dismiss event:", result.error)
+                  }
+            } catch (err) {
+                  console.error(err)
+            }
+      }
+
+      const handleConfirmCalendarEvent = async (eventDetails) => {
+            if (!editingEvent || !window.electron) return
+
+            setCalendarLoading(true)
+            try {
+                  const result = await window.electron.invoke('calendar-create-event', eventDetails)
+                  if (result.success) {
+                        // Check if this was an action item confirmation
+                        if (editingEvent.actionItemIndex !== undefined) {
+                              try {
+                                    await window.electron.invoke('confirm-action-item', {
+                                          fileId: editingEvent.parentFileId || selectedSession?.fileId || selectedSession?.id,
+                                          index: editingEvent.actionItemIndex,
+                                          eventDetails
+                                    })
+                              } catch (e) {
+                                    console.error("Failed to mark action item as confirmed", e)
+                              }
+                        }
+
+                        setCalendarSuccess(true)
+                        setTimeout(() => {
+                              setCalendarSuccess(false)
+                              setEditingEvent(null)
+                              refetch()
+                        }, 2000)
+                  } else {
+                        console.error("Failed to create event:", result.error)
+                        alert(t.errors?.calendarCreate || "Failed to create event on calendar")
+                  }
+            } catch (err) {
+                  console.error(err)
+                  alert(err.message)
+            } finally {
+                  setCalendarLoading(false)
+            }
+      }
 
       React.useEffect(() => {
             const handleSelection = async (selection) => {
@@ -372,24 +453,36 @@ export default function DashboardPage() {
                                                             <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage.upNext}</h2>
                                                             <Calendar className="w-4 h-4 text-neutral-600" />
                                                       </div>
-                                                      <div className="bg-white/5 rounded-2xl p-4 border border-white/5 group hover:border-amber-500/30 transition-colors">
-                                                            <div className="flex items-start justify-between">
-                                                                  <div>
-                                                                        <div className="text-sm font-medium text-white mb-1">CS Data Structures</div>
-                                                                        <div className="text-xs font-mono text-amber-400">14:00 • Today</div>
+
+                                                      <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                                                            {suggestedEvents.length > 0 ? (
+                                                                  suggestedEvents.map(eventData => (
+                                                                        <div id={`calendar-event-${eventData.id}`} key={eventData.id}>
+                                                                              <CalendarEventCard
+                                                                                    event={eventData}
+                                                                                    t={t}
+                                                                                    onReview={() => setEditingEvent({
+                                                                                          calendarEvent: eventData,
+                                                                                          actionItemIndex: eventData.actionItemIndex,
+                                                                                          parentFileId: eventData.parentFileId
+                                                                                    })}
+                                                                                    onDismiss={() => handleDismissCalendarEvent(eventData.parentFileId, eventData.actionItemIndex)}
+                                                                              />
+                                                                        </div>
+                                                                  ))
+                                                            ) : (
+                                                                  <div className="text-xs text-neutral-500 italic p-4 text-center border border-white/5 rounded-2xl bg-white/5">
+                                                                        {t.dashboardPage?.noUpcomingEvents || "No new events detected"}
                                                                   </div>
-                                                                  <button className="px-3 py-1.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200 transition-colors">
-                                                                        {t.session.start}
-                                                                  </button>
-                                                            </div>
+                                                            )}
                                                       </div>
                                                 </div>
 
                                                 <div>
                                                       <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-4">{t.dashboardPage.quickInputs}</h2>
-                                                      <div className="grid grid-cols-3 gap-3">
+                                                      <div className="grid grid-cols-2 gap-3">
                                                             <Voice t={t} micDevice={micDevice} mode={mode} onRecordingSaved={refetch} />
-                                                            <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group">
+                                                            <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group w-full">
                                                                   <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform text-neutral-400 group-hover:text-white">
                                                                         <Monitor className="w-5 h-5" strokeWidth={1.5} />
                                                                   </div>
@@ -506,6 +599,14 @@ export default function DashboardPage() {
                               </div>
                         </div>
                   </main>
+
+                  <EditableEventModal
+                        isOpen={!!editingEvent}
+                        onClose={() => setEditingEvent(null)}
+                        event={editingEvent?.calendarEvent}
+                        onConfirm={handleConfirmCalendarEvent}
+                        t={t}
+                  />
 
                   <AnimatePresence>
                         {selectedSession && (
@@ -631,34 +732,81 @@ export default function DashboardPage() {
                                                                               <ul className="space-y-2">
                                                                                     {selectedSession.details.actionItems?.map((item, i) => {
                                                                                           const isObject = typeof item === 'object' && item !== null;
-                                                                                          const text = isObject ? item.description : item;
+                                                                                          const text = isObject ? (item.text || item.description || "") : String(item);
                                                                                           const tool = isObject ? item.tool : null;
                                                                                           const params = isObject ? item.parameters : {};
 
                                                                                           return (
-                                                                                                <li key={i} className="flex items-start gap-3 text-sm text-neutral-300 bg-black/20 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
-                                                                                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50 mt-1.5 shrink-0" />
-                                                                                                      <div className="flex-1">
+                                                                                                <li key={i} className="flex items-start justify-between gap-4 text-sm text-neutral-300 bg-black/20 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors group/item">
+                                                                                                      <div className="flex items-start gap-3 flex-1">
+                                                                                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50 mt-1.5 shrink-0" />
                                                                                                             <p className="leading-relaxed">{text}</p>
+                                                                                                      </div>
+
+                                                                                                      <div className="flex gap-2 shrink-0 mt-0.5">
+                                                                                                            <button
+                                                                                                                  onClick={(e) => {
+                                                                                                                        e.stopPropagation()
+                                                                                                                        if (item?.confirmed || item?.dismissed) return;
+
+                                                                                                                        let eventData = {};
+
+                                                                                                                        // Use the specific calendar event data if available on the item
+                                                                                                                        if (item.calendarEvent) {
+                                                                                                                              eventData = {
+                                                                                                                                    ...item.calendarEvent,
+                                                                                                                                    detected: true
+                                                                                                                              };
+                                                                                                                        } else {
+                                                                                                                              // Fallback default: 1 hour from now
+                                                                                                                              const now = new Date()
+                                                                                                                              now.setHours(now.getHours() + 1)
+                                                                                                                              eventData = {
+                                                                                                                                    title: text,
+                                                                                                                                    description: `Action item from session: ${selectedSession.title}`,
+                                                                                                                                    dateTime: now.toISOString(),
+                                                                                                                                    detected: true
+                                                                                                                              };
+                                                                                                                        }
+
+                                                                                                                        setEditingEvent({
+                                                                                                                              calendarEvent: eventData,
+                                                                                                                              actionItemIndex: i
+                                                                                                                        })
+                                                                                                                  }}
+                                                                                                                  disabled={item?.confirmed || item?.dismissed}
+                                                                                                                  title={item?.confirmed ? "Confirmed" : item?.dismissed ? "Rejected" : "Confirm Action Item"}
+                                                                                                                  className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all ${item?.confirmed
+                                                                                                                        ? 'bg-amber-500 border-amber-500 text-neutral-950 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                                                                                                                        : item?.dismissed
+                                                                                                                              ? 'bg-neutral-800/50 border-neutral-800 text-neutral-600 cursor-not-allowed'
+                                                                                                                              : 'bg-transparent border-neutral-600 text-neutral-400 hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/10'
+                                                                                                                        }`}
+                                                                                                            >
+                                                                                                                  {item?.dismissed ? (
+                                                                                                                        <X className="w-4 h-4" />
+                                                                                                                  ) : (
+                                                                                                                        <Check className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
+                                                                                                                  )}
+                                                                                                            </button>
+
                                                                                                             {tool && (
-                                                                                                                  <div className="mt-2 flex gap-2">
-                                                                                                                        <button
-                                                                                                                              onClick={(e) => {
-                                                                                                                                    e.stopPropagation();
-                                                                                                                                    if (window.electron) {
-                                                                                                                                          window.electron.invoke('execute-tool', { tool, params })
-                                                                                                                                                .then(res => {
-                                                                                                                                                      if (res.success) alert("Action Executed!");
-                                                                                                                                                      else alert("Error: " + res.error);
-                                                                                                                                                });
-                                                                                                                                    }
-                                                                                                                              }}
-                                                                                                                              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
-                                                                                                                        >
-                                                                                                                              <Zap className="w-3 h-3" />
-                                                                                                                              Execute
-                                                                                                                        </button>
-                                                                                                                  </div>
+                                                                                                                  <button
+                                                                                                                        onClick={(e) => {
+                                                                                                                              e.stopPropagation();
+                                                                                                                              if (window.electron) {
+                                                                                                                                    window.electron.invoke('execute-tool', { tool, params })
+                                                                                                                                          .then(res => {
+                                                                                                                                                if (res.success) alert("Action Executed!");
+                                                                                                                                                else alert("Error: " + res.error);
+                                                                                                                                          });
+                                                                                                                              }
+                                                                                                                        }}
+                                                                                                                        className="h-7 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
+                                                                                                                  >
+                                                                                                                        <Zap className="w-3 h-3" />
+                                                                                                                        Execute
+                                                                                                                  </button>
                                                                                                             )}
                                                                                                       </div>
                                                                                                 </li>
@@ -720,32 +868,7 @@ export default function DashboardPage() {
                                                 <button className="flex-1 py-3 rounded-xl bg-white/5 border border-white/5 text-sm font-medium hover:bg-white/10 hover:text-white text-neutral-300 transition-colors flex items-center justify-center gap-2">
                                                       <ExternalLink className="w-4 h-4" /> {t.dashboardPage.openOverlay}
                                                 </button>
-                                                <button
-                                                      onClick={() => {
-                                                            // If AI detected calendar event, use that date/time
-                                                            if (selectedSession?.calendarEvent?.detected && selectedSession?.calendarEvent?.dateTime) {
-                                                                  const dt = new Date(selectedSession.calendarEvent.dateTime)
-                                                                  setEventDate(dt.toISOString().split('T')[0])
-                                                                  setEventTime(dt.toTimeString().slice(0, 5))
-                                                            } else {
-                                                                  // Fallback to now + 1 hour
-                                                                  const now = new Date()
-                                                                  now.setHours(now.getHours() + 1)
-                                                                  setEventDate(now.toISOString().split('T')[0])
-                                                                  setEventTime(now.toTimeString().slice(0, 5))
-                                                            }
-                                                            setCalendarSuccess(false)
-                                                            setShowCalendarModal(true)
-                                                      }}
-                                                      className={`py-3 px-4 rounded-xl transition-colors ${selectedSession?.calendarEvent?.detected
-                                                            ? 'bg-amber-500/20 border-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/30'
-                                                            : 'bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20'}`}
-                                                      title={selectedSession?.calendarEvent?.detected
-                                                            ? `Add: ${selectedSession.calendarEvent.title} @ ${new Date(selectedSession.calendarEvent.dateTime).toLocaleString()}`
-                                                            : "Add to Calendar"}
-                                                >
-                                                      <CalendarPlus className="w-4 h-4" />
-                                                </button>
+
                                                 <button
                                                       onClick={async () => {
                                                             if (window.electron && selectedSession) {

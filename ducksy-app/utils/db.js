@@ -266,6 +266,7 @@ const getAllFiles = async () => {
             t.language as transcriptionLanguage, 
             t.details as transcriptionDetails,
             t.chatHistory as transcriptionChatHistory,
+            t.calendarEvent as transcriptionCalendarEvent,
             t.calendarEventId, 
             t.notionPageId, 
             t.createdAt as transcriptionCreatedAt, 
@@ -347,6 +348,7 @@ const getSessionLogs = async () => {
                   duration: file.duration,
                   filePath: file.path,
                   mimeType: file.type,
+                  calendarEvent: file.transcriptionCalendarEvent ? JSON.parse(file.transcriptionCalendarEvent) : null,
                   createdAt: file.createdAt,
                   updatedAt: file.updatedAt
             };

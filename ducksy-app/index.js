@@ -59,8 +59,12 @@ async function createOnRecordingWindow() {
             transparent: true,
             hasShadow: false,
             skipTaskbar: true,
-            resizable: true, // Sometimes resizable: false forces a frame on Windows
+            resizable: false,
             movable: true,
+            thickFrame: false, // Remove heavy window border
+            titleBarStyle: 'hidden', // Ensure title bar is hidden
+            minimizable: false,
+            maximizable: false,
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),
                   nodeIntegration: false,
@@ -68,6 +72,8 @@ async function createOnRecordingWindow() {
                   defaultFontFamily: "monospace"
             },
       })
+
+      onRecordingWindow.setMenu(null) // Aggressively remove menu
 
       setOnRecordingWindow(onRecordingWindow)
 

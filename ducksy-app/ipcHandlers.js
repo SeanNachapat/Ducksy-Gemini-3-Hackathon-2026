@@ -622,6 +622,68 @@ const registerIpcHandlers = () => {
             }
       });
 
+      ipcMain.handle("confirm-action-item", async (event, { fileId, index, eventDetails }) => {
+            try {
+                  const transcription = await db.getTranscriptionByFileId(fileId);
+                  if (!transcription) {
+                        return { success: false, error: "Transcription not found" };
+                  }
+
+                  let details = {};
+                  try {
+                        details = transcription.details ? JSON.parse(transcription.details) : {};
+                  } catch (e) {
+                        details = {};
+                  }
+
+                  if (!details.actionItems || !Array.isArray(details.actionItems)) {
+                        return { success: false, error: "No action items found" };
+                  }
+
+                  if (index < 0 || index >= details.actionItems.length) {
+                        return { success: false, error: "Invalid action item index" };
+                  }
+
+                  // Migrate string to object if needed
+                  let item = details.actionItems[index];
+                  if (typeof item === 'string') {
+                        item = {
+                              description: item,
+                              confirmed: true,
+                              calendarEvent: eventDetails,
+                              tool: null,
+                              parameters: {}
+                        };
+                  } else if (typeof item === 'object') {
+                        item.confirmed = true;
+                        item.calendarEvent = eventDetails;
+                  }
+
+                  details.actionItems[index] = item;
+
+                  await db.updateTranscription({
+                        id: transcription.id,
+                        details: details
+                  });
+
+                  // Notify frontend
+                  if (mainWindow && !mainWindow.isDestroyed()) {
+                        mainWindow.webContents.send("transcription-updated", {
+                              fileId: fileId,
+                              status: transcription.status,
+                              title: transcription.title,
+                              details: details
+                        });
+                  }
+
+                  return { success: true };
+            } catch (err) {
+                  console.error("Failed to confirm action item:", err);
+                  return { success: false, error: err.message };
+            }
+
+      });
+
       ipcMain.handle("get-all-files", async () => {
             try {
                   const files = await db.getAllFiles();
@@ -834,6 +896,81 @@ const registerIpcHandlers = () => {
                   return { success: true, eventLink: data.eventLink };
             } catch (err) {
                   console.error('Calendar create error:', err);
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("calendar-dismiss-event", async (event, { fileId, index }) => {
+            try {
+                  const transcription = await db.getTranscriptionByFileId(fileId);
+                  console.log(`[Dismiss] Processing fileId: ${fileId}, item index: ${index}. Transcription found: ${!!transcription}`);
+
+                  if (!transcription) return { success: false, error: 'Transcription not found' };
+
+                  let calendarEvent = {};
+                  let details = {};
+                  try {
+                        calendarEvent = JSON.parse(transcription.calendarEvent || '{}');
+                        details = transcription.details ? JSON.parse(transcription.details) : {};
+                        console.log(`[Dismiss] Current calendarEvent:`, calendarEvent);
+                  } catch (e) {
+                        calendarEvent = {};
+                        details = {};
+                        console.error(`[Dismiss] Parse error:`, e);
+                  }
+
+                  // 1. Mark main calendar event as dismissed (only if no index provided or if it's the root event)
+                  if (index === undefined || index === -1) {
+                        calendarEvent.dismissed = true;
+                  }
+
+                  // 2. Mark specific action item as dismissed
+                  if (details.actionItems && Array.isArray(details.actionItems)) {
+                        if (index !== undefined && index >= 0 && index < details.actionItems.length) {
+                              details.actionItems[index] = {
+                                    ...details.actionItems[index],
+                                    dismissed: true,
+                                    confirmed: false
+                              };
+
+                              // If this was an event and matches the main root event, dismiss that too
+                              if (details.actionItems[index].calendarEvent && calendarEvent.detected) {
+                                    // Simplified check: if titles match or if it's the only one
+                                    if (details.actionItems[index].calendarEvent.title === calendarEvent.title) {
+                                          calendarEvent.dismissed = true;
+                                    }
+                              }
+                        } else {
+                              // Fallback: dismiss all items with calendar events (legacy/catch-all)
+                              details.actionItems = details.actionItems.map(item => {
+                                    if (typeof item === 'object' && item !== null && item.calendarEvent) {
+                                          return { ...item, dismissed: true, confirmed: false };
+                                    }
+                                    return item;
+                              });
+                        }
+                  }
+
+                  console.log(`[Dismiss] Updating transcription ${transcription.id} with dismissed=true`);
+
+                  await db.updateTranscription({
+                        id: transcription.id,
+                        calendarEvent: calendarEvent,
+                        details: details
+                  });
+
+                  console.log(`[Dismiss] Update complete`);
+
+                  if (mainWindow) {
+                        mainWindow.webContents.send("transcription-updated", {
+                              fileId: fileId,
+                              calendarEvent: calendarEvent,
+                              details: details
+                        });
+                  }
+
+                  return { success: true };
+            } catch (err) {
                   return { success: false, error: err.message };
             }
       });
