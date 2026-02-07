@@ -6,6 +6,9 @@ const db = require("./utils/db")
 const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./ipcHandlers")
 require("dotenv").config();
 
+const PROTOCOL_SCHEME = 'ducksy'
+const SERVER_URL = 'http://localhost:8080'
+
 const isProd = app.isPackaged
 
 app.commandLine.appendSwitch('enable-transparent-visuals')
@@ -259,17 +262,157 @@ async function createWindow() {
       });
 }
 
+if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+            const success = app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [path.resolve(process.argv[1])])
+            console.log('Protocol registered (dev mode):', PROTOCOL_SCHEME, '- success:', success)
+            console.log('Argv:', process.argv)
+      }
+} else {
+      const success = app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
+      console.log('Protocol registered (prod mode):', PROTOCOL_SCHEME, '- success:', success)
+}
+
+async function handleDeeplink(url) {
+      console.log('Deeplink received:', url)
+      try {
+            const parsed = new URL(url)
+            console.log('Parsed URL:', { protocol: parsed.protocol, host: parsed.host, pathname: parsed.pathname })
+
+            if (parsed.protocol !== `${PROTOCOL_SCHEME}:`) {
+                  console.log('Wrong protocol, ignoring')
+                  return
+            }
+
+            if (parsed.host === 'auth' && parsed.pathname === '/callback') {
+                  const provider = parsed.searchParams.get('provider')
+                  const tokenId = parsed.searchParams.get('token_id')
+                  console.log('OAuth callback:', { provider, tokenId })
+
+                  if (provider && tokenId) {
+                        console.log('Fetching token from server...')
+                        const response = await fetch(`${SERVER_URL}/auth/token/${tokenId}`)
+                        console.log('Server response status:', response.status)
+
+                        if (response.ok) {
+                              const tokenData = await response.json()
+                              console.log('Token data received:', { hasAccessToken: !!tokenData.access_token })
+
+                              await db.saveMcpCredential(
+                                    provider,
+                                    tokenData.access_token,
+                                    tokenData.refresh_token || null,
+                                    null,
+                                    null,
+                                    JSON.stringify(tokenData)
+                              )
+                              console.log('Credential saved to database')
+
+                              if (mainWindow && !mainWindow.isDestroyed()) {
+                                    mainWindow.webContents.send('mcp-auth-success', { provider })
+                                    mainWindow.show()
+                                    mainWindow.focus()
+                                    console.log('Sent mcp-auth-success event to renderer')
+                              }
+                        } else {
+                              console.error('Server response not OK:', await response.text())
+                        }
+                  }
+            }
+      } catch (error) {
+            console.error('Deeplink error:', error)
+      }
+}
+
+let deferredDeeplinkUrl = null
+
+app.on('open-url', (event, url) => {
+      event.preventDefault()
+      console.log('open-url event received:', url)
+      if (app.isReady() && mainWindow) {
+            handleDeeplink(url)
+      } else {
+            deferredDeeplinkUrl = url
+            console.log('Deferred deeplink URL for later processing')
+      }
+})
+
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+      console.log('Second instance detected, waiting for deeplink URL...')
+
+      // On macOS, the deeplink URL comes via open-url event, not argv
+      // Wait for the open-url event, process the deeplink, then quit
+      app.on('open-url', async (event, url) => {
+            event.preventDefault()
+            console.log('Second instance received deeplink:', url)
+
+            // Process the deeplink directly (saves token to shared DB)
+            try {
+                  const parsed = new URL(url)
+                  if (parsed.host === 'auth' && parsed.pathname === '/callback') {
+                        const provider = parsed.searchParams.get('provider')
+                        const tokenId = parsed.searchParams.get('token_id')
+                        console.log('Processing OAuth callback:', { provider, tokenId })
+
+                        if (provider && tokenId) {
+                              const response = await fetch(`${SERVER_URL}/auth/token/${tokenId}`)
+                              if (response.ok) {
+                                    const tokenData = await response.json()
+                                    await db.saveMcpCredential(
+                                          provider,
+                                          tokenData.access_token,
+                                          tokenData.refresh_token || null,
+                                          null,
+                                          null,
+                                          JSON.stringify(tokenData)
+                                    )
+                                    console.log('Token saved successfully! You may need to refresh the settings page.')
+                              }
+                        }
+                  }
+            } catch (error) {
+                  console.error('Error processing deeplink in second instance:', error)
+            }
+
+            // Give time for DB write, then quit
+            setTimeout(() => app.quit(), 500)
+      })
+
+      // Timeout quit in case no URL is received
+      setTimeout(() => {
+            console.log('No deeplink URL received, quitting second instance')
+            app.quit()
+      }, 5000)
+} else {
+      app.on('second-instance', (event, commandLine) => {
+            console.log('second-instance event, commandLine:', commandLine)
+            const url = commandLine.find(arg => arg.startsWith(`${PROTOCOL_SCHEME}://`))
+            if (url) handleDeeplink(url)
+            if (mainWindow) {
+                  if (mainWindow.isMinimized()) mainWindow.restore()
+                  mainWindow.focus()
+            }
+      })
+}
+
 app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
 
-      // await createSelectionWindow();
       createTray();
 
       globalShortcut.register('Alt+S', () => {
             console.log('Alt+S pressed - activating magic lens')
             ipcMain.emit('activate-magic-lens')
       })
+
+      // Process any deeplink that was deferred during app launch
+      if (deferredDeeplinkUrl) {
+            console.log('Processing deferred deeplink:', deferredDeeplinkUrl)
+            handleDeeplink(deferredDeeplinkUrl)
+            deferredDeeplinkUrl = null
+      }
 })
 
 app.on("window-all-closed", () => {

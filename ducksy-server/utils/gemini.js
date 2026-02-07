@@ -1,4 +1,4 @@
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 const metrics = {
       latency: 0,
@@ -40,9 +40,6 @@ CRITICAL INSTRUCTIONS:
 2. You MUST understand and analyze the content regardless of input language.
 3. You MUST translate and output ALL text content in ${outputLanguage} language.
 4. Even if the input is in a different language, your entire output must be in ${outputLanguage}.
-
-Example: If input is English but app language is Thai, output everything in Thai.
-Example: If input is Japanese but app language is English, output everything in English.
 `;
 
 const getBaseJsonStructure = (outputLanguage, userLanguage) => `
@@ -55,18 +52,10 @@ Output Format: JSON object with this exact structure:
     "content": "Full transcription/extracted text translated to ${outputLanguage}...",
     "details": {
         "topic": "Main topic/subject translated to ${outputLanguage}",
-        "actionItems": ["Action item 1 translated to ${outputLanguage}", "Action item 2 translated to ${outputLanguage}"],
-        "bug": "Bug description if debug type translated to ${outputLanguage}",
-        "fix": "Solution description if debug type translated to ${outputLanguage}",
-        "code": "Code snippet if any (keep in original programming language)"
-    },
-    "calendarEvent": {
-        "detected": true | false,
-        "title": "Event title extracted from content",
-        "description": "Event description/details",
-        "dateTime": "ISO 8601 format datetime (e.g., 2026-02-07T17:00:00)",
-        "duration": 60,
-        "confidence": "high" | "medium" | "low"
+        "actionItems": ["Action item 1", "Action item 2"],
+        "bug": "Bug description if debug type",
+        "fix": "Solution description if debug type",
+        "code": "Code snippet if any"
     }
 }
 
@@ -74,26 +63,8 @@ Rules:
 - "type" must be exactly one of: "summary", "debug"
 - "actionItems" should be an array (empty array [] if none)
 - "language" must be "${userLanguage}"
-- ALL text fields (title, summary, content, topic, actionItems, bug, fix) MUST be translated to ${outputLanguage}
-- Code snippets should remain in their original programming language
+- ALL text fields MUST be translated to ${outputLanguage}
 - Return ONLY the JSON object, no markdown code blocks
-
-CALENDAR EVENT DETECTION RULES:
-- Set "calendarEvent.detected" to true if the content mentions ANY of these:
-  * Specific time (e.g., "5 PM", "17:00", "ห้าโมง", "五点")
-  * Specific date (e.g., "tomorrow", "next Monday", "พรุ่งนี้", "February 10")
-  * Meeting, appointment, reminder, deadline, event mentions
-  * Phrases like "remind me", "don't forget", "schedule", "นัดหมาย"
-- For dateTime: Convert relative times to absolute ISO format based on current datetime: ${new Date().toISOString()}
-  * "5 PM tonight" → today at 17:00
-  * "tomorrow morning" → next day at 09:00
-  * "next week Monday" → calculate actual date
-- For duration: Estimate in minutes (default 60 if not specified)
-- Confidence levels:
-  * "high": Explicit time AND date mentioned
-  * "medium": Only time OR only date mentioned
-  * "low": Implied scheduling (e.g., "we should meet")
-- If no calendar event detected, set: { "detected": false, "title": "", "description": "", "dateTime": "", "duration": 0, "confidence": "" }
 `;
 
 async function generateContent(apiKey, modelId, contents, generationConfig = {}) {
@@ -115,7 +86,7 @@ async function generateContent(apiKey, modelId, contents, generationConfig = {})
                         },
                   }),
             }
-      )
+      );
 
       metrics.latency = Date.now() - startTime;
       metrics.lastUpdated = Date.now();
@@ -123,56 +94,52 @@ async function generateContent(apiKey, modelId, contents, generationConfig = {})
 
       if (!response.ok) {
             metrics.mcpConnected = false;
-            const errorData = await response.json().catch(() => ({}))
-            const errorMessage = errorData.error?.message || `HTTP ${response.status}: Failed to generate content`
-            throw new Error(errorMessage)
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to generate content`);
       }
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.usageMetadata) {
-            const totalTokens = result.usageMetadata.totalTokenCount || 0;
-            metrics.tokensUsed += totalTokens;
+            metrics.tokensUsed += result.usageMetadata.totalTokenCount || 0;
       }
 
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text
-
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
-            const blockReason = result.candidates?.[0]?.finishReason
+            const blockReason = result.candidates?.[0]?.finishReason;
             if (blockReason && blockReason !== 'STOP') {
-                  throw new Error(`Gemini blocked the response: ${blockReason}`)
+                  throw new Error(`Gemini blocked the response: ${blockReason}`);
             }
-            throw new Error('No response from Gemini')
+            throw new Error('No response from Gemini');
       }
 
       return text;
 }
 
 function cleanAndParseJson(text) {
-      let cleanText = text.trim()
-      cleanText = cleanText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?\s*```$/i, '').trim()
+      let cleanText = text.trim();
+      cleanText = cleanText.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?\s*```$/i, '').trim();
 
       try {
-            return JSON.parse(cleanText)
+            return JSON.parse(cleanText);
       } catch (parseErr) {
-            const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
+            const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
-                  return JSON.parse(jsonMatch[0])
-            } else {
-                  throw new Error('Unable to parse AI response. Please try again.')
+                  return JSON.parse(jsonMatch[0]);
             }
+            throw new Error('Unable to parse AI response');
       }
 }
 
 function normalizeResponseData(data, defaultType = 'summary') {
-      const validTypes = ['summary', 'debug']
+      const validTypes = ['summary', 'debug'];
       if (!validTypes.includes(data.type)) {
-            data.type = defaultType
+            data.type = defaultType;
       }
 
       if (!Array.isArray(data.details?.actionItems)) {
-            data.details = data.details || {}
-            data.details.actionItems = []
+            data.details = data.details || {};
+            data.details.actionItems = [];
       }
 
       return {
@@ -189,28 +156,11 @@ function normalizeResponseData(data, defaultType = 'summary') {
                   bug: data.details?.bug || '',
                   fix: data.details?.fix || '',
                   code: data.details?.code || ''
-            },
-            calendarEvent: data.calendarEvent?.detected ? {
-                  detected: true,
-                  title: data.calendarEvent.title || data.title || '',
-                  description: data.calendarEvent.description || data.summary || '',
-                  dateTime: data.calendarEvent.dateTime || '',
-                  duration: data.calendarEvent.duration || 60,
-                  confidence: data.calendarEvent.confidence || 'low'
-            } : {
-                  detected: false,
-                  title: '',
-                  description: '',
-                  dateTime: '',
-                  duration: 0,
-                  confidence: ''
             }
-      }
+      };
 }
 
 async function transcribeAudio(base64Audio, mimeType, apiKey, userLanguage = 'en', settings = {}) {
-      if (!apiKey) throw new Error('API Key is required')
-
       const outputLanguage = getOutputLanguage(userLanguage);
       const persona = getPersonaInstructions(settings);
       const languageInstr = getCommonLanguageInstructions(outputLanguage);
@@ -225,41 +175,29 @@ ${persona}
 ${languageInstr}
 
 Analyze the audio and determine:
-1. What type of content this is: "summary" (meeting/lecture) or "debug" (technical discussion/problem solving)
+1. What type of content this is: "summary" (meeting/lecture) or "debug" (technical discussion)
 2. Create an appropriate title
 3. Provide a comprehensive summary
 4. Extract action items
-5. If detailed technical content, identify bugs/fixes
-6. Full transcription content
+5. Full transcription content
 
 ${jsonStructure}
 `;
 
-      let normalizedMimeType = mimeType.split(';')[0].trim()
+      const normalizedMimeType = mimeType.split(';')[0].trim();
+      const text = await generateContent(apiKey, 'gemini-2.0-flash', [{
+            parts: [
+                  { inline_data: { mime_type: normalizedMimeType, data: base64Audio } },
+                  { text: prompt }
+            ]
+      }]);
 
-      try {
-            const text = await generateContent(apiKey, 'gemini-2.0-flash', [{
-                  parts: [
-                        { inline_data: { mime_type: normalizedMimeType, data: base64Audio } },
-                        { text: prompt }
-                  ]
-            }]);
-
-            const data = cleanAndParseJson(text);
-            if (data.calendarEvent) {
-                  console.log("=== Calendar Event Detected ===");
-                  console.log(JSON.stringify(data.calendarEvent, null, 6));
-            }
-            return normalizeResponseData(data, 'summary');
-      } catch (error) {
-            throw error
-      }
+      const data = cleanAndParseJson(text);
+      return normalizeResponseData(data, 'summary');
 }
 
 async function analyzeImage(base64Image, mimeType, apiKey, customPrompt = null, metadata = null, userLanguage = 'en', settings = {}) {
-      if (!apiKey) throw new Error('API Key is required')
-
-      let cropContext = ""
+      let cropContext = "";
       if (metadata && metadata.width && metadata.height) {
             cropContext = `
 IMPORTANT CONTEXT:
@@ -289,35 +227,23 @@ Determine:
 3. Provide a comprehensive summary/description
 4. Extract any text visible in the image
 5. If it's code/error, identify the issue and suggest fixes
-6. If it's a document, extract key points
 
 ${jsonStructure}
 `;
 
-      let normalizedMimeType = mimeType.split(';')[0].trim()
+      const normalizedMimeType = mimeType.split(';')[0].trim();
+      const text = await generateContent(apiKey, 'gemini-2.0-flash', [{
+            parts: [
+                  { inline_data: { mime_type: normalizedMimeType, data: base64Image } },
+                  { text: prompt }
+            ]
+      }]);
 
-      try {
-            const text = await generateContent(apiKey, 'gemini-2.0-flash', [{
-                  parts: [
-                        { inline_data: { mime_type: normalizedMimeType, data: base64Image } },
-                        { text: prompt }
-                  ]
-            }]);
-
-            const data = cleanAndParseJson(text);
-            if (data.calendarEvent) {
-                  console.log("=== Calendar Event Detected ===");
-                  console.log(JSON.stringify(data.calendarEvent, null, 6));
-            }
-            return normalizeResponseData(data, 'summary');
-      } catch (error) {
-            throw error
-      }
+      const data = cleanAndParseJson(text);
+      return normalizeResponseData(data, 'summary');
 }
 
 async function chatWithSession(context, history, userMessage, apiKey, settings = {}) {
-      if (!apiKey) throw new Error('API Key is required')
-
       const persona = getPersonaInstructions(settings);
 
       const systemPrompt = `
@@ -344,32 +270,16 @@ Full Content: ${context.content}
             { role: "user", parts: [{ text: userMessage }] }
       ];
 
-      try {
-            const text = await generateContent(apiKey, 'gemini-2.0-flash', contents, {
-                  temperature: 0.7,
-                  maxOutputTokens: 1000
-            });
-            return text;
-      } catch (error) {
-            console.error('Chat error:', error)
-            throw error
-      }
-}
-
-async function analyzeMedia(base64Data, mimeType, apiKey, customPrompt = null) {
-      if (mimeType.startsWith('image/')) {
-            return analyzeImage(base64Data, mimeType, apiKey, customPrompt)
-      } else if (mimeType.startsWith('audio/') || mimeType.startsWith('video/')) {
-            return transcribeAudio(base64Data, mimeType, apiKey)
-      } else {
-            throw new Error(`Unsupported media type: ${mimeType}`)
-      }
+      const text = await generateContent(apiKey, 'gemini-2.0-flash', contents, {
+            temperature: 0.7,
+            maxOutputTokens: 1000
+      });
+      return text;
 }
 
 module.exports = {
       transcribeAudio,
       analyzeImage,
       chatWithSession,
-      analyzeMedia,
       getMetrics
-}
+};

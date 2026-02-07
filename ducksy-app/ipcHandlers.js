@@ -1,10 +1,81 @@
-const { ipcMain, app, shell } = require("electron");
+const { ipcMain, app, shell, BrowserWindow } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const db = require("./utils/db");
 const { getSessionData } = require("./utils/sessionHelper");
 const { transcribeAudio, analyzeImage, chatWithSession, getMetrics } = require("./utils/gemini");
 require("dotenv").config();
+
+const SERVER_URL = 'http://localhost:8080';
+
+// OAuth window helper - opens OAuth in a popup and intercepts the callback
+async function openOAuthWindow(authUrl, provider) {
+      return new Promise((resolve, reject) => {
+            const authWindow = new BrowserWindow({
+                  width: 600,
+                  height: 700,
+                  show: true,
+                  title: `Connect ${provider}`,
+                  webPreferences: {
+                        nodeIntegration: false,
+                        contextIsolation: true
+                  }
+            });
+
+            authWindow.loadURL(authUrl);
+
+            // Intercept navigation to catch the callback
+            authWindow.webContents.on('will-redirect', async (event, url) => {
+                  console.log('OAuth redirect:', url);
+
+                  // Check if this is our callback URL with ducksy:// or token_id
+                  if (url.includes('token_id=') || url.startsWith('ducksy://')) {
+                        event.preventDefault();
+
+                        try {
+                              const parsed = new URL(url.startsWith('ducksy://') ? url : url);
+                              const tokenId = parsed.searchParams.get('token_id');
+
+                              if (tokenId) {
+                                    console.log('Fetching token with ID:', tokenId);
+                                    const response = await fetch(`${SERVER_URL}/auth/token/${tokenId}`);
+
+                                    if (response.ok) {
+                                          const tokenData = await response.json();
+                                          await db.saveMcpCredential(
+                                                provider,
+                                                tokenData.access_token,
+                                                tokenData.refresh_token || null,
+                                                null,
+                                                null,
+                                                JSON.stringify(tokenData)
+                                          );
+                                          console.log('OAuth token saved for', provider);
+
+                                          // Notify main window
+                                          if (mainWindow && !mainWindow.isDestroyed()) {
+                                                mainWindow.webContents.send('mcp-auth-success', { provider });
+                                          }
+
+                                          resolve({ success: true });
+                                    } else {
+                                          reject(new Error('Failed to fetch token'));
+                                    }
+                              }
+                        } catch (err) {
+                              console.error('OAuth callback error:', err);
+                              reject(err);
+                        } finally {
+                              authWindow.close();
+                        }
+                  }
+            });
+
+            authWindow.on('closed', () => {
+                  resolve({ success: false, cancelled: true });
+            });
+      });
+}
 
 let mainWindow = null;
 let onRecordingWindow = null;
@@ -74,7 +145,8 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         content: result.content,
                         language: result.language,
                         status: "completed",
-                        details: result.details
+                        details: result.details,
+                        calendarEvent: result.calendarEvent
                   });
 
                   await db.updateFile({
@@ -88,7 +160,8 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         fileId: fileId,
                         status: "completed",
                         title: result.title,
-                        details: result.details
+                        details: result.details,
+                        calendarEvent: result.calendarEvent
                   });
             }
 
@@ -97,7 +170,8 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         fileId: fileId,
                         status: "completed",
                         title: result.title,
-                        details: result.details
+                        details: result.details,
+                        calendarEvent: result.calendarEvent
                   });
             }
 
@@ -173,7 +247,9 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
             const fileRec = await db.getFileById(fileId);
             const metadata = fileRec && fileRec.metadata ? JSON.parse(fileRec.metadata) : null;
 
+            console.log(`Starting image analysis for file ${fileId}...`);
             const result = await analyzeImage(base64Image, mimeType, geminiApiKey, null, metadata, userLanguage, settings);
+            console.log(`Image analysis result received for file ${fileId}`);
 
             const updatedTranscription = await db.getTranscriptionByFileId(fileId);
             if (updatedTranscription) {
@@ -185,7 +261,8 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         content: result.content,
                         language: result.language,
                         status: "completed",
-                        details: result.details
+                        details: result.details,
+                        calendarEvent: result.calendarEvent
                   });
 
                   await db.updateFile({
@@ -199,7 +276,8 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         fileId: fileId,
                         status: "completed",
                         title: result.title,
-                        details: result.details
+                        details: result.details,
+                        calendarEvent: result.calendarEvent
                   });
             }
 
@@ -208,7 +286,8 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         fileId: fileId,
                         status: "completed",
                         title: result.title,
-                        details: result.details
+                        details: result.details,
+                        calendarEvent: result.calendarEvent
                   });
             }
 
@@ -693,6 +772,69 @@ const registerIpcHandlers = () => {
       ipcMain.on("open-external", (event, url) => {
             if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
                   shell.openExternal(url);
+            }
+      });
+
+      ipcMain.handle("mcp-get-status", async () => {
+            try {
+                  const google = await db.getMcpCredential("google_calendar");
+                  const notion = await db.getMcpCredential("notion");
+                  return {
+                        success: true,
+                        google_calendar: { connected: !!(google && google.access_token) },
+                        notion: { connected: !!(notion && notion.access_token) }
+                  };
+            } catch (err) {
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("mcp-open-google-auth", async () => {
+            return openOAuthWindow(`${SERVER_URL}/auth/google`, 'google_calendar');
+      });
+
+      ipcMain.handle("mcp-open-notion-auth", async () => {
+            return openOAuthWindow(`${SERVER_URL}/auth/notion`, 'notion');
+      });
+
+      ipcMain.handle("mcp-disconnect", async (event, { provider }) => {
+            try {
+                  await db.deleteMcpCredential(provider);
+                  return { success: true };
+            } catch (err) {
+                  return { success: false, error: err.message };
+            }
+      });
+
+      ipcMain.handle("calendar-create-event", async (event, { title, description, startTime, endTime }) => {
+            try {
+                  const credential = await db.getMcpCredential('google_calendar');
+                  if (!credential || !credential.access_token) {
+                        return { success: false, error: 'Google Calendar not connected' };
+                  }
+
+                  const response = await fetch(`${SERVER_URL}/calendar/create`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                              title,
+                              description,
+                              startTime,
+                              endTime,
+                              accessToken: credential.access_token,
+                              refreshToken: credential.refresh_token
+                        })
+                  });
+
+                  const data = await response.json();
+                  if (!response.ok) {
+                        throw new Error(data.error || 'Failed to create event');
+                  }
+
+                  return { success: true, eventLink: data.eventLink };
+            } catch (err) {
+                  console.error('Calendar create error:', err);
+                  return { success: false, error: err.message };
             }
       });
 };

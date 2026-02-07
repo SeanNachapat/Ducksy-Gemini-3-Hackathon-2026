@@ -15,6 +15,7 @@ import {
       Eye,
       HardDrive,
       Calendar,
+      CalendarPlus,
       Layers,
       SlidersHorizontal,
       X,
@@ -56,7 +57,7 @@ function LiveSystemMetrics() {
             }
 
             fetchMetrics()
-            const interval = setInterval(fetchMetrics, 3000) 
+            const interval = setInterval(fetchMetrics, 3000)
             return () => clearInterval(interval)
       }, [])
 
@@ -120,6 +121,11 @@ export default function DashboardPage() {
       const [selectedSession, setSelectedSession] = useState(null)
       const [micDevice, setMicDevice] = useState(null)
       const [isDeleting, setIsDeleting] = useState(false)
+      const [showCalendarModal, setShowCalendarModal] = useState(false)
+      const [eventDate, setEventDate] = useState('')
+      const [eventTime, setEventTime] = useState('')
+      const [calendarLoading, setCalendarLoading] = useState(false)
+      const [calendarSuccess, setCalendarSuccess] = useState(false)
       const { t } = useSettings()
 
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
@@ -715,6 +721,32 @@ export default function DashboardPage() {
                                                       <ExternalLink className="w-4 h-4" /> {t.dashboardPage.openOverlay}
                                                 </button>
                                                 <button
+                                                      onClick={() => {
+                                                            // If AI detected calendar event, use that date/time
+                                                            if (selectedSession?.calendarEvent?.detected && selectedSession?.calendarEvent?.dateTime) {
+                                                                  const dt = new Date(selectedSession.calendarEvent.dateTime)
+                                                                  setEventDate(dt.toISOString().split('T')[0])
+                                                                  setEventTime(dt.toTimeString().slice(0, 5))
+                                                            } else {
+                                                                  // Fallback to now + 1 hour
+                                                                  const now = new Date()
+                                                                  now.setHours(now.getHours() + 1)
+                                                                  setEventDate(now.toISOString().split('T')[0])
+                                                                  setEventTime(now.toTimeString().slice(0, 5))
+                                                            }
+                                                            setCalendarSuccess(false)
+                                                            setShowCalendarModal(true)
+                                                      }}
+                                                      className={`py-3 px-4 rounded-xl transition-colors ${selectedSession?.calendarEvent?.detected
+                                                            ? 'bg-amber-500/20 border-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/30'
+                                                            : 'bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20'}`}
+                                                      title={selectedSession?.calendarEvent?.detected
+                                                            ? `Add: ${selectedSession.calendarEvent.title} @ ${new Date(selectedSession.calendarEvent.dateTime).toLocaleString()}`
+                                                            : "Add to Calendar"}
+                                                >
+                                                      <CalendarPlus className="w-4 h-4" />
+                                                </button>
+                                                <button
                                                       onClick={async () => {
                                                             if (window.electron && selectedSession) {
                                                                   const result = await window.electron.invoke('get-session', { fileId: selectedSession.fileId || selectedSession.id })
@@ -744,6 +776,109 @@ export default function DashboardPage() {
 
                                     </motion.div>
                               </>
+                        )}
+                  </AnimatePresence>
+
+                  {/* Calendar Modal */}
+                  <AnimatePresence>
+                        {showCalendarModal && (
+                              <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+                                    onClick={() => setShowCalendarModal(false)}
+                              >
+                                    <motion.div
+                                          initial={{ scale: 0.95, opacity: 0 }}
+                                          animate={{ scale: 1, opacity: 1 }}
+                                          exit={{ scale: 0.95, opacity: 0 }}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm mx-4"
+                                    >
+                                          {calendarSuccess ? (
+                                                <div className="text-center py-4">
+                                                      <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                                                            <CalendarPlus className="w-8 h-8 text-green-500" />
+                                                      </div>
+                                                      <h3 className="text-lg font-bold text-white mb-2">Event Added!</h3>
+                                                      <p className="text-sm text-neutral-400 mb-4">
+                                                            "{selectedSession?.title}" has been added to Google Calendar
+                                                      </p>
+                                                      <button
+                                                            onClick={() => setShowCalendarModal(false)}
+                                                            className="px-6 py-2 bg-white text-black text-sm font-bold rounded-lg hover:bg-neutral-200 transition-colors"
+                                                      >
+                                                            Done
+                                                      </button>
+                                                </div>
+                                          ) : (
+                                                <>
+                                                      <h3 className="text-lg font-bold text-white mb-4">Add to Calendar</h3>
+                                                      <div className="space-y-4">
+                                                            <div>
+                                                                  <label className="block text-xs font-mono text-neutral-500 uppercase tracking-widest mb-2">Date</label>
+                                                                  <input
+                                                                        type="date"
+                                                                        value={eventDate}
+                                                                        onChange={(e) => setEventDate(e.target.value)}
+                                                                        className="w-full px-4 py-3 bg-neutral-800 border border-white/10 rounded-xl text-white focus:outline-none focus:border-amber-500/50"
+                                                                  />
+                                                            </div>
+                                                            <div>
+                                                                  <label className="block text-xs font-mono text-neutral-500 uppercase tracking-widest mb-2">Time</label>
+                                                                  <input
+                                                                        type="time"
+                                                                        value={eventTime}
+                                                                        onChange={(e) => setEventTime(e.target.value)}
+                                                                        className="w-full px-4 py-3 bg-neutral-800 border border-white/10 rounded-xl text-white focus:outline-none focus:border-amber-500/50"
+                                                                  />
+                                                            </div>
+                                                      </div>
+                                                      <div className="flex gap-3 mt-6">
+                                                            <button
+                                                                  onClick={() => setShowCalendarModal(false)}
+                                                                  className="flex-1 py-3 bg-neutral-800 text-neutral-300 text-sm font-medium rounded-xl hover:bg-neutral-700 transition-colors"
+                                                            >
+                                                                  Cancel
+                                                            </button>
+                                                            <button
+                                                                  onClick={async () => {
+                                                                        if (!eventDate || !eventTime || !selectedSession) return
+                                                                        setCalendarLoading(true)
+                                                                        try {
+                                                                              const startTime = new Date(`${eventDate}T${eventTime}:00`).toISOString()
+                                                                              const endTime = new Date(new Date(`${eventDate}T${eventTime}:00`).getTime() + 60 * 60 * 1000).toISOString()
+
+                                                                              const result = await window.electron.invoke('calendar-create-event', {
+                                                                                    title: selectedSession.title,
+                                                                                    description: selectedSession.details?.summary || '',
+                                                                                    startTime,
+                                                                                    endTime
+                                                                              })
+
+                                                                              if (result.success) {
+                                                                                    setCalendarSuccess(true)
+                                                                              } else {
+                                                                                    alert(result.error || 'Failed to add event')
+                                                                              }
+                                                                        } catch (e) {
+                                                                              console.error('Calendar error:', e)
+                                                                              alert('Failed to add event')
+                                                                        } finally {
+                                                                              setCalendarLoading(false)
+                                                                        }
+                                                                  }}
+                                                                  disabled={calendarLoading || !eventDate || !eventTime}
+                                                                  className="flex-1 py-3 bg-amber-500 text-black text-sm font-bold rounded-xl hover:bg-amber-400 transition-colors disabled:opacity-50"
+                                                            >
+                                                                  {calendarLoading ? 'Adding...' : 'Add Event'}
+                                                            </button>
+                                                      </div>
+                                                </>
+                                          )}
+                                    </motion.div>
+                              </motion.div>
                         )}
                   </AnimatePresence>
 

@@ -22,6 +22,13 @@ const getSessionData = async (fileId) => {
             chatHistory = [];
         }
 
+        let calendarEvent = null;
+        try {
+            calendarEvent = file.transcriptionCalendarEvent ? JSON.parse(file.transcriptionCalendarEvent) : null;
+        } catch (e) {
+            calendarEvent = null;
+        }
+
         const fileExists = fs.existsSync(file.path);
 
         const session = {
@@ -41,6 +48,7 @@ const getSessionData = async (fileId) => {
                 fix: details.fix || "",
                 code: details.code || ""
             },
+            calendarEvent: calendarEvent,
             chatHistory: chatHistory,
             transcriptionStatus: file.transcriptionStatus,
             duration: file.duration,

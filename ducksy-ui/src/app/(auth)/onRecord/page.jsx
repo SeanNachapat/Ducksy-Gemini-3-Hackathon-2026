@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw } from "lucide-react"
+import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw, CalendarPlus, Check } from "lucide-react"
 import { useRecorder } from "@/hooks/useRecorder"
 import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
@@ -19,6 +19,11 @@ export default function OnRecordPage() {
       const [isProcessing, setIsProcessing] = useState(false)
       const [deviceId, setDeviceId] = useState(null)
       const [capturedFile, setCapturedFile] = useState(null)
+      const [showCalendarModal, setShowCalendarModal] = useState(false)
+      const [calendarLoading, setCalendarLoading] = useState(false)
+      const [calendarSuccess, setCalendarSuccess] = useState(false)
+      const [eventDate, setEventDate] = useState('')
+      const [eventTime, setEventTime] = useState('')
 
       const {
             isRecording: recorderIsRecording,
@@ -104,7 +109,8 @@ export default function OnRecordPage() {
                                           status: result.data.transcriptionStatus,
                                           title: result.data.title,
                                           details: result.data.details,
-                                          chatHistory: result.data.chatHistory
+                                          chatHistory: result.data.chatHistory,
+                                          calendarEvent: result.data.calendarEvent
                                     })
                               }
                         } catch (e) {
@@ -518,7 +524,7 @@ export default function OnRecordPage() {
                                                             />
                                                       </div>
                                                 </div>
-                                                <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-between items-center">
+                                                <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-between items-center gap-2">
                                                       <button
                                                             onClick={async () => {
                                                                   if (typeof window !== 'undefined' && window.electron) {
@@ -536,7 +542,8 @@ export default function OnRecordPage() {
                                                                                           status: result.data.transcriptionStatus,
                                                                                           title: result.data.title,
                                                                                           details: result.data.details,
-                                                                                          chatHistory: result.data.chatHistory
+                                                                                          chatHistory: result.data.chatHistory,
+                                                                                          calendarEvent: result.data.calendarEvent
                                                                                     })
                                                                               }
                                                                         } catch (e) {
@@ -550,6 +557,35 @@ export default function OnRecordPage() {
                                                             <RefreshCw className="w-4 h-4" />
                                                             {t.sessionsPage?.refresh || "Refresh"}
                                                       </button>
+
+                                                      <button
+                                                            onClick={() => {
+                                                                  // If AI detected calendar event, use that date/time
+                                                                  if (transcriptionResult?.calendarEvent?.detected && transcriptionResult?.calendarEvent?.dateTime) {
+                                                                        const dt = new Date(transcriptionResult.calendarEvent.dateTime)
+                                                                        setEventDate(dt.toISOString().split('T')[0])
+                                                                        setEventTime(dt.toTimeString().slice(0, 5))
+                                                                  } else {
+                                                                        // Fallback to now + 1 hour
+                                                                        const now = new Date()
+                                                                        now.setHours(now.getHours() + 1)
+                                                                        setEventDate(now.toISOString().split('T')[0])
+                                                                        setEventTime(now.toTimeString().slice(0, 5))
+                                                                  }
+                                                                  setCalendarSuccess(false)
+                                                                  setShowCalendarModal(true)
+                                                            }}
+                                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${transcriptionResult?.calendarEvent?.detected
+                                                                  ? 'bg-amber-500/20 text-amber-400 border-2 border-amber-500/50 hover:bg-amber-500/30'
+                                                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20'}`}
+                                                            title={transcriptionResult?.calendarEvent?.detected
+                                                                  ? `Add: ${transcriptionResult.calendarEvent.title} @ ${new Date(transcriptionResult.calendarEvent.dateTime).toLocaleString()}`
+                                                                  : "Add to Calendar"}
+                                                      >
+                                                            <CalendarPlus className="w-4 h-4" />
+                                                            Calendar
+                                                      </button>
+
                                                       <button
                                                             onClick={() => window.electron.send('close-overlay')}
                                                             className="px-4 py-2 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200 transition-colors"
@@ -557,6 +593,110 @@ export default function OnRecordPage() {
                                                             Done
                                                       </button>
                                                 </div>
+
+                                                {/* Calendar Modal */}
+                                                <AnimatePresence>
+                                                      {showCalendarModal && (
+                                                            <motion.div
+                                                                  initial={{ opacity: 0 }}
+                                                                  animate={{ opacity: 1 }}
+                                                                  exit={{ opacity: 0 }}
+                                                                  className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                                                            >
+                                                                  <motion.div
+                                                                        initial={{ scale: 0.9, opacity: 0 }}
+                                                                        animate={{ scale: 1, opacity: 1 }}
+                                                                        exit={{ scale: 0.9, opacity: 0 }}
+                                                                        className="bg-neutral-900 border border-white/10 rounded-2xl p-5 w-full max-w-xs"
+                                                                  >
+                                                                        {calendarSuccess ? (
+                                                                              <div className="text-center py-4">
+                                                                                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-3">
+                                                                                          <Check className="w-6 h-6 text-emerald-500" />
+                                                                                    </div>
+                                                                                    <p className="text-sm font-medium text-white mb-1">Event Added!</p>
+                                                                                    <p className="text-xs text-neutral-500">Check your Google Calendar</p>
+                                                                                    <button
+                                                                                          onClick={() => {
+                                                                                                setShowCalendarModal(false)
+                                                                                                setCalendarSuccess(false)
+                                                                                          }}
+                                                                                          className="mt-4 px-4 py-2 bg-white text-black text-xs font-bold rounded-lg"
+                                                                                    >
+                                                                                          Close
+                                                                                    </button>
+                                                                              </div>
+                                                                        ) : (
+                                                                              <>
+                                                                                    <h3 className="text-sm font-bold text-white mb-4">Add to Calendar</h3>
+
+                                                                                    <div className="space-y-3">
+                                                                                          <div>
+                                                                                                <label className="block text-xs text-neutral-500 mb-1">Date</label>
+                                                                                                <input
+                                                                                                      type="date"
+                                                                                                      value={eventDate}
+                                                                                                      onChange={(e) => setEventDate(e.target.value)}
+                                                                                                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                                                                                                />
+                                                                                          </div>
+                                                                                          <div>
+                                                                                                <label className="block text-xs text-neutral-500 mb-1">Time</label>
+                                                                                                <input
+                                                                                                      type="time"
+                                                                                                      value={eventTime}
+                                                                                                      onChange={(e) => setEventTime(e.target.value)}
+                                                                                                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                                                                                                />
+                                                                                          </div>
+                                                                                    </div>
+
+                                                                                    <div className="flex gap-2 mt-4">
+                                                                                          <button
+                                                                                                onClick={() => setShowCalendarModal(false)}
+                                                                                                className="flex-1 px-3 py-2 bg-white/5 text-neutral-400 text-xs font-medium rounded-lg hover:bg-white/10"
+                                                                                          >
+                                                                                                Cancel
+                                                                                          </button>
+                                                                                          <button
+                                                                                                onClick={async () => {
+                                                                                                      if (!eventDate || !eventTime) return
+                                                                                                      setCalendarLoading(true)
+                                                                                                      try {
+                                                                                                            const startTime = new Date(`${eventDate}T${eventTime}`).toISOString()
+                                                                                                            const endTime = new Date(new Date(`${eventDate}T${eventTime}`).getTime() + 60 * 60 * 1000).toISOString()
+
+                                                                                                            const result = await window.electron.invoke('calendar-create-event', {
+                                                                                                                  title: transcriptionResult?.title || 'New Event',
+                                                                                                                  description: transcriptionResult?.details?.summary || '',
+                                                                                                                  startTime,
+                                                                                                                  endTime
+                                                                                                            })
+
+                                                                                                            if (result.success) {
+                                                                                                                  setCalendarSuccess(true)
+                                                                                                            } else {
+                                                                                                                  alert(result.error || 'Failed to create event')
+                                                                                                            }
+                                                                                                      } catch (e) {
+                                                                                                            console.error('Calendar error:', e)
+                                                                                                            alert('Failed to create event')
+                                                                                                      } finally {
+                                                                                                            setCalendarLoading(false)
+                                                                                                      }
+                                                                                                }}
+                                                                                                disabled={calendarLoading}
+                                                                                                className="flex-1 px-3 py-2 bg-amber-500 text-black text-xs font-bold rounded-lg hover:bg-amber-400 disabled:opacity-50"
+                                                                                          >
+                                                                                                {calendarLoading ? 'Adding...' : 'Add Event'}
+                                                                                          </button>
+                                                                                    </div>
+                                                                              </>
+                                                                        )}
+                                                                  </motion.div>
+                                                            </motion.div>
+                                                      )}
+                                                </AnimatePresence>
                                           </motion.div>
                                     ) : null}
                               </motion.div>

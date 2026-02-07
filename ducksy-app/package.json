@@ -5,8 +5,10 @@
   "author": "Ducksy Team",
   "main": "index.js",
   "dependencies": {
+    "@notionhq/client": "^5.9.0",
     "dotenv": "^17.2.3",
     "electron-serve": "^3.0.1",
+    "googleapis": "^171.4.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   },

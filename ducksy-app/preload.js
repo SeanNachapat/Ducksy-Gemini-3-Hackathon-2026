@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "recording-saved",
                   "transcription-updated",
                   "magic-lens-selection",
+                  "mcp-auth-success",
             ]
             if (validChannels.includes(channel)) {
                   ipcRenderer.on(channel, (event, ...args) => callback(...args))
@@ -79,7 +80,12 @@ contextBridge.exposeInMainWorld("electron", {
                   "get-latest-file",
                   "read-file-as-base64",
                   "get-system-metrics",
-                  "retry-transcription"
+                  "retry-transcription",
+                  "mcp-get-status",
+                  "mcp-open-google-auth",
+                  "mcp-open-notion-auth",
+                  "mcp-disconnect",
+                  "calendar-create-event"
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)

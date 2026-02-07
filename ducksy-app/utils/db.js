@@ -63,6 +63,10 @@ const runMigrations = async (db) => {
                   await db.exec(`ALTER TABLE transcriptions ADD COLUMN chatHistory TEXT DEFAULT '[]'`);
                   console.log("Migration: Added 'chatHistory' column to transcriptions");
             }
+            if (!columns.includes("calendarEvent")) {
+                  await db.exec(`ALTER TABLE transcriptions ADD COLUMN calendarEvent TEXT DEFAULT NULL`);
+                  console.log("Migration: Added 'calendarEvent' column to transcriptions");
+            }
       } catch (err) {
             console.log("Migration skipped: transcriptions table issue or not ready", err.message);
       }
@@ -129,6 +133,7 @@ const runMigrations = async (db) => {
             status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
             details TEXT DEFAULT '{}',
             chatHistory TEXT DEFAULT '[]',
+            calendarEvent TEXT DEFAULT NULL,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
             calendarEventId TEXT,
@@ -229,6 +234,10 @@ const updateTranscription = async (transcription) => {
       if (transcription.calendarEventId !== undefined) {
             fields.push("calendarEventId = ?");
             values.push(transcription.calendarEventId);
+      }
+      if (transcription.calendarEvent !== undefined) {
+            fields.push("calendarEvent = ?");
+            values.push(JSON.stringify(transcription.calendarEvent));
       }
       if (transcription.notionPageId !== undefined) {
             fields.push("notionPageId = ?");
@@ -424,6 +433,7 @@ const getFileById = async (id) => {
             t.language as transcriptionLanguage, 
             t.details as transcriptionDetails,
             t.chatHistory as transcriptionChatHistory,
+            t.calendarEvent as transcriptionCalendarEvent,
             t.calendarEventId, 
             t.notionPageId
         FROM files f
@@ -466,6 +476,45 @@ const deleteDb = async () => {
       }
 };
 
+// MCP Credentials CRUD
+const saveMcpCredential = async (provider, accessToken, refreshToken, clientId, clientSecret, additionalInfo) => {
+      const db = await getDb();
+      const existing = await db.get('SELECT id FROM mcp_credentials WHERE provider = ?', [provider]);
+
+      if (existing) {
+            await db.run(
+                  `UPDATE mcp_credentials SET 
+                        access_token = ?, refresh_token = ?, client_id = ?, client_secret = ?, 
+                        additional_info = ?, updatedAt = CURRENT_TIMESTAMP 
+                   WHERE provider = ?`,
+                  [accessToken, refreshToken, clientId, clientSecret, additionalInfo, provider]
+            );
+      } else {
+            await db.run(
+                  `INSERT INTO mcp_credentials (provider, access_token, refresh_token, client_id, client_secret, additional_info) 
+                   VALUES (?, ?, ?, ?, ?, ?)`,
+                  [provider, accessToken, refreshToken, clientId, clientSecret, additionalInfo]
+            );
+      }
+      return { success: true };
+};
+
+const getMcpCredential = async (provider) => {
+      const db = await getDb();
+      return await db.get('SELECT * FROM mcp_credentials WHERE provider = ?', [provider]);
+};
+
+const deleteMcpCredential = async (provider) => {
+      const db = await getDb();
+      await db.run('DELETE FROM mcp_credentials WHERE provider = ?', [provider]);
+      return { success: true };
+};
+
+const getAllMcpCredentials = async () => {
+      const db = await getDb();
+      return await db.all('SELECT provider, access_token IS NOT NULL as connected, updatedAt FROM mcp_credentials');
+};
+
 module.exports = {
       initializeDatabase,
       isAlreadyFile,
@@ -481,5 +530,9 @@ module.exports = {
       getTranscriptionByFileId,
       getFileById,
       getSizeOfdb,
-      deleteDb
+      deleteDb,
+      saveMcpCredential,
+      getMcpCredential,
+      deleteMcpCredential,
+      getAllMcpCredentials
 };
