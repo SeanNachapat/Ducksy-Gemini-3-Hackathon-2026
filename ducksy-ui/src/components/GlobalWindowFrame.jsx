@@ -24,6 +24,16 @@ export default function GlobalWindowFrame({ children }) {
         )
     }
 
+    if (platform === 'mac') {
+        return (
+            <div className="relative h-screen flex flex-col overflow-hidden">
+                <div className={`flex-1 w-full h-full ${isLanding ? '' : 'pt-[18px]'}`}>
+                    {children}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="relative h-screen flex flex-col overflow-hidden">
             <div className={`fixed top-0 w-full z-50 flex items-center h-10 bg-linear-to-b from-black to-transparent pointer-events-none ${platform === 'windows' ? 'justify-end pr-4 pt-2 items-start' : 'justify-start pl-6 pt-4 items-start'}`} style={{ WebkitAppRegion: 'drag' }}>

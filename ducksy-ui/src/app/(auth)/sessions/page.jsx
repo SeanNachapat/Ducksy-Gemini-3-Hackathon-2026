@@ -19,13 +19,15 @@ import {
     Filter,
     Calendar,
     Clock,
-    Image
+    Image,
+    Plus
 } from "lucide-react"
 import Link from "next/link"
 import { useSettings } from "@/hooks/SettingsContext"
 import { useSessionLogs } from "@/hooks/useSessionLogs"
 import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
+import EditableEventModal from "@/components/EditableEventModal"
 
 export default function SessionsPage() {
     const [selectedSession, setSelectedSession] = useState(null)
@@ -33,6 +35,7 @@ export default function SessionsPage() {
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
     const [filterType, setFilterType] = useState("all")
+    const [editingEvent, setEditingEvent] = useState(null)
     const { t, settings } = useSettings()
 
     const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
@@ -445,24 +448,91 @@ export default function SessionsPage() {
                                                             return (
                                                                 <li key={i} className="flex items-start gap-3 text-sm text-neutral-300 bg-black/20 p-3 rounded-lg border border-white/5">
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50 mt-1.5 shrink-0" />
-                                                                    <div className="flex-1">
-                                                                        <p className="leading-relaxed">{text}</p>
-                                                                        {tool && (
-                                                                            <div className="mt-2">
+                                                                    <div className="flex-1 flex justify-between items-start gap-4">
+                                                                        <div>
+                                                                            <p className="leading-relaxed">{text}</p>
+                                                                        </div>
+                                                                        <div className="flex gap-2 shrink-0 mt-0.5">
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation()
+                                                                                    if (item?.confirmed || item?.dismissed) return;
+
+                                                                                    let eventData = {};
+                                                                                    if (item.calendarEvent) {
+                                                                                        eventData = {
+                                                                                            ...item.calendarEvent,
+                                                                                            detected: true
+                                                                                        };
+                                                                                    } else {
+                                                                                        const now = new Date()
+                                                                                        now.setHours(now.getHours() + 1)
+                                                                                        eventData = {
+                                                                                            title: text,
+                                                                                            description: `Action item from session: ${selectedSession.title}`,
+                                                                                            dateTime: now.toISOString(),
+                                                                                            detected: true
+                                                                                        };
+                                                                                    }
+
+                                                                                    setEditingEvent({
+                                                                                        calendarEvent: eventData,
+                                                                                        actionItemIndex: i
+                                                                                    })
+                                                                                }}
+                                                                                disabled={item?.confirmed || item?.dismissed}
+                                                                                title={item?.confirmed ? "Confirmed" : item?.dismissed ? "Rejected" : "Add to Calendar"}
+                                                                                className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all ${item?.confirmed
+                                                                                    ? 'bg-amber-500 border-amber-500 text-neutral-950 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                                                                                    : item?.dismissed
+                                                                                        ? 'bg-neutral-800/50 border-neutral-800 text-neutral-600 cursor-not-allowed'
+                                                                                        : 'bg-transparent border-neutral-600 text-neutral-400 hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/10'
+                                                                                    }`}
+                                                                            >
+                                                                                {item?.dismissed ? (
+                                                                                    <X className="w-4 h-4" />
+                                                                                ) : (
+                                                                                    <Plus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
+                                                                                )}
+                                                                            </button>
+
+                                                                            <button
+                                                                                onClick={async (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (item?.confirmed || item?.dismissed) return;
+                                                                                    if (window.electron) {
+                                                                                        await window.electron.invoke('calendar-dismiss-event', {
+                                                                                            fileId: selectedSession.fileId || selectedSession.id,
+                                                                                            index: i
+                                                                                        });
+                                                                                    }
+                                                                                }}
+                                                                                disabled={item?.confirmed || item?.dismissed}
+                                                                                title="Reject Suggestion"
+                                                                                className="w-7 h-7 rounded-md border border-neutral-600 text-neutral-400 hover:border-red-500 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
+                                                                            >
+                                                                                <X className="w-4 h-4" />
+                                                                            </button>
+
+                                                                            {tool && (
                                                                                 <button
-                                                                                    onClick={(e) => {
+                                                                                    onClick={async (e) => {
                                                                                         e.stopPropagation();
                                                                                         if (window.electron) {
-                                                                                            window.electron.invoke('execute-tool', { tool, params: item.parameters || {} });
+                                                                                            try {
+                                                                                                await window.electron.invoke('execute-tool', { tool, params: item.parameters || {} });
+                                                                                            } catch (err) {
+                                                                                                console.error("Tool execution failed:", err);
+                                                                                            }
                                                                                         }
                                                                                     }}
-                                                                                    className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
+                                                                                    className="h-7 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
                                                                                 >
                                                                                     <Zap className="w-3 h-3" />
                                                                                     Execute
                                                                                 </button>
-                                                                            </div>
-                                                                        )}
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 </li>
                                                             );
@@ -550,6 +620,36 @@ export default function SessionsPage() {
                     </>
                 )}
             </AnimatePresence>
+
+            <EditableEventModal
+                isOpen={!!editingEvent}
+                onClose={() => setEditingEvent(null)}
+                event={editingEvent?.calendarEvent}
+                onSave={async (updatedEvent) => {
+                    if (window.electron && selectedSession && editingEvent) {
+                        try {
+                            const result = await window.electron.invoke(
+                                'calendar-create-event',
+                                {
+                                    event: updatedEvent,
+                                    fileId: selectedSession.fileId || selectedSession.id,
+                                    index: editingEvent.actionItemIndex
+                                }
+                            );
+
+                            if (result.success) {
+                                setEditingEvent(null);
+                            } else {
+                                console.error("Failed to create event:", result.error);
+                                alert("Failed to create event: " + result.error);
+                            }
+                        } catch (error) {
+                            console.error("Error creating event:", error);
+                            alert("Error creating event: " + error.message);
+                        }
+                    }
+                }}
+            />
         </div>
     )
 }

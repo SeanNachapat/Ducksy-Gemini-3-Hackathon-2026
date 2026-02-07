@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw, CalendarPlus, Check } from "lucide-react"
+import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw, CalendarPlus, Check, Plus, Calendar } from "lucide-react"
+
 import { useRecorder } from "@/hooks/useRecorder"
 import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
@@ -506,7 +507,15 @@ export default function OnRecordPage() {
                                                                                           >
                                                                                                 <div className="flex items-start gap-3 flex-1">
                                                                                                       <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                                                                                                      <p className="leading-relaxed">{text}</p>
+                                                                                                      <div className="flex flex-col gap-1">
+                                                                                                            {isObject && item.type === 'event' && (
+                                                                                                                  <div className="flex items-center gap-1.5 text-amber-500/80 mb-0.5">
+                                                                                                                        <Calendar className="w-3 h-3" />
+                                                                                                                        <span className="text-[10px] font-mono uppercase tracking-wider font-bold">Event</span>
+                                                                                                                  </div>
+                                                                                                            )}
+                                                                                                            <p className="leading-relaxed">{text}</p>
+                                                                                                      </div>
                                                                                                 </div>
 
                                                                                                 <div className="flex gap-2 shrink-0 mt-0.5">
@@ -550,9 +559,9 @@ export default function OnRecordPage() {
                                                                                                                   }`}
                                                                                                       >
                                                                                                             {item?.dismissed ? (
-                                                                                                                  <Check className="w-4 h-4" />
+                                                                                                                  <X className="w-4 h-4" />
                                                                                                             ) : (
-                                                                                                                  <CalendarPlus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
+                                                                                                                  <Plus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
                                                                                                             )}
                                                                                                       </button>
 
@@ -623,10 +632,15 @@ export default function OnRecordPage() {
                                                 <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-between items-center gap-2">
                                                       <button
                                                             onClick={async () => {
-                                                                  setIsProcessing(true)
+                                                                  setIsProcessing(true);
+                                                                  const targetId = transcriptionResult?.fileId || transcriptionResult?.id;
+
                                                                   if (typeof window !== 'undefined' && window.electron) {
                                                                         try {
-                                                                              const result = await window.electron.invoke('get-latest-file')
+                                                                              const result = targetId
+                                                                                    ? await window.electron.invoke('get-session', { fileId: targetId })
+                                                                                    : await window.electron.invoke('get-latest-file');
+
                                                                               if (result && result.success && result.data) {
                                                                                     if (result.data.filePath && result.data.mimeType) {
                                                                                           setCapturedFile({
@@ -635,13 +649,11 @@ export default function OnRecordPage() {
                                                                                           })
                                                                                     }
                                                                                     handleTranscriptionUpdate({
-                                                                                          fileId: result.data.fileId,
-                                                                                          status: result.data.transcriptionStatus,
-                                                                                          title: result.data.title,
-                                                                                          details: result.data.details,
-                                                                                          chatHistory: result.data.chatHistory,
-                                                                                          calendarEvent: result.data.calendarEvent
+                                                                                          ...result.data,
+                                                                                          fileId: result.data.fileId || result.data.id
                                                                                     })
+                                                                              } else {
+                                                                                    setIsProcessing(false);
                                                                               }
                                                                         } catch (e) {
                                                                               console.error("Refresh failed:", e)

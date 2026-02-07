@@ -24,7 +24,8 @@ import {
       Trash2,
       ExternalLink,
       Loader2,
-      RefreshCw
+      RefreshCw,
+      Plus
 } from "lucide-react"
 import Link from "next/link"
 import { useSettings } from "@/hooks/SettingsContext"
@@ -740,7 +741,15 @@ export default function DashboardPage() {
                                                                                                 <li key={i} className="flex items-start justify-between gap-4 text-sm text-neutral-300 bg-black/20 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors group/item">
                                                                                                       <div className="flex items-start gap-3 flex-1">
                                                                                                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500/50 mt-1.5 shrink-0" />
-                                                                                                            <p className="leading-relaxed">{text}</p>
+                                                                                                            <div className="flex flex-col gap-1">
+                                                                                                                  {isObject && item.type === 'event' && (
+                                                                                                                        <div className="flex items-center gap-1.5 text-amber-500/80 mb-0.5">
+                                                                                                                              <Calendar className="w-3 h-3" />
+                                                                                                                              <span className="text-[10px] font-mono uppercase tracking-wider font-bold">Event</span>
+                                                                                                                        </div>
+                                                                                                                  )}
+                                                                                                                  <p className="leading-relaxed">{text}</p>
+                                                                                                            </div>
                                                                                                       </div>
 
                                                                                                       <div className="flex gap-2 shrink-0 mt-0.5">
@@ -775,7 +784,7 @@ export default function DashboardPage() {
                                                                                                                         })
                                                                                                                   }}
                                                                                                                   disabled={item?.confirmed || item?.dismissed}
-                                                                                                                  title={item?.confirmed ? "Confirmed" : item?.dismissed ? "Rejected" : "Confirm Action Item"}
+                                                                                                                  title={item?.confirmed ? "Confirmed" : item?.dismissed ? "Rejected" : "Add to Calendar"}
                                                                                                                   className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all ${item?.confirmed
                                                                                                                         ? 'bg-amber-500 border-amber-500 text-neutral-950 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
                                                                                                                         : item?.dismissed
@@ -786,8 +795,26 @@ export default function DashboardPage() {
                                                                                                                   {item?.dismissed ? (
                                                                                                                         <X className="w-4 h-4" />
                                                                                                                   ) : (
-                                                                                                                        <Check className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
+                                                                                                                        <Plus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
                                                                                                                   )}
+                                                                                                            </button>
+
+                                                                                                            <button
+                                                                                                                  onClick={async (e) => {
+                                                                                                                        e.stopPropagation();
+                                                                                                                        if (item?.confirmed || item?.dismissed) return;
+                                                                                                                        if (window.electron) {
+                                                                                                                              await window.electron.invoke('calendar-dismiss-event', {
+                                                                                                                                    fileId: selectedSession.fileId || selectedSession.id,
+                                                                                                                                    index: i
+                                                                                                                              });
+                                                                                                                        }
+                                                                                                                  }}
+                                                                                                                  disabled={item?.confirmed || item?.dismissed}
+                                                                                                                  title="Reject Suggestion"
+                                                                                                                  className="w-7 h-7 rounded-md border border-neutral-600 text-neutral-400 hover:border-red-500 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
+                                                                                                            >
+                                                                                                                  <X className="w-4 h-4" />
                                                                                                             </button>
 
                                                                                                             {tool && (

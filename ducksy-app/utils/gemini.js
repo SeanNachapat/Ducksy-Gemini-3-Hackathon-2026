@@ -192,9 +192,7 @@ function normalizeResponseData(data, defaultType = 'summary') {
                   // Map "text" to "description" for frontend consistency if needed, 
                   // Add calendar icon for events
                   const baseText = item.text || item.description || 'Action Required';
-                  const formattedText = (item.type === 'event' && !baseText.includes('🗓️'))
-                        ? `🗓️ ${baseText}`
-                        : baseText;
+                  const formattedText = baseText;
 
                   return {
                         ...item,

@@ -238,7 +238,7 @@ async function createWindow() {
             backgroundColor: "#0a0a0a",
             titleBarStyle: "hiddenInset",
             trafficLightPosition: { x: 16, y: 16 },
-            frame: false,
+            frame: process.platform === 'darwin',
             autoHideMenuBar: true,
             webPreferences: {
                   preload: path.join(__dirname, "preload.js"),

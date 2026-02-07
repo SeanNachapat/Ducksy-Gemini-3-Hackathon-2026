@@ -1,5 +1,5 @@
 import React from 'react'
-import { Calendar, ChevronRight, X, Check } from 'lucide-react'
+import { Calendar, ChevronRight, X, Check, Plus } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 const CalendarEventCard = ({ event, onReview, onDismiss, t }) => {
@@ -43,8 +43,8 @@ const CalendarEventCard = ({ event, onReview, onDismiss, t }) => {
                         onClick={onReview}
                         className="flex-1 px-3 py-1.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200 transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <Check className="w-3 h-3" />
-                        {t?.session?.confirm || "Confirm"}
+                        <Plus className="w-3 h-3" />
+                        {t?.session?.add || "Add"}
                     </button>
                     <button
                         onClick={onDismiss}
