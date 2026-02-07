@@ -280,6 +280,24 @@ export default function DashboardPage() {
             }
       }, [])
 
+      React.useEffect(() => {
+            if (!window.electron) return;
+
+            const handleTranscriptionUpdate = (event, data) => {
+                  if (selectedSession && (data.fileId === selectedSession.fileId || data.fileId === selectedSession.id)) {
+                        refetch();
+                  }
+            };
+
+            window.electron.receive('transcription-updated', handleTranscriptionUpdate);
+
+            return () => {
+                  // Assuming removeAllListeners or similar cleanup if available, or just rely on component unmount
+                  if (window.electron.removeAllListeners) {
+                        window.electron.removeAllListeners('transcription-updated');
+                  }
+            };
+      }, [selectedSession, refetch]);
 
 
       const modes = [
@@ -420,7 +438,7 @@ export default function DashboardPage() {
                               </div>
                         </header>
 
-                        <div className="flex-1 overflow-auto p-8 custom-scrollbar">
+                        <div className="flex-1 overflow-hidden p-8">
                               <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
 
                                     <div className="lg:col-span-4 flex flex-col gap-6">
@@ -455,7 +473,7 @@ export default function DashboardPage() {
                                                             <Calendar className="w-4 h-4 text-neutral-600" />
                                                       </div>
 
-                                                      <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                                                      <div className="max-h-[220px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
                                                             {suggestedEvents.length > 0 ? (
                                                                   suggestedEvents.map(eventData => (
                                                                         <div id={`calendar-event-${eventData.id}`} key={eventData.id}>

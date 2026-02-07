@@ -82,6 +82,31 @@ export default function SessionsPage() {
         }
     }
 
+    React.useEffect(() => {
+        if (!window.electron) return;
+
+        const handleTranscriptionUpdate = (event, data) => {
+            if (selectedSession && (data.fileId === selectedSession.fileId || data.fileId === selectedSession.id)) {
+                // If the update contains details, we can update local state directly for immediate feedback
+                if (data.details) {
+                    setSelectedSession(prev => ({
+                        ...prev,
+                        details: data.details
+                    }));
+                }
+                refetch();
+            }
+        };
+
+        window.electron.receive('transcription-updated', handleTranscriptionUpdate);
+
+        return () => {
+            if (window.electron.removeAllListeners) {
+                window.electron.removeAllListeners('transcription-updated');
+            }
+        };
+    }, [selectedSession, refetch]);
+
     const filteredSessions = sessionLogs.filter(log => {
         const matchesSearch = log.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             log.subtitle?.toLowerCase().includes(searchQuery.toLowerCase())

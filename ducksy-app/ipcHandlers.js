@@ -778,18 +778,82 @@ const registerIpcHandlers = () => {
 
                   const responseText = await chatWithSession(context, chatHistory, message, geminiApiKey, settings);
 
+                  // Check for tool call in response
+                  const toolCallRegex = /```json\s*({[\s\S]*?"tool":\s*"addActionItem"[\s\S]*?})\s*```/;
+                  const match = responseText.match(toolCallRegex);
+                  let finalResponse = responseText;
+
+                  if (match) {
+                        try {
+                              const toolCall = JSON.parse(match[1]);
+                              if (toolCall.params) {
+                                    console.log("Processing addActionItem tool call:", toolCall.params);
+
+                                    // Get current session details
+                                    let currentDetails = {};
+                                    try {
+                                          currentDetails = transcription.details ? JSON.parse(transcription.details) : {};
+                                    } catch (e) { }
+
+                                    const currentActionItems = currentDetails.actionItems || [];
+
+                                    // Add new action item
+                                    const newItem = {
+                                          text: toolCall.params.text,
+                                          type: toolCall.params.type || 'task',
+                                          isActionable: true,
+                                          calendarEvent: toolCall.params.calendarEvent
+                                    };
+
+                                    // Update DB
+                                    const updatedDetails = {
+                                          ...currentDetails,
+                                          actionItems: [...currentActionItems, newItem]
+                                    };
+
+                                    await db.updateTranscription({
+                                          id: transcription.id,
+                                          details: JSON.stringify(updatedDetails)
+                                    });
+
+                                    // Notify frontend
+                                    if (mainWindow && !mainWindow.isDestroyed()) {
+                                          mainWindow.webContents.send("transcription-updated", {
+                                                fileId: fileId,
+                                                status: "completed",
+                                                details: updatedDetails
+                                          });
+                                    }
+
+                                    // Also notify recording window if open
+                                    if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
+                                          onRecordingWindow.webContents.send("transcription-updated", {
+                                                fileId: fileId,
+                                                status: "completed",
+                                                details: updatedDetails
+                                          });
+                                    }
+
+                                    // Clean up response to remove the JSON block
+                                    finalResponse = responseText.replace(match[0], '').trim();
+                              }
+                        } catch (e) {
+                              console.error("Failed to process tool call:", e);
+                        }
+                  }
+
                   const newHistory = [
                         ...chatHistory,
                         { role: 'user', content: message, timestamp: Date.now() },
-                        { role: 'model', content: responseText, timestamp: Date.now() }
+                        { role: 'model', content: finalResponse, timestamp: Date.now() }
                   ];
 
                   await db.updateTranscription({
                         id: transcription.id,
-                        chatHistory: newHistory
+                        chatHistory: JSON.stringify(newHistory)
                   });
 
-                  return { success: true, response: responseText, history: newHistory };
+                  return { success: true, response: finalResponse, history: newHistory };
 
             } catch (err) {
                   console.error("Chat session error:", err);

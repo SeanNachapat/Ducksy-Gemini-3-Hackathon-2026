@@ -175,11 +175,13 @@ export default function OnRecordPage() {
             window.electron.receive('recording-saved', handleRecordingSaved)
 
             return () => {
-                  window.electron.removeAllListeners?.('update-record-time')
-                  window.electron.removeAllListeners?.('recording-paused-state')
-                  window.electron.removeAllListeners?.('recording-control-update')
-                  window.electron.removeAllListeners?.('transcription-updated')
-                  window.electron.removeAllListeners?.('recording-saved')
+                  if (window.electron.removeListener) {
+                        window.electron.removeListener('update-record-time', handleTimeUpdate)
+                        window.electron.removeListener('recording-paused-state', handlePausedState)
+                        window.electron.removeListener('recording-control-update', handleRecordingControl)
+                        window.electron.removeListener('transcription-updated', handleTranscriptionUpdate)
+                        window.electron.removeListener('recording-saved', handleRecordingSaved)
+                  }
             }
       }, [])
 

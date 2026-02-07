@@ -101,7 +101,7 @@ CALENDAR EVENT DETECTION RULES:
 - Confidence: "high" (date+time), "medium" (date/time), "low" (implied).
 `;
 
-async function generateContent(apiKey, modelId, contents, generationConfig = {}) {
+async function generateContent(apiKey, modelId, contents, generationConfig = {}, timeout = 120000) {
       const startTime = Date.now();
 
       const response = await fetch(
@@ -119,6 +119,7 @@ async function generateContent(apiKey, modelId, contents, generationConfig = {})
                               ...generationConfig
                         },
                   }),
+                  signal: AbortSignal.timeout(timeout)
             }
       )
 
@@ -284,7 +285,7 @@ ${jsonStructure}
                         { inline_data: { mime_type: normalizedMimeType, data: base64Audio } },
                         { text: prompt }
                   ]
-            }]);
+            }], {}, 180000); // 3 minutes timeout for audio
 
             const data = cleanAndParseJson(text);
             if (data.calendarEvent) {
@@ -343,7 +344,7 @@ ${jsonStructure}
                         { inline_data: { mime_type: normalizedMimeType, data: base64Image } },
                         { text: prompt }
                   ]
-            }]);
+            }], {}, 60000); // 60s timeout for images
 
             const data = cleanAndParseJson(text);
             if (data.calendarEvent) {
@@ -374,6 +375,27 @@ Title: ${context.title}
 Summary: ${context.summary}
 Details: ${JSON.stringify(context.details)}
 Full Content: ${context.content}
+
+IMPORTANT: If the user asks to schedule a meeting, add a task, or create a reminder, you MUST append a JSON block to the end of your response in this exact format:
+\`\`\`json
+{
+    "tool": "addActionItem",
+    "params": {
+        "text": "Description of the task or event",
+        "type": "event|task",
+        "calendarEvent": {
+            "title": "Title",
+            "description": "Description",
+            "dateTime": "ISO8601 Date",
+            "duration": 60,
+            "detected": true
+        }
+    }
+}
+\`\`\`
+For "type", use "event" if it has a specific time, otherwise "task".
+If it is a task without a specific time, "calendarEvent" can be null or omit the dateTime.
+Do not mention the JSON in your text response, just append it at the end.
 `;
 
       const contents = [
