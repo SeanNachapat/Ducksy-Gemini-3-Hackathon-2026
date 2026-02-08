@@ -592,7 +592,7 @@ export default function OnRecordPage() {
                                                                   className="space-y-2"
                                                             >
                                                                   <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage?.meetingTopic || "Meeting Topic"}</h3>
-                                                                  <p className="text-sm text-neutral-300 leading-relaxed bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                                                                  <p className="text-sm text-neutral-300 leading-relaxed bg-white/2 p-3 rounded-xl border border-white/5">
                                                                         {transcriptionResult.details.topic}
                                                                   </p>
                                                             </motion.div>
@@ -618,118 +618,150 @@ export default function OnRecordPage() {
                                                                   <h3 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage?.actionItems || "Action Items"}</h3>
                                                                   <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                                                         <ul className="space-y-2">
-                                                                              {transcriptionResult.details.actionItems.map((item, i) => {
-                                                                                    const isObject = typeof item === 'object' && item !== null;
-                                                                                    const text = isObject ? (item.text || item.description || "") : String(item);
-                                                                                    const tool = isObject ? item.tool : null;
-                                                                                    const params = isObject ? item.parameters : {};
+                                                                              {
+                                                                                    (() => {
+                                                                                          const items = transcriptionResult.details.actionItems || [];
+                                                                                          const sortedItems = [...items].sort((a, b) => {
+                                                                                                const getStatus = (item) => {
+                                                                                                      const isPast = item.calendarEvent?.dateTime && new Date(item.calendarEvent.dateTime) < new Date();
+                                                                                                      const isDismissed = item.dismissed;
+                                                                                                      // 0: Active/Pending, 1: Inactive (Dismissed/Past)
+                                                                                                      return (isDismissed || isPast) ? 1 : 0;
+                                                                                                };
 
-                                                                                    return (
-                                                                                          <motion.li
-                                                                                                key={i}
-                                                                                                variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}
-                                                                                                className="flex items-start justify-between gap-4 text-sm text-neutral-300 bg-white/[0.02] p-3 rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors group/item"
-                                                                                          >
-                                                                                                <div className="flex items-start gap-3 flex-1">
-                                                                                                      <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                                                                                                      <div className="flex flex-col gap-1">
-                                                                                                            {isObject && item.type === 'event' && (
-                                                                                                                  <div className="flex items-center gap-1.5 text-amber-500/80 mb-0.5">
-                                                                                                                        <Calendar className="w-3 h-3" />
-                                                                                                                        <span className="text-[10px] font-mono uppercase tracking-wider font-bold">Event</span>
+                                                                                                const statusA = getStatus(a);
+                                                                                                const statusB = getStatus(b);
+
+                                                                                                if (statusA !== statusB) return statusA - statusB;
+
+                                                                                                // Secondary sort: Date (Ascending)
+                                                                                                const dateA = a.calendarEvent?.dateTime ? new Date(a.calendarEvent.dateTime) : new Date(8640000000000000); // No date = far future
+                                                                                                const dateB = b.calendarEvent?.dateTime ? new Date(b.calendarEvent.dateTime) : new Date(8640000000000000);
+                                                                                                return dateA - dateB;
+                                                                                          });
+
+                                                                                          return sortedItems.map((item, i) => {
+                                                                                                // Note: 'i' here is the index in the SORTED list. 
+                                                                                                // We need to find the ORIGINAL index for callbacks if they rely on index.
+                                                                                                const originalIndex = items.indexOf(item);
+
+                                                                                                const isObject = typeof item === 'object' && item !== null;
+                                                                                                const text = isObject ? (item.text || item.description || "") : String(item);
+                                                                                                const tool = isObject ? item.tool : null;
+                                                                                                const params = isObject ? item.parameters : {};
+
+                                                                                                const isPast = item.calendarEvent?.dateTime && new Date(item.calendarEvent.dateTime) < new Date();
+                                                                                                const isInactive = item?.dismissed || isPast;
+
+                                                                                                return (
+                                                                                                      <motion.li
+                                                                                                            key={originalIndex}
+                                                                                                            variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}
+                                                                                                            className={`flex items-start justify-between gap-4 text-sm text-neutral-300 bg-white/2 p-3 rounded-xl border border-white/5 transition-colors group/item ${isInactive ? 'opacity-50' : 'hover:bg-white/5'}`}
+                                                                                                      >
+                                                                                                            <div className="flex items-start gap-3 flex-1">
+                                                                                                                  <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                                                                                                                  <div className="flex flex-col gap-1">
+                                                                                                                        {isObject && item.type === 'event' && (
+                                                                                                                              <div className="flex items-center gap-1.5 text-amber-500/80 mb-0.5">
+                                                                                                                                    <Calendar className="w-3 h-3" />
+                                                                                                                                    <span className="text-[10px] font-mono uppercase tracking-wider font-bold">Event</span>
+                                                                                                                              </div>
+                                                                                                                        )}
+                                                                                                                        <p className={`leading-relaxed ${isInactive ? 'line-through' : ''}`}>{text}</p>
                                                                                                                   </div>
-                                                                                                            )}
-                                                                                                            <p className="leading-relaxed">{text}</p>
-                                                                                                      </div>
-                                                                                                </div>
+                                                                                                            </div>
 
-                                                                                                <div className="flex gap-2 shrink-0 mt-0.5">
-                                                                                                      <button
-                                                                                                            onClick={(e) => {
-                                                                                                                  e.stopPropagation()
-                                                                                                                  if (item?.confirmed || item?.dismissed) return;
+                                                                                                            <div className="flex gap-2 shrink-0 mt-0.5">
+                                                                                                                  <button
+                                                                                                                        onClick={(e) => {
+                                                                                                                              e.stopPropagation()
+                                                                                                                              if (item?.confirmed || isInactive) return;
 
-                                                                                                                  let eventData = {};
+                                                                                                                              let eventData = {};
 
-                                                                                                                  // Use the specific calendar event data if available on the item
-                                                                                                                  if (item.calendarEvent) {
-                                                                                                                        eventData = {
-                                                                                                                              ...item.calendarEvent,
-                                                                                                                              detected: true
-                                                                                                                        };
-                                                                                                                  } else {
-                                                                                                                        // Fallback default: 1 hour from now
-                                                                                                                        const now = new Date()
-                                                                                                                        now.setHours(now.getHours() + 1)
-                                                                                                                        eventData = {
-                                                                                                                              title: text,
-                                                                                                                              description: `Action item from session: ${transcriptionResult.title}`,
-                                                                                                                              dateTime: now.toISOString(),
-                                                                                                                              detected: true
-                                                                                                                        };
-                                                                                                                  }
+                                                                                                                              // Use the specific calendar event data if available on the item
+                                                                                                                              if (item.calendarEvent) {
+                                                                                                                                    eventData = {
+                                                                                                                                          ...item.calendarEvent,
+                                                                                                                                          detected: true
+                                                                                                                                    };
+                                                                                                                              } else {
+                                                                                                                                    // Fallback default: 1 hour from now
+                                                                                                                                    const now = new Date()
+                                                                                                                                    now.setHours(now.getHours() + 1)
+                                                                                                                                    eventData = {
+                                                                                                                                          title: text,
+                                                                                                                                          description: `Action item from session: ${transcriptionResult.title}`,
+                                                                                                                                          dateTime: now.toISOString(),
+                                                                                                                                          detected: true
+                                                                                                                                    };
+                                                                                                                              }
 
-                                                                                                                  // Reuse existing dashboard logic for calendar if needed, or just open the modal with this data
-                                                                                                                  setEventDate(eventData.dateTime?.split('T')[0] || new Date().toISOString().split('T')[0]);
-                                                                                                                  setEventTime(eventData.dateTime?.split('T')[1]?.substring(0, 5) || '12:00');
-                                                                                                                  setShowCalendarModal(true);
-                                                                                                            }}
-                                                                                                            disabled={item?.confirmed || item?.dismissed}
-                                                                                                            title={item?.confirmed ? "Confirmed" : item?.dismissed ? "Rejected" : "Add to Calendar"}
-                                                                                                            className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all ${item?.confirmed
-                                                                                                                  ? 'bg-amber-500 border-amber-500 text-neutral-950 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                                                                                                                  : item?.dismissed
-                                                                                                                        ? 'bg-neutral-800/50 border-neutral-800 text-neutral-600 cursor-not-allowed'
-                                                                                                                        : 'bg-transparent border-neutral-600 text-neutral-400 hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/10'
-                                                                                                                  }`}
-                                                                                                      >
-                                                                                                            {item?.dismissed ? (
-                                                                                                                  <X className="w-4 h-4" />
-                                                                                                            ) : (
-                                                                                                                  <Plus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
-                                                                                                            )}
-                                                                                                      </button>
+                                                                                                                              // Reuse existing dashboard logic for calendar if needed, or just open the modal with this data
+                                                                                                                              setEventDate(eventData.dateTime?.split('T')[0] || new Date().toISOString().split('T')[0]);
+                                                                                                                              setEventTime(eventData.dateTime?.split('T')[1]?.substring(0, 5) || '12:00');
+                                                                                                                              setShowCalendarModal(true);
+                                                                                                                        }}
+                                                                                                                        disabled={item?.confirmed || isInactive}
+                                                                                                                        title={item?.confirmed ? "Confirmed" : item?.dismissed ? "Rejected" : isPast ? "Past Event" : "Add to Calendar"}
+                                                                                                                        className={`w-7 h-7 rounded-md border flex items-center justify-center transition-all ${item?.confirmed
+                                                                                                                              ? 'bg-amber-500 border-amber-500 text-neutral-950 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                                                                                                                              : isInactive
+                                                                                                                                    ? 'bg-neutral-800/50 border-neutral-800 text-neutral-600 cursor-not-allowed'
+                                                                                                                                    : 'bg-transparent border-neutral-600 text-neutral-400 hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/10'
+                                                                                                                              }`}
+                                                                                                                  >
+                                                                                                                        {item?.dismissed ? (
+                                                                                                                              <X className="w-4 h-4" />
+                                                                                                                        ) : (
+                                                                                                                              <Plus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
+                                                                                                                        )}
+                                                                                                                  </button>
 
-                                                                                                      <button
-                                                                                                            onClick={async (e) => {
-                                                                                                                  e.stopPropagation();
-                                                                                                                  if (item?.confirmed || item?.dismissed) return;
-                                                                                                                  if (window.electron) {
-                                                                                                                        await window.electron.invoke('calendar-dismiss-event', {
-                                                                                                                              fileId: transcriptionResult.fileId || transcriptionResult.id,
-                                                                                                                              index: i
-                                                                                                                        });
-                                                                                                                  }
-                                                                                                            }}
-                                                                                                            disabled={item?.confirmed || item?.dismissed}
-                                                                                                            title="Reject Suggestion"
-                                                                                                            className="w-7 h-7 rounded-md border border-neutral-600 text-neutral-400 hover:border-red-500 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
-                                                                                                      >
-                                                                                                            <X className="w-4 h-4" />
-                                                                                                      </button>
-
-                                                                                                      {tool && (
-                                                                                                            <button
-                                                                                                                  onClick={(e) => {
-                                                                                                                        e.stopPropagation();
-                                                                                                                        if (window.electron) {
-                                                                                                                              window.electron.invoke('execute-tool', { tool, params })
-                                                                                                                                    .then(res => {
-                                                                                                                                          if (res.success) alert("Action Executed!");
-                                                                                                                                          else alert("Error: " + res.error);
+                                                                                                                  <button
+                                                                                                                        onClick={async (e) => {
+                                                                                                                              e.stopPropagation();
+                                                                                                                              if (item?.confirmed || isInactive) return;
+                                                                                                                              if (window.electron) {
+                                                                                                                                    await window.electron.invoke('calendar-dismiss-event', {
+                                                                                                                                          fileId: transcriptionResult.fileId || transcriptionResult.id,
+                                                                                                                                          index: originalIndex
                                                                                                                                     });
-                                                                                                                        }
-                                                                                                                  }}
-                                                                                                                  className="h-7 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
-                                                                                                            >
-                                                                                                                  <Monitor className="w-3 h-3" />
-                                                                                                                  Execute
-                                                                                                            </button>
-                                                                                                      )}
-                                                                                                </div>
-                                                                                          </motion.li>
-                                                                                    );
-                                                                              })}
+                                                                                                                              }
+                                                                                                                        }}
+                                                                                                                        disabled={item?.confirmed || isInactive}
+                                                                                                                        title="Reject Suggestion"
+                                                                                                                        className={`w-7 h-7 rounded-md border border-neutral-600 text-neutral-400 flex items-center justify-center transition-all ${isInactive ? 'opacity-50 cursor-not-allowed' : 'hover:border-red-500 hover:text-red-500 hover:bg-red-500/10'}`}
+                                                                                                                  >
+                                                                                                                        <X className="w-4 h-4" />
+                                                                                                                  </button>
+
+                                                                                                                  {tool && (
+                                                                                                                        <button
+                                                                                                                              onClick={(e) => {
+                                                                                                                                    e.stopPropagation();
+                                                                                                                                    if (window.electron) {
+                                                                                                                                          window.electron.invoke('execute-tool', { tool, params })
+                                                                                                                                                .then(res => {
+                                                                                                                                                      if (res.success) alert("Action Executed!");
+                                                                                                                                                      else alert("Error: " + res.error);
+                                                                                                                                                });
+                                                                                                                                    }
+                                                                                                                              }}
+                                                                                                                              className="h-7 px-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-medium rounded-md transition-colors border border-amber-500/20 flex items-center gap-2"
+                                                                                                                        >
+                                                                                                                              <Monitor className="w-3 h-3" />
+                                                                                                                              Execute
+                                                                                                                        </button>
+                                                                                                                  )}
+                                                                                                            </div>
+                                                                                                      </motion.li>
+                                                                                                );
+                                                                                          });
+                                                                                    })()
+                                                                              }
+
                                                                         </ul>
                                                                   </div>
                                                             </motion.div>
