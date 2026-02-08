@@ -5,14 +5,14 @@ import { useSettings } from "@/hooks/SettingsContext";
 
 export default function SessionChat({ fileId, initialHistory = [] }) {
     const { settings } = useSettings();
-    const [history, setHistory] = useState(initialHistory);
+    const [history, setHistory] = useState(Array.isArray(initialHistory) ? initialHistory : []);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const scrollRef = useRef(null);
 
     useEffect(() => {
-        setHistory(initialHistory);
+        setHistory(Array.isArray(initialHistory) ? initialHistory : []);
     }, [initialHistory]);
 
     useEffect(() => {
