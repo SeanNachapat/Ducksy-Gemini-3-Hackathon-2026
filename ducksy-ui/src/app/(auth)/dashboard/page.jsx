@@ -35,7 +35,6 @@ import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
 import CalendarEventCard from "@/components/CalendarEventCard"
 import EditableEventModal from "@/components/EditableEventModal"
-
 function LiveSystemMetrics() {
       const [metrics, setMetrics] = useState({
             latency: 0,
@@ -44,7 +43,6 @@ function LiveSystemMetrics() {
             mcpConnected: false,
             lastUpdated: 0
       })
-
       useEffect(() => {
             const fetchMetrics = async () => {
                   if (typeof window !== 'undefined' && window.electron) {
@@ -58,20 +56,16 @@ function LiveSystemMetrics() {
                         }
                   }
             }
-
             fetchMetrics()
             const interval = setInterval(fetchMetrics, 3000)
             return () => clearInterval(interval)
       }, [])
-
       const formatTokens = (num) => {
             if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
             if (num >= 1000) return `${(num / 1000).toFixed(1)}k`
             return num.toString()
       }
-
       const isStale = Date.now() - metrics.lastUpdated > 60000
-
       return (
             <div className="flex items-center gap-3 font-mono text-xs bg-neutral-900/70 px-4 py-2.5 rounded-xl border border-white/5 backdrop-blur-md">
                   <div className="flex items-center gap-2">
@@ -83,9 +77,7 @@ function LiveSystemMetrics() {
                               {metrics.latency === 0 ? '--' : `${metrics.latency}ms`}
                         </span>
                   </div>
-
                   <span className="w-px h-4 bg-white/10" />
-
                   <div className="flex items-center gap-2">
                         <span className="text-neutral-500 uppercase tracking-wider text-[10px]">TKN</span>
                         <span className="font-bold tabular-nums">
@@ -96,9 +88,7 @@ function LiveSystemMetrics() {
                               <span className="text-neutral-500">1M</span>
                         </span>
                   </div>
-
                   <span className="w-px h-4 bg-white/10" />
-
                   <div className="flex items-center gap-2">
                         <span className="text-neutral-500 uppercase tracking-wider text-[10px]">MCP</span>
                         <div className="flex items-center gap-1.5">
@@ -117,8 +107,6 @@ function LiveSystemMetrics() {
             </div>
       )
 }
-
-
 export default function DashboardPage() {
       const [selectedSession, setSelectedSession] = useState(null)
       const [micDevice, setMicDevice] = useState(null)
@@ -133,12 +121,9 @@ export default function DashboardPage() {
       const [calendarSuccess, setCalendarSuccess] = useState(false)
       const [editingEvent, setEditingEvent] = useState(null)
       const { t, settings } = useSettings()
-
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
-
       const suggestedEvents = sessionLogs.reduce((acc, log) => {
             if (log.transcriptionStatus !== 'completed' || !log.details?.actionItems) return acc;
-
             const events = log.details.actionItems
                   .map((item, index) => ({ item, index, parentFileId: log.fileId || log.id }))
                   .filter(({ item }) =>
@@ -151,17 +136,12 @@ export default function DashboardPage() {
                         id: `${parentFileId}-${index}`,
                         parentFileId,
                         actionItemIndex: index,
-                        // Context for confirming
                         originalSession: log
                   }));
-
             return [...acc, ...events];
       }, []).sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-
-
       const handleDismissCalendarEvent = async (fileId, index) => {
             if (!window.electron) return
-
             try {
                   const result = await window.electron.invoke('calendar-dismiss-event', { fileId, index })
                   if (result.success) {
@@ -173,10 +153,8 @@ export default function DashboardPage() {
                   console.error(err)
             }
       }
-
       const handleConfirmCalendarEvent = async (eventDetails) => {
             if (!editingEvent || !window.electron) return
-
             setCalendarLoading(true)
             try {
                   const result = await window.electron.invoke('calendar-create-event', eventDetails)
@@ -192,7 +170,6 @@ export default function DashboardPage() {
                                     console.error("Failed to mark action item as confirmed", e)
                               }
                         }
-
                         setCalendarSuccess(true)
                         setTimeout(() => {
                               setCalendarSuccess(false)
@@ -210,12 +187,10 @@ export default function DashboardPage() {
                   setCalendarLoading(false)
             }
       }
-
       React.useEffect(() => {
             const handleSelection = async (selection) => {
                   if (!selection) return
                   console.log("Received selection:", selection)
-
                   try {
                         const sources = await window.electron.invoke("get-screen-sources")
                         if (!sources || sources.length === 0) {
@@ -232,23 +207,18 @@ export default function DashboardPage() {
                                     },
                               },
                         })
-
                         console.log("Stream:", stream)
-
                         const video = document.createElement("video")
                         video.srcObject = stream
                         video.onloadedmetadata = () => {
                               video.play()
-
                               setTimeout(() => {
                                     const canvas = document.createElement("canvas")
                                     canvas.width = video.videoWidth
                                     canvas.height = video.videoHeight
                                     const ctx = canvas.getContext("2d")
                                     ctx.drawImage(video, 0, 0)
-
                                     const dataUrl = canvas.toDataURL("image/png")
-
                                     window.electron.invoke("save-image-file", {
                                           buffer: dataUrl,
                                           mimeType: "image/png",
@@ -258,7 +228,6 @@ export default function DashboardPage() {
                                           selection: selection,
                                           settings: settings
                                     })
-
                                     stream.getTracks().forEach(track => track.stop())
                                     video.remove()
                                     canvas.remove()
@@ -268,45 +237,33 @@ export default function DashboardPage() {
                         console.error("Failed to capture screen selection:", err)
                   }
             }
-
             if (window.electron) {
                   window.electron.receive("magic-lens-selection", handleSelection)
             }
-
             return () => {
                   if (window.electron && window.electron.removeAllListeners) {
                         window.electron.removeAllListeners("magic-lens-selection")
                   }
             }
       }, [settings])
-
       React.useEffect(() => {
             if (!window.electron) return;
-
             const handleTranscriptionUpdate = (event, data) => {
                   if (selectedSession && (data.fileId === selectedSession.fileId || data.fileId === selectedSession.id)) {
                         refetch();
                   }
             };
-
             window.electron.receive('transcription-updated', handleTranscriptionUpdate);
-
             return () => {
                   if (window.electron.removeAllListeners) {
                         window.electron.removeAllListeners('transcription-updated');
                   }
             };
       }, [selectedSession, refetch]);
-
-
-
-
       const handleDeleteSession = async () => {
             if (!selectedSession || isDeleting) return
-
             setIsDeleting(true)
             const result = await deleteSession(selectedSession.fileId)
-
             if (result.success) {
                   setSelectedSession(null)
             } else {
@@ -314,7 +271,6 @@ export default function DashboardPage() {
             }
             setIsDeleting(false)
       }
-
       const getStatusBadge = (status) => {
             switch (status) {
                   case 'pending':
@@ -347,48 +303,38 @@ export default function DashboardPage() {
                         return null
             }
       }
-
       const handleDrop = async (e) => {
             e.preventDefault();
             e.stopPropagation();
             setIsDragging(false);
-
             const files = e.dataTransfer.files;
             if (files.length === 0) return;
-
             processFile(files[0]);
       };
-
       const handleDragOver = (e) => {
             e.preventDefault();
             e.stopPropagation();
             setIsDragging(true);
       };
-
       const handleDragLeave = (e) => {
             e.preventDefault();
             e.stopPropagation();
             setIsDragging(false);
       };
-
       const handleFileSelect = (e) => {
             const files = e.target.files;
             if (files.length === 0) return;
             processFile(files[0]);
       };
-
       const processFile = async (file) => {
             const mimeType = file.type;
             const isAudio = mimeType.startsWith('audio/');
             const isImage = mimeType.startsWith('image/');
-
             if (!isAudio && !isImage) {
                   console.warn('Unsupported file type:', mimeType);
                   return;
             }
-
             setIsProcessingFile(true);
-
             try {
                   const arrayBuffer = await file.arrayBuffer();
                   const uint8Array = new Uint8Array(arrayBuffer);
@@ -399,10 +345,8 @@ export default function DashboardPage() {
                         binary += String.fromCharCode.apply(null, chunk);
                   }
                   const base64 = btoa(binary);
-
                   const storedSettings = localStorage.getItem('ducksy-settings');
                   const settings = storedSettings ? JSON.parse(storedSettings) : {};
-
                   if (typeof window !== 'undefined' && window.electron) {
                         if (isAudio) {
                               const result = await window.electron.invoke('save-audio-file', {
@@ -432,19 +376,15 @@ export default function DashboardPage() {
                   setIsProcessingFile(false);
             }
       };
-
       return (
             <div className="flex h-full w-full relative bg-neutral-950 text-white font-sans overflow-hidden selection:bg-amber-500/30">
-
                   <div className="absolute inset-0 bg-linear-to-b from-neutral-900 via-neutral-950 to-black pointer-events-none z-0" />
                   <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-amber-500/5 blur-[120px] rounded-full pointer-events-none z-0" />
                   <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-amber-400/3 blur-[100px] rounded-full pointer-events-none z-0" />
-
                   <aside className="w-20 border-r border-white/5 flex flex-col items-center py-6 z-20 bg-neutral-900/30 backdrop-blur-md">
                         <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center mb-8 hover:bg-white/10 transition-colors cursor-pointer group">
                               <Layers className="w-5 h-5 text-neutral-500 group-hover:text-amber-400 transition-colors" />
                         </div>
-
                         <div className="mt-auto flex flex-col gap-6 items-center pb-6">
                               <div className="relative group flex items-center justify-center">
                                     <Link href="/configure">
@@ -455,31 +395,23 @@ export default function DashboardPage() {
                                                 <SlidersHorizontal className="w-5 h-5" strokeWidth={1.5} />
                                           </button>
                                     </Link>
-
                                     <span className="absolute left-full ml-4 px-2 py-1 bg-neutral-900 border border-white/10 rounded-md text-xs text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none backdrop-blur-md z-50">
                                           {t.dashboardPage.configureAgent}
                                     </span>
                               </div>
                         </div>
                   </aside>
-
                   <main className="flex-1 flex flex-col relative overflow-hidden z-10 transition-all duration-300">
-
                         <header className="h-24 px-8 flex items-center justify-between border-b border-white/5 bg-neutral-950/50 backdrop-blur-xl">
                               <div></div>
-
                               <div className="flex items-center gap-6">
                                     <LiveSystemMetrics />
-
                                     <MicDevice setMicDevice={setMicDevice} micDevice={micDevice} />
                               </div>
                         </header>
-
                         <div className="flex-1 overflow-hidden p-8">
                               <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-
                                     <div className="lg:col-span-4 flex flex-col gap-6 h-full">
-
                                           <motion.button
                                                 whileHover={{ scale: 1.01, backgroundColor: "rgb(251 191 36)" }}
                                                 whileTap={{ scale: 0.99 }}
@@ -490,7 +422,6 @@ export default function DashboardPage() {
                                                 }}
                                                 className="group w-full h-36 rounded-3xl bg-amber-500 flex flex-col items-center justify-center relative overflow-hidden transition-all shadow-[0_0_40px_-10px_rgba(245,158,11,0.3)] border border-amber-400/20"
                                           >
-
                                                 <div className="relative z-10 flex flex-col items-center gap-3">
                                                       <div className="w-14 h-14 rounded-2xl bg-black/10 flex items-center justify-center text-neutral-950 backdrop-blur-md border border-black/5">
                                                             <Zap className="w-6 h-6 fill-neutral-950" strokeWidth={0} />
@@ -501,15 +432,12 @@ export default function DashboardPage() {
                                                       </div>
                                                 </div>
                                           </motion.button>
-
                                           <div className="bg-neutral-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-sm flex flex-col gap-6 flex-1">
-
                                                 <div className="flex flex-col flex-1">
                                                       <div className="flex items-center justify-between mb-4">
                                                             <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage.upNext}</h2>
                                                             <Calendar className="w-4 h-4 text-neutral-600" />
                                                       </div>
-
                                                       <div className="max-h-[220px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
                                                             {suggestedEvents.length > 0 ? (
                                                                   suggestedEvents.map(eventData => (
@@ -532,7 +460,6 @@ export default function DashboardPage() {
                                                                   </div>
                                                             )}
                                                       </div>
-
                                                       <div
                                                             className={`mt-auto border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative overflow-hidden group/dropzone
                                                             ${isDragging
@@ -551,7 +478,6 @@ export default function DashboardPage() {
                                                                   onChange={handleFileSelect}
                                                                   accept="audio/*,image/*"
                                                             />
-
                                                             {isProcessingFile ? (
                                                                   <div className="flex flex-col items-center py-2">
                                                                         <Loader2 className="w-6 h-6 text-amber-500 animate-spin mb-2" />
@@ -573,9 +499,7 @@ export default function DashboardPage() {
                                                       </div>
                                                 </div>
                                           </div>
-
                                     </div>
-
                                     <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
                                           <div className="bg-neutral-900/40 border border-white/5 rounded-3xl p-8 flex-1 flex flex-col backdrop-blur-sm relative overflow-hidden">
                                                 <div className="flex items-center justify-between mb-8 z-10 relative">
@@ -603,7 +527,6 @@ export default function DashboardPage() {
                                                             </Link>
                                                       </div>
                                                 </div>
-
                                                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar z-10 relative">
                                                       {isLoading && sessionLogs.length === 0 ? (
                                                             <div className="flex flex-col items-center justify-center h-48">
@@ -642,13 +565,11 @@ export default function DashboardPage() {
                                                                               {log.type === 'summary' && <FileText className="w-4 h-4" strokeWidth={1.5} />}
                                                                               {log.type === 'debug' && <Bug className="w-4 h-4" strokeWidth={1.5} />}
                                                                         </div>
-
                                                                         <div className="ml-5 flex-1 min-w-0">
                                                                               <h3 className="text-neutral-200 font-medium truncate text-sm">{log.title}</h3>
                                                                               <p className="text-xs text-neutral-500 mt-1 font-medium">{log.subtitle}</p>
                                                                         </div>
-
-                                                                        {/* Status indicator */}
+                                                                        {}
                                                                         {log.transcriptionStatus === 'processing' && (
                                                                               <div className="mr-2">
                                                                                     <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
@@ -664,7 +585,6 @@ export default function DashboardPage() {
                                                                                     <div className="w-2 h-2 rounded-full bg-red-500" />
                                                                               </div>
                                                                         )}
-
                                                                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-700 group-hover:text-white transition-all ml-2 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transform duration-200">
                                                                               <ChevronRight className="w-4 h-4" />
                                                                         </div>
@@ -672,15 +592,12 @@ export default function DashboardPage() {
                                                             ))
                                                       )}
                                                 </div>
-
                                                 <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-neutral-950/80 to-transparent pointer-events-none" />
                                           </div>
                                     </div>
-
                               </div>
                         </div>
                   </main>
-
                   <EditableEventModal
                         isOpen={!!editingEvent}
                         onClose={() => setEditingEvent(null)}
@@ -688,7 +605,6 @@ export default function DashboardPage() {
                         onConfirm={handleConfirmCalendarEvent}
                         t={t}
                   />
-
                   <AnimatePresence>
                         {selectedSession && (
                               <>
@@ -699,7 +615,6 @@ export default function DashboardPage() {
                                           onClick={() => setSelectedSession(null)}
                                           className="absolute inset-0 bg-black/40 backdrop-blur-sm z-40"
                                     />
-
                                     <motion.div
                                           initial={{ x: "100%" }}
                                           animate={{ x: 0 }}
@@ -733,7 +648,6 @@ export default function DashboardPage() {
                                                       <X className="w-5 h-5" />
                                                 </button>
                                           </div>
-
                                           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                                                 <div className="mb-6">
                                                       <MediaPreview
@@ -743,7 +657,6 @@ export default function DashboardPage() {
                                                             duration={selectedSession.duration}
                                                       />
                                                 </div>
-
                                                 {selectedSession.transcriptionStatus === 'pending' && (
                                                       <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
                                                             <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4">
@@ -753,7 +666,6 @@ export default function DashboardPage() {
                                                             <p className="text-xs mt-1 text-neutral-600">{t.session.queue}</p>
                                                       </div>
                                                 )}
-
                                                 {selectedSession.transcriptionStatus === 'processing' && (
                                                       <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
                                                             <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
@@ -761,7 +673,6 @@ export default function DashboardPage() {
                                                             <p className="text-xs mt-1 text-neutral-600">{t.session.analyzing}</p>
                                                       </div>
                                                 )}
-
                                                 {selectedSession.transcriptionStatus === 'failed' && (
                                                       <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
                                                             <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
@@ -795,7 +706,6 @@ export default function DashboardPage() {
                                                             </button>
                                                       </div>
                                                 )}
-
                                                 {selectedSession.transcriptionStatus === 'completed' && (
                                                       <>
                                                             {selectedSession.type === 'summary' && (
@@ -819,28 +729,21 @@ export default function DashboardPage() {
                                                                                                       const isDismissed = item.dismissed;
                                                                                                       return (isDismissed || isPast) ? 1 : 0;
                                                                                                 };
-
                                                                                                 const statusA = getStatus(a);
                                                                                                 const statusB = getStatus(b);
-
                                                                                                 if (statusA !== statusB) return statusA - statusB;
-
                                                                                                 const dateA = a.calendarEvent?.dateTime ? new Date(a.calendarEvent.dateTime) : new Date(8640000000000000);
                                                                                                 const dateB = b.calendarEvent?.dateTime ? new Date(b.calendarEvent.dateTime) : new Date(8640000000000000);
                                                                                                 return dateA - dateB;
                                                                                           });
-
                                                                                           return sortedItems.map((item, i) => {
                                                                                                 const originalIndex = items.indexOf(item);
-
                                                                                                 const isObject = typeof item === 'object' && item !== null;
                                                                                                 const text = isObject ? (item.text || item.description || "") : String(item);
                                                                                                 const tool = isObject ? item.tool : null;
                                                                                                 const params = isObject ? item.parameters : {};
-
                                                                                                 const isPast = item.calendarEvent?.dateTime && new Date(item.calendarEvent.dateTime) < new Date();
                                                                                                 const isInactive = item?.dismissed || isPast;
-
                                                                                                 return (
                                                                                                       <li key={originalIndex} className={`flex items-start justify-between gap-4 text-sm text-neutral-300 bg-black/20 p-3 rounded-lg border border-white/5 hover:border-white/10 transition-colors group/item ${isInactive ? 'opacity-50' : ''}`}>
                                                                                                             <div className="flex items-start gap-3 flex-1">
@@ -855,15 +758,12 @@ export default function DashboardPage() {
                                                                                                                         <p className={`leading-relaxed ${isInactive ? 'line-through' : ''}`}>{text}</p>
                                                                                                                   </div>
                                                                                                             </div>
-
                                                                                                             <div className="flex gap-2 shrink-0 mt-0.5">
                                                                                                                   <button
                                                                                                                         onClick={(e) => {
                                                                                                                               e.stopPropagation()
                                                                                                                               if (item?.confirmed || isInactive) return;
-
                                                                                                                               let eventData = {};
-
                                                                                                                               if (item.calendarEvent) {
                                                                                                                                     eventData = {
                                                                                                                                           ...item.calendarEvent,
@@ -879,7 +779,6 @@ export default function DashboardPage() {
                                                                                                                                           detected: true
                                                                                                                                     };
                                                                                                                               }
-
                                                                                                                               setEditingEvent({
                                                                                                                                     calendarEvent: eventData,
                                                                                                                                     actionItemIndex: originalIndex
@@ -896,7 +795,6 @@ export default function DashboardPage() {
                                                                                                                   >
                                                                                                                         <Plus className="w-4 h-4" strokeWidth={item?.confirmed ? 3 : 2} />
                                                                                                                   </button>
-
                                                                                                                   <button
                                                                                                                         onClick={async (e) => {
                                                                                                                               e.stopPropagation();
@@ -914,7 +812,6 @@ export default function DashboardPage() {
                                                                                                                   >
                                                                                                                         <X className="w-4 h-4" />
                                                                                                                   </button>
-
                                                                                                                   {tool && (
                                                                                                                         <button
                                                                                                                               onClick={(e) => {
@@ -939,14 +836,12 @@ export default function DashboardPage() {
                                                                                           });
                                                                                     })()}
                                                                                     {(!selectedSession.details.actionItems || selectedSession.details.actionItems.length === 0) && (
-
                                                                                           <li className="text-sm text-neutral-500 italic">{t.dashboardPage.noActionItems}</li>
                                                                                     )}
                                                                               </ul>
                                                                         </div>
                                                                   </div>
                                                             )}
-
                                                             {selectedSession.type === 'debug' && (
                                                                   <div className="space-y-6">
                                                                         <div>
@@ -979,8 +874,6 @@ export default function DashboardPage() {
                                                                         )}
                                                                   </div>
                                                             )}
-
-
                                                       </>
                                                 )}
                                                 <div className="mt-8 pt-6 border-t border-white/5">
@@ -990,12 +883,10 @@ export default function DashboardPage() {
                                                       />
                                                 </div>
                                           </div>
-
                                           <div className="p-6 border-t border-white/5 bg-neutral-900/30 flex gap-3">
                                                 <button className="flex-1 py-3 rounded-xl bg-white/5 border border-white/5 text-sm font-medium hover:bg-white/10 hover:text-white text-neutral-300 transition-colors flex items-center justify-center gap-2">
                                                       <ExternalLink className="w-4 h-4" /> {t.dashboardPage.openOverlay}
                                                 </button>
-
                                                 <button
                                                       onClick={async () => {
                                                             if (window.electron && selectedSession) {
@@ -1023,13 +914,11 @@ export default function DashboardPage() {
                                                       )}
                                                 </button>
                                           </div>
-
                                     </motion.div>
                               </>
                         )}
                   </AnimatePresence>
-
-                  {/* Calendar Modal */}
+                  {}
                   <AnimatePresence>
                         {showCalendarModal && (
                               <motion.div
@@ -1099,14 +988,12 @@ export default function DashboardPage() {
                                                                         try {
                                                                               const startTime = new Date(`${eventDate}T${eventTime}:00`).toISOString()
                                                                               const endTime = new Date(new Date(`${eventDate}T${eventTime}:00`).getTime() + 60 * 60 * 1000).toISOString()
-
                                                                               const result = await window.electron.invoke('calendar-create-event', {
                                                                                     title: selectedSession.title,
                                                                                     description: selectedSession.details?.summary || '',
                                                                                     startTime,
                                                                                     endTime
                                                                               })
-
                                                                               if (result.success) {
                                                                                     setCalendarSuccess(true)
                                                                               } else {
@@ -1131,7 +1018,6 @@ export default function DashboardPage() {
                               </motion.div>
                         )}
                   </AnimatePresence>
-
             </div >
       )
 }

@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, Trash2, ExternalLink, Save, ArrowRight, Sparkles, Database, Settings, Globe, Moon, Sun, Monitor, Link2, Check, Plus, MessageSquare, Info, Github, Bug, Linkedin, Cpu, Twitter } from "lucide-react"
 import Link from "next/link"
 import translations from "../../../locales/translations.json"
-
 export default function ConfigurePage() {
     const [activeSection, setActiveSection] = useState("general")
     const [clearing, setClearing] = useState(false)
@@ -20,7 +19,6 @@ export default function ConfigurePage() {
     const [saving, setSaving] = useState(false)
     const [showBuilders, setShowBuilders] = useState(false)
     const [contributors, setContributors] = useState([])
-
     useEffect(() => {
         const fetchContributors = async () => {
             try {
@@ -57,7 +55,6 @@ export default function ConfigurePage() {
             fetchContributors()
         }
     }, [showBuilders])
-
     useEffect(() => {
         const savedSettings = localStorage.getItem("ducksy_settings")
         if (savedSettings) {
@@ -68,33 +65,27 @@ export default function ConfigurePage() {
             setSettings(prev => ({ ...prev, ...parsed }))
         }
     }, [])
-
     const [mcpStatus, setMcpStatus] = useState({
         google_calendar: { connected: false },
         notion: { connected: false }
     })
-
     const [serverStatus, setServerStatus] = useState({
         checking: false,
         online: false,
         url: ""
     })
-
     const [sizeCache, setSizeCache] = useState({
         status: "",
         percent: null,
         size: null,
     })
-
     useEffect(() => {
         if (activeSection === "connections") {
             const isProd = process.env.NODE_ENV === 'production';
             const serverUrl = isProd
                 ? "https://ducksy-gemini-3-hackathon-2026.onrender.com"
                 : "http://localhost:8080";
-
             setServerStatus(prev => ({ ...prev, checking: true, url: serverUrl }));
-
             fetch(`${serverUrl}/health`)
                 .then(res => {
                     if (res.ok) return res.json();
@@ -113,10 +104,8 @@ export default function ConfigurePage() {
                 });
         }
     }, [activeSection])
-
     useEffect(() => {
         if (!window.electron) return;
-
         if (activeSection === "connections") {
             window.electron.invoke("mcp-get-status").then((result) => {
                 if (result.success) {
@@ -127,7 +116,6 @@ export default function ConfigurePage() {
                 }
             })
         }
-
         const handleAuthSuccess = (event, data) => {
             if (data.provider === "google_calendar") {
                 setMcpStatus(prev => ({ ...prev, google_calendar: { connected: true } }))
@@ -135,17 +123,13 @@ export default function ConfigurePage() {
                 setMcpStatus(prev => ({ ...prev, notion: { connected: true } }))
             }
         }
-
         window.electron.receive("mcp-auth-success", handleAuthSuccess)
         return () => window.electron.removeListener("mcp-auth-success", handleAuthSuccess)
     }, [activeSection])
-
     useEffect(() => {
         if (!window.electron) return;
-
         if (activeSection === "memory") {
             setSizeCache({ status: "", percent: null, size: null })
-
             console.log("request-sizeCache")
             window.electron.invoke("request-sizeCache").then((event) => {
                 const { status, percent, size } = event
@@ -154,7 +138,6 @@ export default function ConfigurePage() {
             })
         }
     }, [activeSection])
-
     const handleClearMemory = () => {
         setClearing(true)
         if (window.electron) {
@@ -172,7 +155,6 @@ export default function ConfigurePage() {
             })
         }
     }
-
     const handleSave = () => {
         setSaving(true)
         setTimeout(() => {
@@ -181,9 +163,7 @@ export default function ConfigurePage() {
             window.location.reload()
         }, 800)
     }
-
     const t = translations[settings.language] || translations.en
-
     const sections = [
         { id: "general", label: t.nav.general, desc: "Theme & Language", icon: Settings },
         { id: "persona", label: t.nav.persona, desc: "Personality & Voice", icon: Sparkles },
@@ -191,18 +171,15 @@ export default function ConfigurePage() {
         { id: "connections", label: t.nav.connections, desc: "Integrations & MCP", icon: Link2 },
         { id: "info", label: "Info", desc: "System & About", icon: Info },
     ]
-
     const getStatusColor = (status) => {
         if (status === 'warning') return { text: 'text-amber-500', bg: 'bg-amber-500', bgSoft: 'bg-amber-500/10' };
         if (status === 'danger') return { text: 'text-red-500', bg: 'bg-red-500', bgSoft: 'bg-red-500/10' };
         return { text: 'text-emerald-500', bg: 'bg-emerald-500', bgSoft: 'bg-emerald-500/10' };
     }
-
     return (
         <div className="flex h-full bg-neutral-950 text-white font-sans selection:bg-amber-500/30 overflow-hidden relative">
             <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-amber-500/10 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
-
             <aside className="w-80 border-r border-white/5 flex flex-col relative z-20 bg-neutral-900/30 backdrop-blur-md">
                 <div className="p-6 border-b border-white/5 space-y-6">
                     <div className="flex items-center gap-4">
@@ -217,7 +194,6 @@ export default function ConfigurePage() {
                         </div>
                     </div>
                 </div>
-
                 <div className="flex-1 py-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
                     {sections.map((section) => {
                         const Icon = section.icon
@@ -252,7 +228,6 @@ export default function ConfigurePage() {
                     })}
                 </div>
             </aside>
-
             <main className="flex-1 flex flex-col relative z-10 bg-neutral-950/50">
                 <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
                     <AnimatePresence mode="wait">
@@ -269,7 +244,6 @@ export default function ConfigurePage() {
                                     <h2 className="text-2xl font-bold text-white mb-2">{t.persona.title}</h2>
                                     <p className="text-neutral-400">{t.persona.desc}</p>
                                 </div>
-
                                 <div className="grid grid-cols-1 gap-6">
                                     <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm space-y-6">
                                         <div className="flex items-center gap-3 mb-4">
@@ -281,7 +255,6 @@ export default function ConfigurePage() {
                                                 <p className="text-xs text-neutral-500">{t.persona.personalityDesc}</p>
                                             </div>
                                         </div>
-
                                         <div className="px-2">
                                             <div className="flex justify-between text-xs text-neutral-400 mb-2 font-medium">
                                                 <span>{t.persona.labels.strict}</span>
@@ -297,7 +270,6 @@ export default function ConfigurePage() {
                                             />
                                         </div>
                                     </div>
-
                                     <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm space-y-6">
                                         <div className="flex items-center gap-3 mb-4">
                                             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
@@ -308,7 +280,6 @@ export default function ConfigurePage() {
                                                 <p className="text-xs text-neutral-500">{t.persona.responsesDesc}</p>
                                             </div>
                                         </div>
-
                                         <div className="px-2">
                                             <div className="flex justify-between text-xs text-neutral-400 mb-2 font-medium">
                                                 <span>{t.persona.labels.concise}</span>
@@ -324,12 +295,9 @@ export default function ConfigurePage() {
                                             />
                                         </div>
                                     </div>
-
-
                                 </div>
                             </motion.div>
                         )}
-
                         {activeSection === "memory" && (
                             <motion.div
                                 key="memory"
@@ -343,10 +311,8 @@ export default function ConfigurePage() {
                                     <h2 className="text-2xl font-bold text-white mb-2">Memory Module</h2>
                                     <p className="text-neutral-400">Manage the agent's long-term memory and context.</p>
                                 </div>
-
                                 <div className="grid grid-cols-1 gap-6">
                                     <div className="border border-white/5 bg-neutral-900/40 p-8 rounded-3xl relative overflow-hidden backdrop-blur-sm min-h-[180px] flex flex-col justify-center">
-
                                         {sizeCache.percent === null ? (
                                             <div className="animate-pulse flex flex-col md:flex-row md:items-center justify-between gap-8">
                                                 <div className="space-y-4">
@@ -386,7 +352,6 @@ export default function ConfigurePage() {
                                                         Local Vector Storage Usage
                                                     </p>
                                                 </div>
-
                                                 <div className="flex-1 max-w-sm">
                                                     <div className="flex justify-between text-xs font-medium mb-2">
                                                         <span className="text-white">Usage</span>
@@ -404,7 +369,6 @@ export default function ConfigurePage() {
                                             </div>
                                         )}
                                     </div>
-
                                     <button
                                         onClick={handleClearMemory}
                                         disabled={clearing}
@@ -430,7 +394,6 @@ export default function ConfigurePage() {
                                 </div>
                             </motion.div>
                         )}
-
                         {activeSection === "connections" && (
                             <motion.div
                                 key="connections"
@@ -444,7 +407,6 @@ export default function ConfigurePage() {
                                     <h2 className="text-2xl font-bold text-white mb-2">Connections & MCP</h2>
                                     <p className="text-neutral-400">Connect external accounts and Model Context Protocol servers.</p>
                                 </div>
-
                                 <div className="grid grid-cols-1 gap-4">
                                     {/* Google Calendar */}
                                     <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex items-center justify-between group hover:border-white/10 transition-colors">
@@ -481,7 +443,6 @@ export default function ConfigurePage() {
                                             </button>
                                         )}
                                     </div>
-
                                     {/* Notion */}
                                     <div className="bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex items-center justify-between group hover:border-white/10 transition-colors">
                                         <div className="flex items-center gap-4">
@@ -512,7 +473,6 @@ export default function ConfigurePage() {
                                             </button>
                                         )}
                                     </div>
-
                                     {/* Server Status */}
                                     <div className={`bg-neutral-900/40 border ${serverStatus.online ? 'border-emerald-500/20' : 'border-amber-500/20'} p-6 rounded-3xl backdrop-blur-sm transition-all duration-300`}>
                                         <div className="flex items-center justify-between mb-4">
@@ -551,7 +511,6 @@ export default function ConfigurePage() {
                                 </div>
                             </motion.div>
                         )}
-
                         {activeSection === "info" && (
                             <motion.div
                                 key="info"
@@ -565,7 +524,6 @@ export default function ConfigurePage() {
                                     <h2 className="text-2xl font-bold text-white mb-2">Info & About</h2>
                                     <p className="text-neutral-400">System information and application details.</p>
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="md:col-span-2 bg-linear-to-br from-neutral-900/40 to-neutral-900/20 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
                                         <div className="flex items-center gap-6">
@@ -587,7 +545,6 @@ export default function ConfigurePage() {
                                             <p className="text-sm text-white font-mono">8f314e4-aa5a</p>
                                         </div>
                                     </div>
-
                                     <Link href="https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026" target="_blank" className="group bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-4 hover:bg-white/5 hover:border-white/10 transition-all">
                                         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
                                             <Github className="w-5 h-5" />
@@ -597,7 +554,6 @@ export default function ConfigurePage() {
                                             <p className="text-xs text-neutral-500">Explore the codebase on GitHub</p>
                                         </div>
                                     </Link>
-
                                     <Link href="https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/issues" target="_blank" className="group bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-4 hover:bg-white/5 hover:border-white/10 transition-all">
                                         <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform">
                                             <Bug className="w-5 h-5" />
@@ -607,14 +563,12 @@ export default function ConfigurePage() {
                                             <p className="text-xs text-neutral-500">Found a bug? Let us know.</p>
                                         </div>
                                     </Link>
-
                                     <div className="md:col-span-2">
                                         <button
                                             onClick={() => setShowBuilders(!showBuilders)}
                                             className="w-full group relative overflow-hidden bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between hover:border-amber-500/30 transition-all text-left"
                                         >
                                             <div className="absolute inset-0 bg-linear-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-
                                             <div className="flex items-center gap-4 relative z-10">
                                                 <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500 group-hover:text-amber-400 transition-colors">
                                                     <Sparkles className="w-6 h-6" />
@@ -624,12 +578,10 @@ export default function ConfigurePage() {
                                                     <p className="text-sm text-neutral-500">The human minds behind the AI</p>
                                                 </div>
                                             </div>
-
                                             <div className={`w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-neutral-400 group-hover:bg-amber-500 group-hover:text-black transition-all relative z-10 ${showBuilders ? "rotate-90 bg-amber-500 text-black" : ""}`}>
                                                 <ArrowRight className="w-5 h-5" />
                                             </div>
                                         </button>
-
                                         <AnimatePresence>
                                             {showBuilders && (
                                                 <motion.div
@@ -673,9 +625,6 @@ export default function ConfigurePage() {
                                             )}
                                         </AnimatePresence>
                                     </div>
-
-
-
                                     <div className="md:col-span-2 text-center pt-8 pb-4 space-y-2">
                                         <p className="text-sm text-neutral-500 font-medium">Submitted for Gemini 3 Hackathon 2026</p>
                                         <p className="text-xs text-neutral-600">Made with ❤️ and ☕ in Thailand</p>
@@ -683,7 +632,6 @@ export default function ConfigurePage() {
                                 </div>
                             </motion.div>
                         )}
-
                         {activeSection === "general" && (
                             <motion.div
                                 key="general"
@@ -697,9 +645,7 @@ export default function ConfigurePage() {
                                     <h2 className="text-2xl font-bold text-white mb-2">{t.general.title}</h2>
                                     <p className="text-neutral-400">{t.general.desc}</p>
                                 </div>
-
                                 <div className="grid grid-cols-1 gap-6">
-
                                     <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 rounded-lg bg-neutral-100/10 text-white">
@@ -710,7 +656,6 @@ export default function ConfigurePage() {
                                                 <p className="text-xs text-neutral-500">{t.general.appearanceDesc}</p>
                                             </div>
                                         </div>
-
                                         <select
                                             value={settings.theme}
                                             onChange={(e) => setSettings({ ...settings, theme: e.target.value })}
@@ -720,7 +665,6 @@ export default function ConfigurePage() {
                                             <option value="dark">Dark Mode</option>
                                         </select>
                                     </div>
-
                                     <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
@@ -731,7 +675,6 @@ export default function ConfigurePage() {
                                                 <p className="text-xs text-neutral-500">{t.general.languageDesc}</p>
                                             </div>
                                         </div>
-
                                         <select
                                             value={settings.language}
                                             onChange={(e) => setSettings({ ...settings, language: e.target.value })}
@@ -743,7 +686,6 @@ export default function ConfigurePage() {
                                             <option value="ja">日本語 (Japanese)</option>
                                         </select>
                                     </div>
-
                                     <div className="bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm space-y-6">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -757,9 +699,7 @@ export default function ConfigurePage() {
                                                 <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${settings.autoStart ? "translate-x-6" : "translate-x-0"}`} />
                                             </button>
                                         </div>
-
                                         <div className="h-px bg-white/5" />
-
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <label className="text-base font-semibold text-white block">{t.general.reducedMotion}</label>
@@ -773,7 +713,6 @@ export default function ConfigurePage() {
                                             </button>
                                         </div>
                                     </div>
-
                                 </div>
                             </motion.div>
                         )}

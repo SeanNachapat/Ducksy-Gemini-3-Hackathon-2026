@@ -4,16 +4,11 @@ const fs = require("fs")
 const serve = require("electron-serve").default
 const db = require("./utils/db")
 const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./ipcHandlers")
-
 const PROTOCOL_SCHEME = 'ducksy'
 const SERVER_URL = 'https://ducksy-gemini-3-hackathon-2026.onrender.com'
-
 const isProd = app.isPackaged
-
 app.commandLine.appendSwitch('enable-transparent-visuals')
-
 const loadURL = serve({ directory: 'out' });
-
 function getAppPath(page = '') {
       if (isProd) {
             if (page === '' || page === 'index' || page === 'index.html') {
@@ -25,7 +20,6 @@ function getAppPath(page = '') {
       }
       return null
 }
-
 let mainWindow
 let onRecordingWindow
 let selectionWindow
@@ -33,18 +27,15 @@ let initalized
 let captureWindow
 let deviceId
 let tray = null
-
 async function createOnRecordingWindow() {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.show()
             onRecordingWindow.focus()
             return
       }
-
       const { width } = screen.getPrimaryDisplay().workAreaSize
       const width_f = 450
       const height_f = 250
-
       onRecordingWindow = new BrowserWindow({
             width: width_f,
             height: height_f,
@@ -71,39 +62,30 @@ async function createOnRecordingWindow() {
                   defaultFontFamily: "monospace"
             },
       })
-
       onRecordingWindow.setMenu(null)
-
       setOnRecordingWindow(onRecordingWindow)
-
       onRecordingWindow.setPosition(width - width_f - 20, 20)
       onRecordingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-
       if (isProd) {
             await onRecordingWindow.loadURL("app://-/onRecord");
       } else {
             await onRecordingWindow.loadURL("http://localhost:3000/onRecord")
       }
-
       onRecordingWindow.on("page-title-updated", (e) => {
             e.preventDefault()
       })
-
       onRecordingWindow.on("closed", () => {
             onRecordingWindow = null
             setOnRecordingWindow(null)
       })
 }
-
 async function createSelectionWindow() {
       console.log("Create Page")
       if (selectionWindow && !selectionWindow.isDestroyed()) {
             return
       }
-
       const primaryDisplay = screen.getPrimaryDisplay()
       const { x, y, width, height } = primaryDisplay.bounds
-
       selectionWindow = new BrowserWindow({
             x,
             y,
@@ -127,32 +109,26 @@ async function createSelectionWindow() {
                   contextIsolation: true
             }
       })
-
       selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-
       if (isProd) {
             await selectionWindow.loadURL("app://-/magic-lens")
       } else {
             await selectionWindow.loadURL("http://localhost:3000/magic-lens")
       }
-
       selectionWindow.on("closed", () => {
             selectionWindow = null
       })
 }
-
 function closeOnRecordingWindow() {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.close()
             onRecordingWindow = null
       }
 }
-
 function createTray() {
       const iconPath = path.join(__dirname, "assets", "icon-32x32.png")
       const icon = nativeImage.createFromPath(iconPath)
       tray = new Tray(icon)
-
       const contextMenu = Menu.buildFromTemplate([
             {
                   label: "Show Dashboard",
@@ -174,10 +150,8 @@ function createTray() {
                   }
             }
       ])
-
       tray.setToolTip("Ducksy")
       tray.setContextMenu(contextMenu)
-
       tray.on("click", () => {
             if (mainWindow) {
                   if (mainWindow.isVisible()) {
@@ -190,7 +164,6 @@ function createTray() {
             }
       })
 }
-
 async function createWindow() {
       mainWindow = new BrowserWindow({
             width: 1200,
@@ -209,7 +182,6 @@ async function createWindow() {
                   defaultFontFamily: "monospace"
             },
       })
-
       setMainWindow(mainWindow);
       if (isProd) {
             await loadURL(mainWindow);
@@ -217,11 +189,9 @@ async function createWindow() {
             await mainWindow.loadURL("http://localhost:3000")
             mainWindow.webContents.openDevTools()
       }
-
       mainWindow.webContents.on("did-finish-load", () => {
             mainWindow.webContents.send("app-ready")
       })
-
       mainWindow.webContents.setWindowOpenHandler(({ url }) => {
             if (url.startsWith("https:") || url.startsWith("http:")) {
                   shell.openExternal(url);
@@ -229,7 +199,6 @@ async function createWindow() {
             return { action: "deny" };
       });
 }
-
 if (process.defaultApp) {
       if (process.argv.length >= 2) {
             const success = app.setAsDefaultProtocolClient(PROTOCOL_SCHEME, process.execPath, [path.resolve(process.argv[1])])
@@ -240,32 +209,26 @@ if (process.defaultApp) {
       const success = app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
       console.log('Protocol registered (prod mode):', PROTOCOL_SCHEME, '- success:', success)
 }
-
 async function handleDeeplink(url) {
       console.log('Deeplink received:', url)
       try {
             const parsed = new URL(url)
             console.log('Parsed URL:', { protocol: parsed.protocol, host: parsed.host, pathname: parsed.pathname })
-
             if (parsed.protocol !== `${PROTOCOL_SCHEME}:`) {
                   console.log('Wrong protocol, ignoring')
                   return
             }
-
             if (parsed.host === 'auth' && parsed.pathname === '/callback') {
                   const provider = parsed.searchParams.get('provider')
                   const tokenId = parsed.searchParams.get('token_id')
                   console.log('OAuth callback:', { provider, tokenId })
-
                   if (provider && tokenId) {
                         console.log('Fetching token from server...')
                         const response = await fetch(`${SERVER_URL}/auth/token/${tokenId}`)
                         console.log('Server response status:', response.status)
-
                         if (response.ok) {
                               const tokenData = await response.json()
                               console.log('Token data received:', { hasAccessToken: !!tokenData.access_token })
-
                               await db.saveMcpCredential(
                                     provider,
                                     tokenData.access_token,
@@ -275,7 +238,6 @@ async function handleDeeplink(url) {
                                     JSON.stringify(tokenData)
                               )
                               console.log('Credential saved to database')
-
                               if (mainWindow && !mainWindow.isDestroyed()) {
                                     mainWindow.webContents.send('mcp-auth-success', { provider })
                                     mainWindow.show()
@@ -291,9 +253,7 @@ async function handleDeeplink(url) {
             console.error('Deeplink error:', error)
       }
 }
-
 let deferredDeeplinkUrl = null
-
 app.on('open-url', (event, url) => {
       event.preventDefault()
       console.log('open-url event received:', url)
@@ -304,25 +264,18 @@ app.on('open-url', (event, url) => {
             console.log('Deferred deeplink URL for later processing')
       }
 })
-
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
       console.log('Second instance detected, waiting for deeplink URL...')
-
-      // On macOS, the deeplink URL comes via open-url event, not argv
-      // Wait for the open-url event, process the deeplink, then quit
       app.on('open-url', async (event, url) => {
             event.preventDefault()
             console.log('Second instance received deeplink:', url)
-
-            // Process the deeplink directly (saves token to shared DB)
             try {
                   const parsed = new URL(url)
                   if (parsed.host === 'auth' && parsed.pathname === '/callback') {
                         const provider = parsed.searchParams.get('provider')
                         const tokenId = parsed.searchParams.get('token_id')
                         console.log('Processing OAuth callback:', { provider, tokenId })
-
                         if (provider && tokenId) {
                               const response = await fetch(`${SERVER_URL}/auth/token/${tokenId}`)
                               if (response.ok) {
@@ -342,12 +295,8 @@ if (!gotTheLock) {
             } catch (error) {
                   console.error('Error processing deeplink in second instance:', error)
             }
-
-            // Give time for DB write, then quit
             setTimeout(() => app.quit(), 500)
       })
-
-      // Timeout quit in case no URL is received
       setTimeout(() => {
             console.log('No deeplink URL received, quitting second instance')
             app.quit()
@@ -363,45 +312,36 @@ if (!gotTheLock) {
             }
       })
 }
-
 app.whenReady().then(async () => {
       createWindow()
       registerIpcHandlers();
-
       createTray();
-
       globalShortcut.register('Alt+S', () => {
             console.log('Alt+S pressed - activating magic lens')
             ipcMain.emit('activate-magic-lens')
       })
-
-      // Process any deeplink that was deferred during app launch
       if (deferredDeeplinkUrl) {
             console.log('Processing deferred deeplink:', deferredDeeplinkUrl)
             handleDeeplink(deferredDeeplinkUrl)
             deferredDeeplinkUrl = null
       }
 })
-
 app.on("window-all-closed", () => {
       globalShortcut.unregisterAll()
       if (process.platform !== "darwin") {
             app.quit()
       }
 })
-
 app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
             createWindow()
       }
 })
-
 async function checkPermissions() {
       const permissions = {
             microphone: "unknown",
             screen: "unknown",
       }
-
       if (process.platform === "darwin") {
             permissions.microphone = systemPreferences.getMediaAccessStatus("microphone")
             permissions.screen = systemPreferences.getMediaAccessStatus("screen")
@@ -409,45 +349,34 @@ async function checkPermissions() {
             permissions.microphone = "granted"
             permissions.screen = "granted"
       }
-
       return permissions
 }
-
 async function requestMicrophonePermission() {
       if (process.platform === "darwin") {
             const status = systemPreferences.getMediaAccessStatus("microphone")
-
             if (status === "not-determined") {
                   const granted = await systemPreferences.askForMediaAccess("microphone")
                   return granted ? "granted" : "denied"
             }
-
             return status
       }
-
       return "granted"
 }
-
 async function requestScreenPermission() {
       if (process.platform === "darwin") {
             const status = systemPreferences.getMediaAccessStatus("screen")
-
             if (status === "not-determined" || status === "denied") {
                   try {
                         await desktopCapturer.getSources({ types: ["screen", "window"] })
                   } catch (e) {
                         console.log("Screen permission request triggered")
                   }
-
                   return systemPreferences.getMediaAccessStatus("screen")
             }
-
             return status
       }
-
       return "granted"
 }
-
 function openSystemPreferences(type) {
       if (process.platform === "darwin") {
             if (type === "microphone") {
@@ -457,12 +386,9 @@ function openSystemPreferences(type) {
             }
       }
 }
-
 ipcMain.on("record-audio", async (event, data) => {
       console.log("Record audio:", data.action)
-
       const { action } = data
-
       if (action === "start") {
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.hide()
@@ -470,20 +396,16 @@ ipcMain.on("record-audio", async (event, data) => {
             await createOnRecordingWindow()
       }
 })
-
 ipcMain.on("realtime-time-record", (event, data) => {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.webContents.send("update-record-time", data)
       }
 })
-
 ipcMain.on("recording-control", (event, data) => {
       console.log("Recording control:", data.action)
-
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send("recording-control-update", data)
       }
-
       ipcMain.on("close-overlay", () => {
             closeOnRecordingWindow()
             if (mainWindow && !mainWindow.isDestroyed()) {
@@ -491,16 +413,13 @@ ipcMain.on("recording-control", (event, data) => {
                   mainWindow.focus()
             }
       })
-
       if (data.action === "pause" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.webContents.send("recording-paused-state", { isPaused: true })
       }
-
       if (data.action === "resume" && onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.webContents.send("recording-paused-state", { isPaused: false })
       }
 })
-
 ipcMain.on("resize-recording-window", (event, { height }) => {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             const { width } = onRecordingWindow.getBounds()
@@ -508,67 +427,52 @@ ipcMain.on("resize-recording-window", (event, { height }) => {
             console.log(`Resized recording window to height: ${height}`)
       }
 })
-
 ipcMain.on("set-mic-device", (e, d) => {
       deviceId = d
       console.log("Mic changed to: ", d)
 })
-
 ipcMain.handle("set-mic-front", (e, d) => {
       return deviceId;
 })
-
 ipcMain.handle("isInitial", async (event, data) => {
       const status = await db.isAlreadyFile()
       await db.initializeDatabase()
       return status
 })
-
 ipcMain.on("step-changed", (event, data) => {
       console.log("Step changed:", data)
 })
-
 ipcMain.on("onboarding-complete", (event, data) => {
       console.log("Onboarding complete:", data)
 })
-
 ipcMain.on("request-permissions", async (event) => {
       console.log("Requesting permissions...")
-
       const micStatus = await requestMicrophonePermission()
       const screenStatus = await requestScreenPermission()
-
       const result = {
             microphone: micStatus,
             screen: screenStatus,
       }
-
       console.log("Permission results:", result)
       mainWindow.webContents.send("permissions-result", result)
 })
-
 ipcMain.handle("check-permissions", async () => {
       return await checkPermissions()
 })
-
 ipcMain.handle("request-microphone", async () => {
       return await requestMicrophonePermission()
 })
-
 ipcMain.handle("request-screen", async () => {
       return await requestScreenPermission()
 })
-
 ipcMain.handle("delete-db", async () => {
       console.log("Deleting database...")
       try {
             const result = await db.deleteDb();
-
             if (result.status === "success") {
                   setTimeout(() => {
                         app.exit();
                   }, 500);
-
                   return { success: true };
             }
             return { success: false, error: result.message };
@@ -577,20 +481,16 @@ ipcMain.handle("delete-db", async () => {
             return { success: false, error: err.message };
       }
 });
-
 ipcMain.on("open-system-preferences", (event, type) => {
       openSystemPreferences(type)
 })
-
 ipcMain.on("activate-magic-lens", async () => {
       console.log("Activate Magic Lens")
       try {
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.hide()
             }
-
             console.log("Selection Window exists:", !!selectionWindow, selectionWindow ? !selectionWindow.isDestroyed() : "N/A")
-
             if (!selectionWindow || selectionWindow.isDestroyed()) {
                   console.log("Creating new selection window...")
                   await createSelectionWindow()
@@ -601,7 +501,6 @@ ipcMain.on("activate-magic-lens", async () => {
                   const { x, y, width, height } = primaryDisplay.bounds
                   selectionWindow.setBounds({ x, y, width, height })
             }
-
             selectionWindow.show()
             selectionWindow.focus()
             console.log("Selection window should now be visible")
@@ -609,17 +508,14 @@ ipcMain.on("activate-magic-lens", async () => {
             console.error("Error in activate-magic-lens:", e)
       }
 })
-
 ipcMain.on("selection-complete", (event, selection) => {
       console.log("Selection complete:", selection)
       if (selectionWindow && !selectionWindow.isDestroyed()) {
             selectionWindow.hide()
       }
-
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send("magic-lens-selection", selection)
       }
-
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             onRecordingWindow.show()
             onRecordingWindow.focus()
@@ -628,7 +524,6 @@ ipcMain.on("selection-complete", (event, selection) => {
             createOnRecordingWindow();
       }
 })
-
 ipcMain.on("open-overlay", async () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.hide()
@@ -640,7 +535,6 @@ ipcMain.on("open-overlay", async () => {
             onRecordingWindow.focus()
       }
 })
-
 ipcMain.on("close-overlay", () => {
       closeOnRecordingWindow()
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -649,32 +543,25 @@ ipcMain.on("close-overlay", () => {
             mainWindow.focus()
       }
 })
-
 ipcMain.on("resize-recording-window", (event, { width, height }) => {
       if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
             const currentBounds = onRecordingWindow.getBounds()
             const newWidth = width || currentBounds.width
             const newHeight = height || currentBounds.height
-
             onRecordingWindow.setSize(newWidth, newHeight, true)
       }
 })
-
 ipcMain.handle("request-sizeCache", async (event) => {
       var size = await db.getSizeOfdb()
-
       var maxCacheSize = 2 * 1024 * 1024 * 1024
       var percent = (size / maxCacheSize) * 100
-
       percent = percent.toFixed(2)
       size = size.toFixed(2)
-
       var status = {
             status: "",
             percent,
             size,
       }
-
       if (percent > 100) {
             status.status = "danger"
       } else if (percent >= 50 && percent <= 70) {
@@ -682,20 +569,16 @@ ipcMain.handle("request-sizeCache", async (event) => {
       } else {
             status.status = "emerald"
       }
-
       console.log(status)
       return status
 })
-
 ipcMain.handle("get-screen-sources", async () => {
       try {
             const sources = await desktopCapturer.getSources({
                   types: ["screen", "window"],
                   thumbnailSize: { width: 150, height: 150 },
             })
-
             console.log("Sources:", sources)
-
             return sources.map(source => ({
                   id: source.id,
                   name: source.name,
@@ -706,11 +589,9 @@ ipcMain.handle("get-screen-sources", async () => {
             return []
       }
 })
-
 ipcMain.on("app-minimize", () => {
       mainWindow?.minimize()
 })
-
 ipcMain.on("app-maximize", () => {
       if (mainWindow?.isMaximized()) {
             mainWindow.unmaximize()
@@ -718,23 +599,19 @@ ipcMain.on("app-maximize", () => {
             mainWindow?.maximize()
       }
 })
-
 ipcMain.on("app-close", () => {
       mainWindow?.close()
 })
-
 ipcMain.handle("get-settings", async () => {
       return {
             language: "en",
             theme: "dark",
       }
 })
-
 ipcMain.handle("save-settings", async (event, settings) => {
       console.log("Saving settings:", settings)
       return true
 })
-
 ipcMain.handle("get-system-info", async () => {
       return {
             platform: process.platform,

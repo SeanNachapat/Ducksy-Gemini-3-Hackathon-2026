@@ -5,9 +5,7 @@ const db = require("./utils/db");
 const { getSessionData } = require("./utils/sessionHelper");
 const { transcribeAudio, analyzeImage, chatWithSession, getMetrics } = require("./utils/geminiApi");
 require("dotenv").config();
-
 const SERVER_URL = 'https://ducksy-gemini-3-hackathon-2026.onrender.com';
-
 async function openOAuthWindow(authUrl, provider) {
       return new Promise((resolve, reject) => {
             const authWindow = new BrowserWindow({
@@ -20,25 +18,17 @@ async function openOAuthWindow(authUrl, provider) {
                         contextIsolation: true
                   }
             });
-
             authWindow.loadURL(authUrl);
-
-            // Intercept navigation to catch the callback
             authWindow.webContents.on('will-redirect', async (event, url) => {
                   console.log('OAuth redirect:', url);
-
-                  // Check if this is our callback URL with ducksy:// or token_id
                   if (url.includes('token_id=') || url.startsWith('ducksy://')) {
                         event.preventDefault();
-
                         try {
                               const parsed = new URL(url.startsWith('ducksy://') ? url : url);
                               const tokenId = parsed.searchParams.get('token_id');
-
                               if (tokenId) {
                                     console.log('Fetching token with ID:', tokenId);
                                     const response = await fetch(`${SERVER_URL}/auth/token/${tokenId}`);
-
                                     if (response.ok) {
                                           const tokenData = await response.json();
                                           await db.saveMcpCredential(
@@ -50,12 +40,9 @@ async function openOAuthWindow(authUrl, provider) {
                                                 JSON.stringify(tokenData)
                                           );
                                           console.log('OAuth token saved for', provider);
-
-                                          // Notify main window
                                           if (mainWindow && !mainWindow.isDestroyed()) {
                                                 mainWindow.webContents.send('mcp-auth-success', { provider });
                                           }
-
                                           resolve({ success: true });
                                     } else {
                                           reject(new Error('Failed to fetch token'));
@@ -69,25 +56,20 @@ async function openOAuthWindow(authUrl, provider) {
                         }
                   }
             });
-
             authWindow.on('closed', () => {
                   resolve({ success: false, cancelled: true });
             });
       });
 }
-
 let mainWindow = null;
 let onRecordingWindow = null;
 let latestFileId = null;
-
 const setMainWindow = (window) => {
       mainWindow = window;
 };
-
 const setOnRecordingWindow = (window) => {
       onRecordingWindow = window;
 };
-
 const processTranscription = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
       try {
             const transcription = await db.getTranscriptionByFileId(fileId);
@@ -97,26 +79,21 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         status: "processing"
                   });
             }
-
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "processing"
                   });
             }
-
             if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                   onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "processing"
                   });
             }
-
             const audioBuffer = fs.readFileSync(filePath);
             const base64Audio = audioBuffer.toString("base64");
-
             const result = await transcribeAudio(base64Audio, mimeType, null, userLanguage, settings);
-
             const updatedTranscription = await db.getTranscriptionByFileId(fileId);
             if (updatedTranscription) {
                   await db.updateTranscription({
@@ -130,13 +107,11 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         details: result.details,
                         calendarEvent: result.calendarEvent
                   });
-
                   await db.updateFile({
                         id: fileId,
                         title: result.title
                   });
             }
-
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -146,7 +121,6 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         calendarEvent: result.calendarEvent
                   });
             }
-
             if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                   onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -156,11 +130,9 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         calendarEvent: result.calendarEvent
                   });
             }
-
             console.log(`Transcription completed for file ${fileId}`);
       } catch (error) {
             console.error(`Transcription failed for file ${fileId}:`, error);
-
             const transcription = await db.getTranscriptionByFileId(fileId);
             if (transcription) {
                   await db.updateTranscription({
@@ -168,7 +140,6 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         status: "failed"
                   });
             }
-
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -176,7 +147,6 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
                         error: error.message
                   });
             }
-
             if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                   onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -186,7 +156,6 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
             }
       }
 };
-
 const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
       try {
             const transcription = await db.getTranscriptionByFileId(fileId);
@@ -196,31 +165,25 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         status: "processing"
                   });
             }
-
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "processing"
                   });
             }
-
             if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                   onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
                         status: "processing"
                   });
             }
-
             const imageBuffer = fs.readFileSync(filePath);
             const base64Image = imageBuffer.toString("base64");
-
             const fileRec = await db.getFileById(fileId);
             const metadata = fileRec && fileRec.metadata ? JSON.parse(fileRec.metadata) : null;
-
             console.log(`Starting image analysis for file ${fileId}...`);
             const result = await analyzeImage(base64Image, mimeType, null, null, metadata, userLanguage, settings);
             console.log(`Image analysis result received for file ${fileId}`);
-
             const updatedTranscription = await db.getTranscriptionByFileId(fileId);
             if (updatedTranscription) {
                   await db.updateTranscription({
@@ -234,13 +197,11 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         details: result.details,
                         calendarEvent: result.calendarEvent
                   });
-
                   await db.updateFile({
                         id: fileId,
                         title: result.title
                   });
             }
-
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -250,7 +211,6 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         calendarEvent: result.calendarEvent
                   });
             }
-
             if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                   onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -260,11 +220,9 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         calendarEvent: result.calendarEvent
                   });
             }
-
             console.log(`Image analysis completed for file ${fileId}`);
       } catch (error) {
             console.error(`Image analysis failed for file ${fileId}:`, error);
-
             const transcription = await db.getTranscriptionByFileId(fileId);
             if (transcription) {
                   await db.updateTranscription({
@@ -272,7 +230,6 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         status: "failed"
                   });
             }
-
             if (mainWindow && !mainWindow.isDestroyed()) {
                   mainWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -280,7 +237,6 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
                         error: error.message
                   });
             }
-
             if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                   onRecordingWindow.webContents.send("transcription-updated", {
                         fileId: fileId,
@@ -290,7 +246,6 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
             }
       }
 };
-
 const registerIpcHandlers = () => {
       ipcMain.handle("get-session-logs", async () => {
             try {
@@ -301,21 +256,18 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message, data: [] };
             }
       });
-
       ipcMain.handle("get-session", async (event, { fileId }) => {
             try {
                   const file = await db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "Session not found" };
                   }
-
                   let details = {};
                   try {
                         details = file.transcriptionDetails ? JSON.parse(file.transcriptionDetails) : {};
                   } catch (e) {
                         details = {};
                   }
-
                   const session = {
                         id: file.id,
                         fileId: file.id,
@@ -339,18 +291,15 @@ const registerIpcHandlers = () => {
                         mimeType: file.type,
                         createdAt: file.createdAt
                   };
-
                   return { success: true, data: session };
             } catch (err) {
                   console.error("Failed to get session:", err);
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("delete-session", async (event, { fileId }) => {
             try {
                   const file = await db.getFileById(fileId);
-
                   if (file) {
                         if (file.path && fs.existsSync(file.path)) {
                               fs.unlinkSync(file.path);
@@ -359,40 +308,31 @@ const registerIpcHandlers = () => {
                         await db.deleteFile(fileId);
                         console.log(`Deleted session: ${fileId}`);
                   }
-
                   return { success: true };
             } catch (err) {
                   console.error("Failed to delete session:", err);
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("save-audio-file", async (event, data) => {
             const { buffer, mimeType, duration, mode = "lens", title = "", userLanguage = "en", settings = {} } = data;
-
             try {
                   const ext = mimeType.includes("mp4")
                         ? "m4a"
                         : mimeType.includes("ogg")
                               ? "ogg"
                               : "webm";
-
                   const timestamp = Date.now();
                   const fileName = `recording_${timestamp}.${ext}`;
                   const fileNameWithoutExt = `recording_${timestamp}`;
-
                   const savePath = path.join(app.getPath("userData"), "recordings");
-
                   if (!fs.existsSync(savePath)) {
                         fs.mkdirSync(savePath, { recursive: true });
                   }
-
                   const filePath = path.join(savePath, fileName);
                   const audioBuffer = Buffer.from(buffer, "base64");
                   fs.writeFileSync(filePath, audioBuffer);
-
                   console.log(`Audio saved: ${filePath} (${duration}s)`);
-
                   if (duration < 5) {
                         try {
                               fs.unlinkSync(filePath);
@@ -405,7 +345,6 @@ const registerIpcHandlers = () => {
                               isShort: true
                         };
                   }
-
                   const fileResult = await db.createFile({
                         title: title || `Recording ${new Date().toLocaleString()}`,
                         mode: mode,
@@ -417,10 +356,8 @@ const registerIpcHandlers = () => {
                         isAnalyzed: 0,
                         duration: duration
                   });
-
                   const fileId = fileResult.lastID;
                   latestFileId = fileId;
-
                   await db.createTranscription({
                         fileId: fileId,
                         type: "summary",
@@ -433,7 +370,6 @@ const registerIpcHandlers = () => {
                         calendarEventId: null,
                         notionPageId: null
                   });
-
                   if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send("recording-saved", {
                               fileId: fileId,
@@ -441,7 +377,6 @@ const registerIpcHandlers = () => {
                               fileName: fileName
                         });
                   }
-
                   if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                         onRecordingWindow.webContents.send("recording-saved", {
                               fileId: fileId,
@@ -449,9 +384,7 @@ const registerIpcHandlers = () => {
                               fileName: fileName
                         });
                   }
-
                   processTranscription(fileId, filePath, mimeType, userLanguage, settings);
-
                   return {
                         success: true,
                         fileId: fileId,
@@ -468,31 +401,23 @@ const registerIpcHandlers = () => {
                   };
             }
       });
-
       ipcMain.handle("save-image-file", async (event, data) => {
             const { buffer, mimeType, width, height, title, mode = "lens", selection, userLanguage = "en", settings = {} } = data;
-
             try {
                   const timestamp = Date.now();
                   const fileName = `capture_${timestamp}.png`;
                   const fileNameWithoutExt = `capture_${timestamp}`;
-
                   const savePath = path.join(app.getPath("userData"), "captures");
-
                   if (!fs.existsSync(savePath)) {
                         fs.mkdirSync(savePath, { recursive: true });
                   }
-
                   const filePath = path.join(savePath, fileName);
-
                   let base64Data = buffer;
                   if (typeof buffer === 'string' && buffer.startsWith('data:')) {
                         base64Data = buffer.replace(/^data:image\/\w+;base64,/, "");
                   }
-
                   const imageBuffer = Buffer.from(base64Data, "base64");
                   fs.writeFileSync(filePath, imageBuffer);
-
                   const fileResult = await db.createFile({
                         title: title || `Capture ${new Date(timestamp).toLocaleString()}`,
                         mode: mode,
@@ -505,10 +430,8 @@ const registerIpcHandlers = () => {
                         duration: 0,
                         metadata: selection || {}
                   });
-
                   const fileId = fileResult.lastID;
                   latestFileId = fileId;
-
                   await db.createTranscription({
                         fileId: fileId,
                         status: "pending",
@@ -521,23 +444,18 @@ const registerIpcHandlers = () => {
                         calendarEventId: null,
                         notionPageId: null
                   });
-
                   const notificationData = {
                         fileId: fileId,
                         filePath: filePath,
                         fileName: fileName
                   };
-
                   if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send("recording-saved", notificationData);
                   }
-
                   if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                         onRecordingWindow.webContents.send("recording-saved", notificationData);
                   }
-
                   processImageAnalysis(fileId, filePath, mimeType || "image/png", userLanguage, settings);
-
                   return {
                         success: true,
                         fileId: fileId,
@@ -550,14 +468,11 @@ const registerIpcHandlers = () => {
       });
       ipcMain.handle("update-transcription", async (event, data) => {
             const { fileId, type, title, summary, content, language, status, details } = data;
-
             try {
                   const transcription = await db.getTranscriptionByFileId(fileId);
-
                   if (!transcription) {
                         return { success: false, error: "Transcription not found" };
                   }
-
                   await db.updateTranscription({
                         id: transcription.id,
                         type: type,
@@ -568,14 +483,12 @@ const registerIpcHandlers = () => {
                         status: status,
                         details: details
                   });
-
                   if (title) {
                         await db.updateFile({
                               id: fileId,
                               title: title
                         });
                   }
-
                   if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send("transcription-updated", {
                               fileId: fileId,
@@ -584,37 +497,30 @@ const registerIpcHandlers = () => {
                               details: details
                         });
                   }
-
                   return { success: true };
             } catch (err) {
                   console.error("Failed to update transcription:", err);
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("confirm-action-item", async (event, { fileId, index, eventDetails }) => {
             try {
                   const transcription = await db.getTranscriptionByFileId(fileId);
                   if (!transcription) {
                         return { success: false, error: "Transcription not found" };
                   }
-
                   let details = {};
                   try {
                         details = transcription.details ? JSON.parse(transcription.details) : {};
                   } catch (e) {
                         details = {};
                   }
-
                   if (!details.actionItems || !Array.isArray(details.actionItems)) {
                         return { success: false, error: "No action items found" };
                   }
-
                   if (index < 0 || index >= details.actionItems.length) {
                         return { success: false, error: "Invalid action item index" };
                   }
-
-                  // Migrate string to object if needed
                   let item = details.actionItems[index];
                   if (typeof item === 'string') {
                         item = {
@@ -628,15 +534,11 @@ const registerIpcHandlers = () => {
                         item.confirmed = true;
                         item.calendarEvent = eventDetails;
                   }
-
                   details.actionItems[index] = item;
-
                   await db.updateTranscription({
                         id: transcription.id,
                         details: details
                   });
-
-                  // Notify frontend
                   if (mainWindow && !mainWindow.isDestroyed()) {
                         mainWindow.webContents.send("transcription-updated", {
                               fileId: fileId,
@@ -645,15 +547,12 @@ const registerIpcHandlers = () => {
                               details: details
                         });
                   }
-
                   return { success: true };
             } catch (err) {
                   console.error("Failed to confirm action item:", err);
                   return { success: false, error: err.message };
             }
-
       });
-
       ipcMain.handle("get-all-files", async () => {
             try {
                   const files = await db.getAllFiles();
@@ -663,7 +562,6 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message, data: [] };
             }
       });
-
       ipcMain.handle("get-db-size", async () => {
             try {
                   const size = await db.getSizeOfdb();
@@ -673,14 +571,12 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en", settings = {} }) => {
             try {
                   const file = await db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "File not found" };
                   }
-
                   const transcription = await db.getTranscriptionByFileId(fileId);
                   if (transcription) {
                         await db.updateTranscription({
@@ -688,31 +584,26 @@ const registerIpcHandlers = () => {
                               status: "processing"
                         });
                   }
-
                   console.log(`Retrying transcription for file: ${fileId}`);
                   if (file.type && file.type.startsWith("image/")) {
                         processImageAnalysis(fileId, file.path, file.type, userLanguage, settings);
                   } else {
                         processTranscription(fileId, file.path, file.type, userLanguage, settings);
                   }
-
                   return { success: true };
             } catch (err) {
                   console.error("Failed to retry transcription:", err);
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("chat-session", async (event, { fileId, message, settings = {} }) => {
             try {
                   const file = await db.getFileById(fileId);
                   if (!file) {
                         return { success: false, error: "Session not found" };
                   }
-
                   let chatHistory = [];
                   const transcription = await db.getTranscriptionByFileId(fileId);
-
                   if (transcription && transcription.chatHistory && transcription.chatHistory !== '[]') {
                         try {
                               chatHistory = JSON.parse(transcription.chatHistory);
@@ -720,60 +611,44 @@ const registerIpcHandlers = () => {
                               chatHistory = [];
                         }
                   }
-
                   let details = {};
                   try {
                         details = transcription.details ? JSON.parse(transcription.details) : {};
                   } catch (e) { }
-
                   const context = {
                         title: transcription.title,
                         summary: transcription.summary,
                         content: transcription.content,
                         details: details
                   };
-
                   const responseText = await chatWithSession(context, chatHistory, message, null, settings);
-
-                  // Check for tool call in response
                   const toolCallRegex = /```json\s*({[\s\S]*?"tool":\s*"addActionItem"[\s\S]*?})\s*```/;
                   const match = responseText.match(toolCallRegex);
                   let finalResponse = responseText;
-
                   if (match) {
                         try {
                               const toolCall = JSON.parse(match[1]);
                               if (toolCall.params) {
                                     console.log("Processing addActionItem tool call:", toolCall.params);
-
-                                    // Get current session details
                                     let currentDetails = {};
                                     try {
                                           currentDetails = transcription.details ? JSON.parse(transcription.details) : {};
                                     } catch (e) { }
-
                                     const currentActionItems = currentDetails.actionItems || [];
-
-                                    // Add new action item
                                     const newItem = {
                                           text: toolCall.params.text,
                                           type: toolCall.params.type || 'task',
                                           isActionable: true,
                                           calendarEvent: toolCall.params.calendarEvent
                                     };
-
-                                    // Update DB
                                     const updatedDetails = {
                                           ...currentDetails,
                                           actionItems: [...currentActionItems, newItem]
                                     };
-
                                     await db.updateTranscription({
                                           id: transcription.id,
                                           details: JSON.stringify(updatedDetails)
                                     });
-
-                                    // Notify frontend
                                     if (mainWindow && !mainWindow.isDestroyed()) {
                                           mainWindow.webContents.send("transcription-updated", {
                                                 fileId: fileId,
@@ -781,8 +656,6 @@ const registerIpcHandlers = () => {
                                                 details: updatedDetails
                                           });
                                     }
-
-                                    // Also notify recording window if open
                                     if (onRecordingWindow && !onRecordingWindow.isDestroyed()) {
                                           onRecordingWindow.webContents.send("transcription-updated", {
                                                 fileId: fileId,
@@ -790,58 +663,47 @@ const registerIpcHandlers = () => {
                                                 details: updatedDetails
                                           });
                                     }
-
-                                    // Clean up response to remove the JSON block
                                     finalResponse = responseText.replace(match[0], '').trim();
                               }
                         } catch (e) {
                               console.error("Failed to process tool call:", e);
                         }
                   }
-
                   const newHistory = [
                         ...chatHistory,
                         { role: 'user', content: message, timestamp: Date.now() },
                         { role: 'model', content: finalResponse, timestamp: Date.now() }
                   ];
-
                   await db.updateTranscription({
                         id: transcription.id,
                         chatHistory: JSON.stringify(newHistory)
                   });
-
                   return { success: true, response: finalResponse, history: newHistory };
-
             } catch (err) {
                   console.error("Chat session error:", err);
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("get-latest-file", async () => {
             if (!latestFileId) {
                   return { success: false, error: "No active file" };
             }
             return await getSessionData(latestFileId);
       });
-
       ipcMain.handle("read-file-as-base64", async (event, { filePath, mimeType }) => {
             try {
                   if (!filePath || !fs.existsSync(filePath)) {
                         return { success: false, error: "File not found" };
                   }
-
                   const buffer = fs.readFileSync(filePath);
                   const base64 = buffer.toString("base64");
                   const dataUrl = `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
-
                   return { success: true, dataUrl };
             } catch (err) {
                   console.error("Failed to read file as base64:", err);
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("get-system-metrics", async () => {
             try {
                   const metrics = await getMetrics();
@@ -851,13 +713,11 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.on("open-external", (event, url) => {
             if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
                   shell.openExternal(url);
             }
       });
-
       ipcMain.handle("mcp-get-status", async () => {
             try {
                   const google = await db.getMcpCredential("google_calendar");
@@ -871,15 +731,12 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("mcp-open-google-auth", async () => {
             return openOAuthWindow(`${SERVER_URL}/auth/google`, 'google_calendar');
       });
-
       ipcMain.handle("mcp-open-notion-auth", async () => {
             return openOAuthWindow(`${SERVER_URL}/auth/notion`, 'notion');
       });
-
       ipcMain.handle("mcp-disconnect", async (event, { provider }) => {
             try {
                   await db.deleteMcpCredential(provider);
@@ -888,14 +745,12 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("calendar-create-event", async (event, { title, description, startTime, endTime }) => {
             try {
                   const credential = await db.getMcpCredential('google_calendar');
                   if (!credential || !credential.access_token) {
                         return { success: false, error: 'Google Calendar not connected' };
                   }
-
                   const response = await fetch(`${SERVER_URL}/calendar/create`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -908,26 +763,21 @@ const registerIpcHandlers = () => {
                               refreshToken: credential.refresh_token
                         })
                   });
-
                   const data = await response.json();
                   if (!response.ok) {
                         throw new Error(data.error || 'Failed to create event');
                   }
-
                   return { success: true, eventLink: data.eventLink };
             } catch (err) {
                   console.error('Calendar create error:', err);
                   return { success: false, error: err.message };
             }
       });
-
       ipcMain.handle("calendar-dismiss-event", async (event, { fileId, index }) => {
             try {
                   const transcription = await db.getTranscriptionByFileId(fileId);
                   console.log(`[Dismiss] Processing fileId: ${fileId}, item index: ${index}. Transcription found: ${!!transcription}`);
-
                   if (!transcription) return { success: false, error: 'Transcription not found' };
-
                   let calendarEvent = {};
                   let details = {};
                   try {
@@ -939,13 +789,9 @@ const registerIpcHandlers = () => {
                         details = {};
                         console.error(`[Dismiss] Parse error:`, e);
                   }
-
-                  // 1. Mark main calendar event as dismissed (only if no index provided or if it's the root event)
                   if (index === undefined || index === -1) {
                         calendarEvent.dismissed = true;
                   }
-
-                  // 2. Mark specific action item as dismissed
                   if (details.actionItems && Array.isArray(details.actionItems)) {
                         if (index !== undefined && index >= 0 && index < details.actionItems.length) {
                               details.actionItems[index] = {
@@ -953,16 +799,12 @@ const registerIpcHandlers = () => {
                                     dismissed: true,
                                     confirmed: false
                               };
-
-                              // If this was an event and matches the main root event, dismiss that too
                               if (details.actionItems[index].calendarEvent && calendarEvent.detected) {
-                                    // Simplified check: if titles match or if it's the only one
                                     if (details.actionItems[index].calendarEvent.title === calendarEvent.title) {
                                           calendarEvent.dismissed = true;
                                     }
                               }
                         } else {
-                              // Fallback: dismiss all items with calendar events (legacy/catch-all)
                               details.actionItems = details.actionItems.map(item => {
                                     if (typeof item === 'object' && item !== null && item.calendarEvent) {
                                           return { ...item, dismissed: true, confirmed: false };
@@ -971,17 +813,13 @@ const registerIpcHandlers = () => {
                               });
                         }
                   }
-
                   console.log(`[Dismiss] Updating transcription ${transcription.id} with dismissed=true`);
-
                   await db.updateTranscription({
                         id: transcription.id,
                         calendarEvent: calendarEvent,
                         details: details
                   });
-
                   console.log(`[Dismiss] Update complete`);
-
                   if (mainWindow) {
                         mainWindow.webContents.send("transcription-updated", {
                               fileId: fileId,
@@ -989,14 +827,12 @@ const registerIpcHandlers = () => {
                               details: details
                         });
                   }
-
                   return { success: true };
             } catch (err) {
                   return { success: false, error: err.message };
             }
       });
 };
-
 module.exports = {
       registerIpcHandlers,
       setMainWindow,
