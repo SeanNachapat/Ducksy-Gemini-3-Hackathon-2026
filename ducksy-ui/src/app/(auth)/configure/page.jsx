@@ -88,8 +88,6 @@ export default function ConfigurePage() {
 
     useEffect(() => {
         if (activeSection === "connections") {
-            // Determine server URL based on environment
-            // Note: In Next.js, NODE_ENV is available at build time/runtime
             const isProd = process.env.NODE_ENV === 'production';
             const serverUrl = isProd
                 ? "https://ducksy-gemini-3-hackathon-2026.onrender.com"

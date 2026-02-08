@@ -22,7 +22,6 @@ const getOutputLanguage = (langCode) => LANGUAGE_NAMES[langCode] || 'English';
 const getPersonaInstructions = (settings = {}) => {
       const personality = settings.personality ?? 50;
       const responses = settings.responses ?? 50;
-      const voice = settings.voice || 'alloy';
 
       let styleInstruction = "Tone: Professional and balanced.";
       if (personality < 30) styleInstruction = "Tone: Strict, formal, and objective.";
@@ -32,21 +31,7 @@ const getPersonaInstructions = (settings = {}) => {
       if (responses < 30) lengthInstruction = "Response Style: Extremely concise and to the point.";
       else if (responses > 70) lengthInstruction = "Response Style: Detailed, comprehensive, and verbose.";
 
-      let voiceInstruction = "";
-      switch (voice) {
-            case 'echo':
-                  voiceInstruction = "Voice Personality: Warm, resonant, and thoughtful. Use reflective language.";
-                  break;
-            case 'shimmer':
-                  voiceInstruction = "Voice Personality: Bright, energetic, and expressive. Use vivid and positive language.";
-                  break;
-            case 'alloy':
-            default:
-                  voiceInstruction = "Voice Personality: Neutral, versatile, and clear. Focus on clarity.";
-                  break;
-      }
-
-      return `PERSONA SETTINGS:\n${styleInstruction}\n${lengthInstruction}\n${voiceInstruction}`;
+      return `PERSONA SETTINGS:\n${styleInstruction}\n${lengthInstruction}\n`;
 };
 
 const getCommonLanguageInstructions = (outputLanguage) => `
