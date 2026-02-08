@@ -589,7 +589,7 @@ export default function ConfigurePage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="md:col-span-2 bg-gradient-to-br from-neutral-900/40 to-neutral-900/20 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
+                                    <div className="md:col-span-2 bg-linear-to-br from-neutral-900/40 to-neutral-900/20 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between">
                                         <div className="flex items-center gap-6">
                                             <div className="w-24 h-24 rounded-2xl flex items-center justify-center">
                                                 <img src="/ducksy-logo.svg" alt="Ducksy Logo" className="w-full h-full object-contain" />
@@ -620,7 +620,7 @@ export default function ConfigurePage() {
                                         </div>
                                     </Link>
 
-                                    <Link href="#" className="group bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-4 hover:bg-white/5 hover:border-white/10 transition-all">
+                                    <Link href="https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/issues" target="_blank" className="group bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-4 hover:bg-white/5 hover:border-white/10 transition-all">
                                         <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform">
                                             <Bug className="w-5 h-5" />
                                         </div>
@@ -635,7 +635,7 @@ export default function ConfigurePage() {
                                             onClick={() => setShowBuilders(!showBuilders)}
                                             className="w-full group relative overflow-hidden bg-neutral-900/40 border border-white/5 p-8 rounded-3xl backdrop-blur-sm flex items-center justify-between hover:border-amber-500/30 transition-all text-left"
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                                            <div className="absolute inset-0 bg-linear-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
                                             <div className="flex items-center gap-4 relative z-10">
                                                 <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500 group-hover:text-amber-400 transition-colors">

@@ -25,7 +25,8 @@ import {
       ExternalLink,
       Loader2,
       RefreshCw,
-      Plus
+      Plus,
+      Upload
 } from "lucide-react"
 import Link from "next/link"
 import { useSettings } from "@/hooks/SettingsContext"
@@ -125,6 +126,9 @@ export default function DashboardPage() {
       const [selectedSession, setSelectedSession] = useState(null)
       const [micDevice, setMicDevice] = useState(null)
       const [isDeleting, setIsDeleting] = useState(false)
+      const [isDragging, setIsDragging] = useState(false)
+      const [isProcessingFile, setIsProcessingFile] = useState(false)
+      const fileInputRef = useRef(null)
       const [showCalendarModal, setShowCalendarModal] = useState(false)
       const [eventDate, setEventDate] = useState('')
       const [eventTime, setEventTime] = useState('')
@@ -135,7 +139,6 @@ export default function DashboardPage() {
 
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
 
-      // Flatten and extract all AI-detected calendar events from actionItems
       const suggestedEvents = sessionLogs.reduce((acc, log) => {
             if (log.transcriptionStatus !== 'completed' || !log.details?.actionItems) return acc;
 
@@ -181,7 +184,6 @@ export default function DashboardPage() {
             try {
                   const result = await window.electron.invoke('calendar-create-event', eventDetails)
                   if (result.success) {
-                        // Check if this was an action item confirmation
                         if (editingEvent.actionItemIndex !== undefined) {
                               try {
                                     await window.electron.invoke('confirm-action-item', {
@@ -293,7 +295,6 @@ export default function DashboardPage() {
             window.electron.receive('transcription-updated', handleTranscriptionUpdate);
 
             return () => {
-                  // Assuming removeAllListeners or similar cleanup if available, or just rely on component unmount
                   if (window.electron.removeAllListeners) {
                         window.electron.removeAllListeners('transcription-updated');
                   }
@@ -363,6 +364,91 @@ export default function DashboardPage() {
                         return null
             }
       }
+
+      const handleDrop = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+
+            const files = e.dataTransfer.files;
+            if (files.length === 0) return;
+
+            processFile(files[0]);
+      };
+
+      const handleDragOver = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(true);
+      };
+
+      const handleDragLeave = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+      };
+
+      const handleFileSelect = (e) => {
+            const files = e.target.files;
+            if (files.length === 0) return;
+            processFile(files[0]);
+      };
+
+      const processFile = async (file) => {
+            const mimeType = file.type;
+            const isAudio = mimeType.startsWith('audio/');
+            const isImage = mimeType.startsWith('image/');
+
+            if (!isAudio && !isImage) {
+                  console.warn('Unsupported file type:', mimeType);
+                  return;
+            }
+
+            setIsProcessingFile(true);
+
+            try {
+                  const arrayBuffer = await file.arrayBuffer();
+                  const uint8Array = new Uint8Array(arrayBuffer);
+                  let binary = '';
+                  const chunkSize = 8192;
+                  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                        const chunk = uint8Array.subarray(i, i + chunkSize);
+                        binary += String.fromCharCode.apply(null, chunk);
+                  }
+                  const base64 = btoa(binary);
+
+                  const storedSettings = localStorage.getItem('ducksy-settings');
+                  const settings = storedSettings ? JSON.parse(storedSettings) : {};
+
+                  if (typeof window !== 'undefined' && window.electron) {
+                        if (isAudio) {
+                              const result = await window.electron.invoke('save-audio-file', {
+                                    audioData: base64,
+                                    mimeType: mimeType,
+                                    settings: settings
+                              });
+                              console.log('Audio file saved:', result);
+                              if (result.success) {
+                                    setTimeout(refetch, 2000);
+                              }
+                        } else if (isImage) {
+                              const result = await window.electron.invoke('save-image-file', {
+                                    buffer: base64,
+                                    mimeType: mimeType,
+                                    settings: settings
+                              });
+                              console.log('Image file saved:', result);
+                              if (result.success) {
+                                    setTimeout(refetch, 2000);
+                              }
+                        }
+                  }
+            } catch (err) {
+                  console.error('Error processing file:', err);
+            } finally {
+                  setIsProcessingFile(false);
+            }
+      };
 
       return (
             <div className="flex h-full w-full relative bg-neutral-950 text-white font-sans overflow-hidden selection:bg-amber-500/30">
@@ -442,7 +528,7 @@ export default function DashboardPage() {
                         <div className="flex-1 overflow-hidden p-8">
                               <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
 
-                                    <div className="lg:col-span-4 flex flex-col gap-6">
+                                    <div className="lg:col-span-4 flex flex-col gap-6 h-full">
 
                                           <motion.button
                                                 whileHover={{ scale: 1.01, backgroundColor: "rgb(251 191 36)" }}
@@ -466,9 +552,9 @@ export default function DashboardPage() {
                                                 </div>
                                           </motion.button>
 
-                                          <div className="bg-neutral-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-sm flex flex-col gap-6">
+                                          <div className="bg-neutral-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-sm flex flex-col gap-6 flex-1">
 
-                                                <div>
+                                                <div className="flex flex-col flex-1">
                                                       <div className="flex items-center justify-between mb-4">
                                                             <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest">{t.dashboardPage.upNext}</h2>
                                                             <Calendar className="w-4 h-4 text-neutral-600" />
@@ -493,6 +579,45 @@ export default function DashboardPage() {
                                                             ) : (
                                                                   <div className="text-xs text-neutral-500 italic p-4 text-center border border-white/5 rounded-2xl bg-white/5">
                                                                         {t.dashboardPage?.noUpcomingEvents || "No new events detected"}
+                                                                  </div>
+                                                            )}
+                                                      </div>
+
+                                                      <div
+                                                            className={`mt-auto border-2 border-dashed rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative overflow-hidden group/dropzone
+                                                            ${isDragging
+                                                                        ? 'border-amber-500 bg-amber-500/10'
+                                                                        : 'border-white/10 bg-white/2 hover:border-amber-500/30 hover:bg-amber-500/5'
+                                                                  }`}
+                                                            onDrop={handleDrop}
+                                                            onDragOver={handleDragOver}
+                                                            onDragLeave={handleDragLeave}
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                      >
+                                                            <input
+                                                                  type="file"
+                                                                  ref={fileInputRef}
+                                                                  className="hidden"
+                                                                  onChange={handleFileSelect}
+                                                                  accept="audio/*,image/*"
+                                                            />
+
+                                                            {isProcessingFile ? (
+                                                                  <div className="flex flex-col items-center py-2">
+                                                                        <Loader2 className="w-6 h-6 text-amber-500 animate-spin mb-2" />
+                                                                        <span className="text-xs text-amber-500 font-medium animate-pulse">Processing file...</span>
+                                                                  </div>
+                                                            ) : (
+                                                                  <div className="flex flex-col items-center py-1">
+                                                                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mb-2 group-hover/dropzone:scale-110 transition-transform text-neutral-400 group-hover/dropzone:text-amber-500">
+                                                                              <Upload className="w-5 h-5" strokeWidth={1.5} />
+                                                                        </div>
+                                                                        <span className="text-xs text-neutral-400 font-medium group-hover/dropzone:text-neutral-200 transition-colors">
+                                                                              Drop audio or image here
+                                                                        </span>
+                                                                        <span className="text-[10px] text-neutral-600 mt-0.5">
+                                                                              or click to browse
+                                                                        </span>
                                                                   </div>
                                                             )}
                                                       </div>
@@ -742,7 +867,6 @@ export default function DashboardPage() {
                                                                                                 const getStatus = (item) => {
                                                                                                       const isPast = item.calendarEvent?.dateTime && new Date(item.calendarEvent.dateTime) < new Date();
                                                                                                       const isDismissed = item.dismissed;
-                                                                                                      // 0: Active/Pending, 1: Inactive (Dismissed/Past)
                                                                                                       return (isDismissed || isPast) ? 1 : 0;
                                                                                                 };
 
@@ -751,17 +875,12 @@ export default function DashboardPage() {
 
                                                                                                 if (statusA !== statusB) return statusA - statusB;
 
-                                                                                                // Secondary sort: Date (Ascending)
-                                                                                                const dateA = a.calendarEvent?.dateTime ? new Date(a.calendarEvent.dateTime) : new Date(8640000000000000); // No date = far future
+                                                                                                const dateA = a.calendarEvent?.dateTime ? new Date(a.calendarEvent.dateTime) : new Date(8640000000000000);
                                                                                                 const dateB = b.calendarEvent?.dateTime ? new Date(b.calendarEvent.dateTime) : new Date(8640000000000000);
                                                                                                 return dateA - dateB;
                                                                                           });
 
                                                                                           return sortedItems.map((item, i) => {
-                                                                                                // Note: 'i' here is the index in the SORTED list. 
-                                                                                                // We need to find the ORIGINAL index for callbacks if they rely on index.
-                                                                                                // However, the previous code used 'i' for 'actionItemIndex'.
-                                                                                                // We must ensure 'actionItemIndex' corresponds to the index in the original 'selectedSession.details.actionItems' array.
                                                                                                 const originalIndex = items.indexOf(item);
 
                                                                                                 const isObject = typeof item === 'object' && item !== null;
@@ -795,14 +914,12 @@ export default function DashboardPage() {
 
                                                                                                                               let eventData = {};
 
-                                                                                                                              // Use the specific calendar event data if available on the item
                                                                                                                               if (item.calendarEvent) {
                                                                                                                                     eventData = {
                                                                                                                                           ...item.calendarEvent,
                                                                                                                                           detected: true
                                                                                                                                     };
                                                                                                                               } else {
-                                                                                                                                    // Fallback default: 1 hour from now
                                                                                                                                     const now = new Date()
                                                                                                                                     now.setHours(now.getHours() + 1)
                                                                                                                                     eventData = {
