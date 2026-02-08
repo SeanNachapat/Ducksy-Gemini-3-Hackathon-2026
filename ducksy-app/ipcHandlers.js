@@ -78,7 +78,6 @@ async function openOAuthWindow(authUrl, provider) {
 
 let mainWindow = null;
 let onRecordingWindow = null;
-let geminiApiKey = process.env.GEMINI_API_KEY;
 let latestFileId = null;
 
 const setMainWindow = (window) => {
@@ -90,18 +89,6 @@ const setOnRecordingWindow = (window) => {
 };
 
 const processTranscription = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
-      if (!geminiApiKey) {
-            console.error("Gemini API key not set");
-            const transcription = await db.getTranscriptionByFileId(fileId);
-            if (transcription) {
-                  await db.updateTranscription({
-                        id: transcription.id,
-                        status: "failed"
-                  });
-            }
-            return;
-      }
-
       try {
             const transcription = await db.getTranscriptionByFileId(fileId);
             if (transcription) {
@@ -128,7 +115,7 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
             const audioBuffer = fs.readFileSync(filePath);
             const base64Audio = audioBuffer.toString("base64");
 
-            const result = await transcribeAudio(base64Audio, mimeType, geminiApiKey, userLanguage, settings);
+            const result = await transcribeAudio(base64Audio, mimeType, null, userLanguage, settings);
 
             const updatedTranscription = await db.getTranscriptionByFileId(fileId);
             if (updatedTranscription) {
@@ -201,18 +188,6 @@ const processTranscription = async (fileId, filePath, mimeType, userLanguage = '
 };
 
 const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
-      if (!geminiApiKey) {
-            console.error("Gemini API key not set");
-            const transcription = await db.getTranscriptionByFileId(fileId);
-            if (transcription) {
-                  await db.updateTranscription({
-                        id: transcription.id,
-                        status: "failed"
-                  });
-            }
-            return;
-      }
-
       try {
             const transcription = await db.getTranscriptionByFileId(fileId);
             if (transcription) {
@@ -243,7 +218,7 @@ const processImageAnalysis = async (fileId, filePath, mimeType, userLanguage = '
             const metadata = fileRec && fileRec.metadata ? JSON.parse(fileRec.metadata) : null;
 
             console.log(`Starting image analysis for file ${fileId}...`);
-            const result = await analyzeImage(base64Image, mimeType, geminiApiKey, null, metadata, userLanguage, settings);
+            const result = await analyzeImage(base64Image, mimeType, null, null, metadata, userLanguage, settings);
             console.log(`Image analysis result received for file ${fileId}`);
 
             const updatedTranscription = await db.getTranscriptionByFileId(fileId);
@@ -699,15 +674,6 @@ const registerIpcHandlers = () => {
             }
       });
 
-      ipcMain.handle("set-gemini-api-key", async (event, { apiKey }) => {
-            try {
-                  geminiApiKey = apiKey;
-                  return { success: true };
-            } catch (err) {
-                  return { success: false, error: err.message };
-            }
-      });
-
       ipcMain.handle("retry-transcription", async (event, { fileId, userLanguage = "en", settings = {} }) => {
             try {
                   const file = await db.getFileById(fileId);
@@ -738,10 +704,6 @@ const registerIpcHandlers = () => {
       });
 
       ipcMain.handle("chat-session", async (event, { fileId, message, settings = {} }) => {
-            if (!geminiApiKey) {
-                  return { success: false, error: "API Key not set" };
-            }
-
             try {
                   const file = await db.getFileById(fileId);
                   if (!file) {
@@ -771,7 +733,7 @@ const registerIpcHandlers = () => {
                         details: details
                   };
 
-                  const responseText = await chatWithSession(context, chatHistory, message, geminiApiKey, settings);
+                  const responseText = await chatWithSession(context, chatHistory, message, null, settings);
 
                   // Check for tool call in response
                   const toolCallRegex = /```json\s*({[\s\S]*?"tool":\s*"addActionItem"[\s\S]*?})\s*```/;
