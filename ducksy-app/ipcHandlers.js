@@ -674,10 +674,12 @@ const registerIpcHandlers = () => {
                         { role: 'user', content: message, timestamp: Date.now() },
                         { role: 'model', content: finalResponse, timestamp: Date.now() }
                   ];
+
                   await db.updateTranscription({
                         id: transcription.id,
-                        chatHistory: JSON.stringify(newHistory)
+                        chatHistory: newHistory
                   });
+
                   return { success: true, response: finalResponse, history: newHistory };
             } catch (err) {
                   console.error("Chat session error:", err);

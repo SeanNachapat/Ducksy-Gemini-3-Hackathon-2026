@@ -335,10 +335,12 @@ Do not mention the JSON in your text response, just append it at the end.
       const safeHistory = Array.isArray(history) ? history : [];
       const contents = [
             { role: "model", parts: [{ text: systemPrompt }] },
-            ...safeHistory.map(msg => ({
-                  role: msg.role === 'user' ? 'user' : 'model',
-                  parts: [{ text: msg.content }]
-            })),
+            ...safeHistory
+                  .map(msg => ({
+                        role: msg.role === 'user' ? 'user' : 'model',
+                        parts: [{ text: msg.content || (msg.parts && msg.parts[0]?.text) || "" }]
+                  }))
+                  .filter(msg => msg.parts[0].text.trim() !== ""),
             { role: "user", parts: [{ text: userMessage }] }
       ];
       try {

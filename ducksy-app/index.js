@@ -6,6 +6,8 @@ const db = require("./utils/db")
 const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./ipcHandlers")
 const PROTOCOL_SCHEME = 'ducksy'
 const SERVER_URL = 'https://ducksy-gemini-3-hackathon-2026.onrender.com'
+const dotenv = require('dotenv')
+dotenv.config()
 const isProd = app.isPackaged
 app.commandLine.appendSwitch('enable-transparent-visuals')
 const loadURL = serve({ directory: 'out' });
