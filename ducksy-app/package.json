@@ -19,6 +19,11 @@
   "scripts": {
     "electron": "electron .",
     "build": "electron-builder",
+    "build:ui": "cd ../ducksy-ui && npm run build",
+    "build:all": "npm run build:ui && electron-builder",
+    "build:mac": "npm run build:ui && electron-builder --mac",
+    "build:win": "npm run build:ui && electron-builder --win",
+    "build:linux": "npm run build:ui && electron-builder --linux",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
@@ -34,9 +39,60 @@
       "!*.db"
     ],
     "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns",
-      "category": "public.app-category.productivity"
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/icon.png",
+      "category": "public.app-category.productivity",
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "icon": "assets/icon.svg",
+      "iconSize": 100,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 140,
+          "y": 180,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.png",
+      "uninstallerIcon": "assets/icon.png",
+      "installerHeader": "assets/icon.png",
+      "installerHeaderIcon": "assets/icon.png",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Ducksy"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility"
     }
   }
 }
