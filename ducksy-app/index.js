@@ -4,7 +4,6 @@ const fs = require("fs")
 const serve = require("electron-serve").default
 const db = require("./utils/db")
 const { registerIpcHandlers, setMainWindow, setOnRecordingWindow } = require("./ipcHandlers")
-require("dotenv").config();
 
 const PROTOCOL_SCHEME = 'ducksy'
 const SERVER_URL = 'https://ducksy-gemini-3-hackathon-2026.onrender.com'
