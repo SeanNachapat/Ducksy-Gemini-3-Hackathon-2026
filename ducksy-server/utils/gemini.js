@@ -392,9 +392,12 @@ If it is a task without a specific time, "calendarEvent" can be null or omit the
 Do not mention the JSON in your text response, just append it at the end.
 `;
 
+      // Ensure history is an array
+      const safeHistory = Array.isArray(history) ? history : [];
+
       const contents = [
             { role: "model", parts: [{ text: systemPrompt }] },
-            ...history.map(msg => ({
+            ...safeHistory.map(msg => ({
                   role: msg.role === 'user' ? 'user' : 'model',
                   parts: [{ text: msg.content }]
             })),
