@@ -11,8 +11,6 @@ import {
       ChevronRight,
       Activity,
       Zap,
-      Ghost,
-      Eye,
       HardDrive,
       Calendar,
       CalendarPlus,
@@ -122,7 +120,6 @@ function LiveSystemMetrics() {
 
 
 export default function DashboardPage() {
-      const [mode, setMode] = useState("lens")
       const [selectedSession, setSelectedSession] = useState(null)
       const [micDevice, setMicDevice] = useState(null)
       const [isDeleting, setIsDeleting] = useState(false)
@@ -302,21 +299,7 @@ export default function DashboardPage() {
       }, [selectedSession, refetch]);
 
 
-      const modes = [
-            { id: "ghost", label: t.modes.ghost, icon: Ghost, description: t.modes.ghostDesc, color: "text-neutral-500", border: "border-neutral-800 bg-neutral-900" },
-            { id: "lens", label: t.modes.lens, icon: Eye, description: t.modes.lensDesc, color: "text-amber-400", border: "border-amber-500/50 bg-amber-500/10" },
-      ]
 
-      const getAvatarContent = () => {
-            switch (mode) {
-                  case "ghost":
-                        return <span className="text-lg grayscale opacity-50">🦆</span>
-                  case "lens":
-                        return <span className="text-lg">🦆</span>
-                  default:
-                        return "🦆"
-            }
-      }
 
       const handleDeleteSession = async () => {
             if (!selectedSession || isDeleting) return
@@ -483,40 +466,7 @@ export default function DashboardPage() {
                   <main className="flex-1 flex flex-col relative overflow-hidden z-10 transition-all duration-300">
 
                         <header className="h-24 px-8 flex items-center justify-between border-b border-white/5 bg-neutral-950/50 backdrop-blur-xl">
-                              <div className="flex items-center bg-neutral-900/50 rounded-full p-1 border border-white/5">
-                                    {modes.map((m) => {
-                                          const isActive = mode === m.id
-                                          const Icon = m.icon
-                                          const activeColor = "text-amber-400"
-                                          const activeBg = "bg-neutral-800/80 border border-white/5 shadow-sm"
-
-                                          return (
-                                                <button
-                                                      key={m.id}
-                                                      onClick={() => setMode(m.id)}
-                                                      className={`
-                                relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300
-                                ${isActive ? "" : "hover:bg-white/5"}
-                            `}
-                                                >
-                                                      <span className="relative z-10 flex items-center gap-2">
-                                                            <Icon className={`w-4 h-4 ${isActive ? activeColor : "text-neutral-500"}`} strokeWidth={2} />
-                                                            <span className={`text-sm font-medium ${isActive ? "text-white" : "text-neutral-500"}`}>
-                                                                  {m.label}
-                                                            </span>
-                                                      </span>
-
-                                                      {isActive && (
-                                                            <motion.div
-                                                                  layoutId="activeMode"
-                                                                  className={`absolute inset-0 rounded-full ${activeBg}`}
-                                                                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                                            />
-                                                      )}
-                                                </button>
-                                          )
-                                    })}
-                              </div>
+                              <div></div>
 
                               <div className="flex items-center gap-6">
                                     <LiveSystemMetrics />

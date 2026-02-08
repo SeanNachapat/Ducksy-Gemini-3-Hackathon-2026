@@ -9,6 +9,8 @@
     "dotenv": "^17.2.3",
     "electron-serve": "^3.0.1",
     "googleapis": "^171.4.0",
+    "jimp": "^0.22.12",
+    "png-to-ico": "^3.0.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   },
@@ -43,13 +45,13 @@
         "dmg",
         "zip"
       ],
-      "icon": "assets/icon.png",
+      "icon": "assets/ducksy.png",
       "category": "public.app-category.productivity",
       "darkModeSupport": true
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "icon": "assets/icon.svg",
+      "icon": "assets/ducksy.svg",
       "iconSize": 100,
       "window": {
         "width": 540,
@@ -78,10 +80,6 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/icon.png",
-      "uninstallerIcon": "assets/icon.png",
-      "installerHeader": "assets/icon.png",
-      "installerHeaderIcon": "assets/icon.png",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Ducksy"
@@ -91,7 +89,7 @@
         "AppImage",
         "deb"
       ],
-      "icon": "assets/icon.png",
+      "icon": "assets/ducksy.png",
       "category": "Utility"
     }
   }
