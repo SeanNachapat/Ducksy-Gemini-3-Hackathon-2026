@@ -131,7 +131,7 @@ export default function DashboardPage() {
       const [calendarLoading, setCalendarLoading] = useState(false)
       const [calendarSuccess, setCalendarSuccess] = useState(false)
       const [editingEvent, setEditingEvent] = useState(null)
-      const { t } = useSettings()
+      const { t, settings } = useSettings()
 
       const { sessionLogs, isLoading, error, refetch, deleteSession } = useSessionLogs()
 
@@ -256,7 +256,8 @@ export default function DashboardPage() {
                                           width: video.videoWidth,
                                           height: video.videoHeight,
                                           title: `Magic Lens Capture`,
-                                          selection: selection
+                                          selection: selection,
+                                          settings: settings
                                     })
 
                                     stream.getTracks().forEach(track => track.stop())
@@ -278,7 +279,7 @@ export default function DashboardPage() {
                         window.electron.removeAllListeners("magic-lens-selection")
                   }
             }
-      }, [])
+      }, [settings])
 
       React.useEffect(() => {
             if (!window.electron) return;
@@ -494,20 +495,6 @@ export default function DashboardPage() {
                                                                         {t.dashboardPage?.noUpcomingEvents || "No new events detected"}
                                                                   </div>
                                                             )}
-                                                      </div>
-                                                </div>
-
-                                                <div>
-                                                      <h2 className="text-xs font-mono text-neutral-500 uppercase tracking-widest mb-4">{t.dashboardPage.quickInputs}</h2>
-                                                      <div className="grid grid-cols-2 gap-3">
-                                                            <Voice t={t} micDevice={micDevice} mode={mode} onRecordingSaved={refetch} />
-                                                            <button className="flex flex-col items-center justify-center gap-2 h-20 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group w-full">
-                                                                  <div className="p-2 rounded-full bg-neutral-900 group-hover:scale-110 transition-transform text-neutral-400 group-hover:text-white">
-                                                                        <Monitor className="w-5 h-5" strokeWidth={1.5} />
-                                                                  </div>
-                                                                  <span className="text-[10px] font-medium text-neutral-400 group-hover:text-neutral-200">{t.dashboardPage.camera}</span>
-                                                            </button>
-
                                                       </div>
                                                 </div>
                                           </div>

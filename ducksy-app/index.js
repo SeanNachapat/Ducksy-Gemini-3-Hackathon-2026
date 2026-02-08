@@ -52,7 +52,7 @@ async function createOnRecordingWindow() {
             minWidth: width_f,
             minHeight: height_f,
             backgroundColor: "#00000000",
-            title: "", // Start with no title
+            title: "",
             autoHideMenuBar: true,
             alwaysOnTop: true,
             frame: false,
@@ -61,8 +61,8 @@ async function createOnRecordingWindow() {
             skipTaskbar: true,
             resizable: false,
             movable: true,
-            thickFrame: false, // Remove heavy window border
-            titleBarStyle: 'hidden', // Ensure title bar is hidden
+            thickFrame: false,
+            titleBarStyle: 'hidden',
             minimizable: false,
             maximizable: false,
             webPreferences: {
@@ -73,7 +73,7 @@ async function createOnRecordingWindow() {
             },
       })
 
-      onRecordingWindow.setMenu(null) // Aggressively remove menu
+      onRecordingWindow.setMenu(null)
 
       setOnRecordingWindow(onRecordingWindow)
 
@@ -129,9 +129,7 @@ async function createSelectionWindow() {
             }
       })
 
-      if (process.platform !== 'darwin') {
-            selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-      }
+      selectionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
       if (isProd) {
             await selectionWindow.loadURL("app://-/magic-lens")
@@ -142,41 +140,6 @@ async function createSelectionWindow() {
       selectionWindow.on("closed", () => {
             selectionWindow = null
       })
-}
-
-
-async function createCaptureScreen() {
-      if (captureWindow && !captureWindow.isDestroyed()) {
-            captureWindow.show()
-            captureWindow.focus()
-            return
-      }
-
-      const { width, height } = screen.getPrimaryDisplay().size;
-
-      captureWindow = new BrowserWindow({
-            width,
-            height,
-            titleBarStyle: "hidden",
-            autoHideMenuBar: true,
-            alwaysOnTop: true,
-            frame: false,
-            transparent: true,
-            hasShadow: false,
-            skipTaskbar: true,
-            resizable: false,
-            movable: true,
-            show: false,
-            webPreferences: {
-                  preload: path.join(__dirname, "preload.js"),
-                  nodeIntegration: false,
-                  contextIsolation: true,
-                  defaultFontFamily: "monospace"
-            },
-      })
-
-      captureWindow.loadURL("http://localhost:3000/capture")
-
 }
 
 function closeOnRecordingWindow() {

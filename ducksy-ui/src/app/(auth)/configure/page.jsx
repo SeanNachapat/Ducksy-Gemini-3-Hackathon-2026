@@ -74,11 +74,47 @@ export default function ConfigurePage() {
         notion: { connected: false }
     })
 
+    const [serverStatus, setServerStatus] = useState({
+        checking: false,
+        online: false,
+        url: ""
+    })
+
     const [sizeCache, setSizeCache] = useState({
         status: "",
         percent: null,
         size: null,
     })
+
+    useEffect(() => {
+        if (activeSection === "connections") {
+            // Determine server URL based on environment
+            // Note: In Next.js, NODE_ENV is available at build time/runtime
+            const isProd = process.env.NODE_ENV === 'production';
+            const serverUrl = isProd
+                ? "https://ducksy-gemini-3-hackathon-2026.onrender.com"
+                : "http://localhost:8080";
+
+            setServerStatus(prev => ({ ...prev, checking: true, url: serverUrl }));
+
+            fetch(`${serverUrl}/health`)
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error('Server returned non-ok status');
+                })
+                .then(data => {
+                    if (data.status === 'ok') {
+                        setServerStatus(prev => ({ ...prev, checking: false, online: true }));
+                    } else {
+                        throw new Error('Server status not ok');
+                    }
+                })
+                .catch(err => {
+                    console.error("Server check failed", err);
+                    setServerStatus(prev => ({ ...prev, checking: false, online: false }));
+                });
+        }
+    }, [activeSection])
 
     useEffect(() => {
         if (!window.electron) return;
@@ -500,19 +536,39 @@ export default function ConfigurePage() {
                                     </div>
 
                                     {/* Server Status */}
-                                    <div className="bg-neutral-900/40 border border-amber-500/20 p-6 rounded-3xl backdrop-blur-sm">
-                                        <div className="flex items-center gap-4 mb-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-                                                <Link2 className="w-6 h-6" />
+                                    <div className={`bg-neutral-900/40 border ${serverStatus.online ? 'border-emerald-500/20' : 'border-amber-500/20'} p-6 rounded-3xl backdrop-blur-sm transition-all duration-300`}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-12 h-12 rounded-2xl ${serverStatus.online ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'} border flex items-center justify-center transition-colors duration-300`}>
+                                                    <Link2 className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-base font-semibold text-white">Ducksy Server</h3>
+                                                    <p className="text-xs text-neutral-500">API</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="text-base font-semibold text-white">Ducksy Server</h3>
-                                                <p className="text-xs text-neutral-500">OAuth & API Proxy</p>
+                                            <div className="flex flex-col items-end">
+                                                {serverStatus.checking ? (
+                                                    <span className="text-xs text-neutral-400 animate-pulse">Checking...</span>
+                                                ) : serverStatus.online ? (
+                                                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-xs font-medium rounded-full border border-emerald-500/20 flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                        Online
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-3 py-1 bg-red-500/10 text-red-500 text-xs font-medium rounded-full border border-red-500/20 flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                                        Offline
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
-                                        <p className="text-xs text-neutral-400">
-                                            Make sure <code className="bg-black/40 px-2 py-1 rounded">ducksy-server</code> is running on port 8080 for OAuth to work.
-                                        </p>
+                                        {!serverStatus.online && !serverStatus.checking && (
+                                            <p className="text-xs text-red-400 mt-3 flex items-center gap-2">
+                                                <Info className="w-3.5 h-3.5" />
+                                                Server must be running
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>

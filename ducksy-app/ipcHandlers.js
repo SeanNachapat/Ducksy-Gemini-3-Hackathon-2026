@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const db = require("./utils/db");
 const { getSessionData } = require("./utils/sessionHelper");
-const { transcribeAudio, analyzeImage, chatWithSession, getMetrics } = require("./utils/gemini");
+const { transcribeAudio, analyzeImage, chatWithSession, getMetrics } = require("./utils/geminiApi");
 require("dotenv").config();
 
 const SERVER_URL = 'https://ducksy-gemini-3-hackathon-2026.onrender.com';
@@ -87,10 +87,6 @@ const setMainWindow = (window) => {
 
 const setOnRecordingWindow = (window) => {
       onRecordingWindow = window;
-};
-
-const setGeminiApiKey = (apiKey) => {
-      geminiApiKey = apiKey;
 };
 
 const processTranscription = async (fileId, filePath, mimeType, userLanguage = 'en', settings = {}) => {
@@ -886,7 +882,7 @@ const registerIpcHandlers = () => {
 
       ipcMain.handle("get-system-metrics", async () => {
             try {
-                  const metrics = getMetrics();
+                  const metrics = await getMetrics();
                   return { success: true, data: metrics };
             } catch (err) {
                   console.error("Failed to get system metrics:", err);

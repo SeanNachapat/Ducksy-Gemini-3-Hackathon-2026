@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw, CalendarPlus, Check, Plus, Calendar } from "lucide-react"
+import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw, CalendarPlus, Check, Plus, Calendar, Sparkles, Upload } from "lucide-react"
 
 import { useRecorder } from "@/hooks/useRecorder"
 import SessionChat from "@/components/SessionChat"
@@ -25,6 +25,7 @@ export default function OnRecordPage() {
       const [calendarSuccess, setCalendarSuccess] = useState(false)
       const [eventDate, setEventDate] = useState('')
       const [eventTime, setEventTime] = useState('')
+      const [isDragging, setIsDragging] = useState(false)
 
       const {
             isRecording: recorderIsRecording,
@@ -62,7 +63,7 @@ export default function OnRecordPage() {
             save()
       }, [audioBlob, saveRecording, resetRecording])
 
-      const handleTranscriptionUpdate = (data) => {
+      const handleTranscriptionUpdate = async (data) => {
             console.log('Transcription update:', data)
 
             let parsedData = { ...data }
@@ -76,6 +77,19 @@ export default function OnRecordPage() {
             }
 
             if (parsedData.status === 'completed') {
+                  // Validated: Fetch full session details to ensure we have everything
+                  if (typeof window !== 'undefined' && window.electron) {
+                        try {
+                              const result = await window.electron.invoke('get-session', { fileId: parsedData.fileId || parsedData.id })
+                              if (result.success && result.data) {
+                                    console.log("Refetched full session:", result.data)
+                                    parsedData = { ...result.data }
+                              }
+                        } catch (e) {
+                              console.error("Failed to refetch session:", e)
+                        }
+                  }
+
                   setTranscriptionResult(parsedData)
                   setIsProcessing(false)
                   setExpanded(true)
@@ -85,6 +99,29 @@ export default function OnRecordPage() {
             } else if (parsedData.status === 'failed') {
                   setTranscriptionResult(parsedData)
                   setIsProcessing(false)
+
+                  // Auto-retry on "Resource exhausted" (429) error
+                  const errorMsg = parsedData.error || '';
+                  if (errorMsg.includes("Resource exhausted") || errorMsg.includes("429")) {
+                        console.log("Resource exhausted error detected. Auto-retrying in 3s...");
+                        const retryFileId = parsedData.fileId || parsedData.id;
+                        if (retryFileId && typeof window !== 'undefined' && window.electron) {
+                              setTimeout(async () => {
+                                    setIsProcessing(true);
+                                    try {
+                                          const result = await window.electron.invoke('retry-transcription', {
+                                                fileId: retryFileId
+                                          });
+                                          if (!result.success) {
+                                                console.error("Auto-retry failed:", result.error);
+                                          }
+                                    } catch (e) {
+                                          console.error("Auto-retry error:", e);
+                                          setIsProcessing(false);
+                                    }
+                              }, 3000);
+                        }
+                  }
             } else {
                   setIsProcessing(true)
             }
@@ -269,8 +306,103 @@ export default function OnRecordPage() {
             }
       }
 
+      const handleDrop = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+
+            const files = e.dataTransfer.files;
+            if (files.length === 0) return;
+
+            const file = files[0];
+            const mimeType = file.type;
+
+            // Check if audio or image
+            const isAudio = mimeType.startsWith('audio/');
+            const isImage = mimeType.startsWith('image/');
+
+            if (!isAudio && !isImage) {
+                  console.warn('Unsupported file type:', mimeType);
+                  return;
+            }
+
+            setIsProcessing(true);
+
+            try {
+                  // Read file as ArrayBuffer and convert to base64 (chunked to avoid stack overflow)
+                  const arrayBuffer = await file.arrayBuffer();
+                  const uint8Array = new Uint8Array(arrayBuffer);
+                  let binary = '';
+                  const chunkSize = 8192;
+                  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                        const chunk = uint8Array.subarray(i, i + chunkSize);
+                        binary += String.fromCharCode.apply(null, chunk);
+                  }
+                  const base64 = btoa(binary);
+
+                  // Get settings from localStorage
+                  const storedSettings = localStorage.getItem('ducksy-settings');
+                  const settings = storedSettings ? JSON.parse(storedSettings) : {};
+
+                  if (typeof window !== 'undefined' && window.electron) {
+                        if (isAudio) {
+                              const result = await window.electron.invoke('save-audio-file', {
+                                    audioData: base64,
+                                    mimeType: mimeType,
+                                    settings: settings
+                              });
+                              console.log('Audio file saved:', result);
+                        } else if (isImage) {
+                              const result = await window.electron.invoke('save-image-file', {
+                                    buffer: base64,
+                                    mimeType: mimeType,
+                                    settings: settings
+                              });
+                              console.log('Image file saved:', result);
+                        }
+                  }
+            } catch (err) {
+                  console.error('Error processing dropped file:', err);
+                  setIsProcessing(false);
+            }
+      };
+
+      const handleDragOver = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(true);
+      };
+
+      const handleDragLeave = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+      };
+
       return (
-            <div className="h-full w-full flex flex-col items-center justify-center p-4 bg-transparent overflow-hidden">
+            <div
+                  className="h-full w-full flex flex-col items-center justify-center p-4 bg-transparent overflow-hidden"
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+            >
+                  {/* Drag overlay */}
+                  <AnimatePresence>
+                        {isDragging && (
+                              <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm border-2 border-dashed border-amber-500/50 rounded-3xl"
+                              >
+                                    <div className="flex flex-col items-center gap-3">
+                                          <Upload className="w-12 h-12 text-amber-500" />
+                                          <p className="text-white font-medium">Drop audio or image file</p>
+                                          <p className="text-neutral-400 text-sm">Supports audio & image files</p>
+                                    </div>
+                              </motion.div>
+                        )}
+                  </AnimatePresence>
                   <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
@@ -334,16 +466,6 @@ export default function OnRecordPage() {
                                                             title={t.voiceRecord}
                                                       >
                                                             <Mic className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
-                                                      </motion.button>
-
-                                                      <motion.button
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            onClick={handleScreenClick}
-                                                            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center transition-all group non-draggable"
-                                                            title={t.overlay.screen}
-                                                      >
-                                                            <Monitor className="w-5 h-5 text-white/70 group-hover:text-white" strokeWidth={1.5} />
                                                       </motion.button>
 
                                                       <motion.button
@@ -428,6 +550,7 @@ export default function OnRecordPage() {
                                           </motion.div>
                                     ) : transcriptionResult ? (
                                           <motion.div
+                                                key={transcriptionResult.fileId || transcriptionResult.id || 'result'}
                                                 initial="hidden"
                                                 animate="visible"
                                                 variants={{
@@ -633,45 +756,31 @@ export default function OnRecordPage() {
                                                 </div>
                                                 <div className="p-4 border-t border-white/5 bg-neutral-900/50 flex justify-between items-center gap-2">
                                                       <button
-                                                            onClick={async () => {
-                                                                  setIsProcessing(true);
-                                                                  const targetId = transcriptionResult?.fileId || transcriptionResult?.id;
+                                                            onClick={handleRetry}
+                                                            className="flex items-center gap-2 px-3 py-2 bg-white/5 text-neutral-400 text-xs font-medium rounded-lg hover:bg-white/10 hover:text-white transition-colors border border-white/10"
+                                                            title={t.dashboardPage?.regen || "Regenerate"}
+                                                      >
+                                                            <Sparkles className="w-4 h-4" />
+                                                            {t.dashboardPage?.regen || "Re-gen"}
+                                                      </button>
 
+                                                      <button
+                                                            onClick={() => {
+                                                                  setTranscriptionResult(null);
+                                                                  setCapturedFile(null);
+                                                                  setIsProcessing(false);
+                                                                  setExpanded(false);
+                                                                  setRecordTime({ time: 0, formatted: "00:00" });
                                                                   if (typeof window !== 'undefined' && window.electron) {
-                                                                        try {
-                                                                              const result = targetId
-                                                                                    ? await window.electron.invoke('get-session', { fileId: targetId })
-                                                                                    : await window.electron.invoke('get-latest-file');
-
-                                                                              if (result && result.success && result.data) {
-                                                                                    if (result.data.filePath && result.data.mimeType) {
-                                                                                          setCapturedFile({
-                                                                                                filePath: result.data.filePath,
-                                                                                                mimeType: result.data.mimeType
-                                                                                          })
-                                                                                    }
-                                                                                    handleTranscriptionUpdate({
-                                                                                          ...result.data,
-                                                                                          fileId: result.data.fileId || result.data.id
-                                                                                    })
-                                                                              } else {
-                                                                                    setIsProcessing(false);
-                                                                              }
-                                                                        } catch (e) {
-                                                                              console.error("Refresh failed:", e)
-                                                                              setIsProcessing(false)
-                                                                        }
-                                                                  } else {
-                                                                        setIsProcessing(false)
+                                                                        window.electron.send('resize-recording-window', { height: 250 });
                                                                   }
                                                             }}
                                                             className="flex items-center gap-2 px-3 py-2 bg-white/5 text-neutral-400 text-xs font-medium rounded-lg hover:bg-white/10 hover:text-white transition-colors border border-white/10"
-                                                            title={t.sessionsPage?.refresh || "Refresh"}
+                                                            title="New Scan"
                                                       >
-                                                            <RefreshCw className="w-4 h-4" />
-                                                            {t.sessionsPage?.refresh || "Refresh"}
+                                                            <Plus className="w-4 h-4" />
+                                                            New Scan
                                                       </button>
-
 
 
                                                       <button
