@@ -62,7 +62,10 @@
 
 ### Installation
 
-The project is divided into two parts: `ducksy-ui` (The renderer) and `ducksy-app` (The main process).
+The project is divided into three parts:
+- `ducksy-ui`: The Next.js frontend renderer.
+- `ducksy-app`: The Electron main process.
+- `ducksy-server`: The backend API server for AI and OAuth.
 
 1.  **Clone the repository:**
     ```bash
@@ -78,26 +81,37 @@ The project is divided into two parts: `ducksy-ui` (The renderer) and `ducksy-ap
 
 ### Running Development Environment
 
-You can run both the Next.js UI and the Electron app simultaneously from the root directory.
+**Ideally, just run this one command:**
 
-**Recommended:**
 ```bash
-# From root directory
+# From root directory (starts UI + Electron + Server concurrently)
 npm run dev
 ```
 
-**Manual Start:**
-1.  **Start the Next.js UI server:**
-    ```bash
-    cd ducksy-ui
-    npm run dev
-    ```
+If you prefer to run services manually:
 
-2.  **Start Electron:**
-    ```bash
-    cd ducksy-app
-    npm run electron
-    ```
+1.  **Start Frontend:** `cd ducksy-ui && npm run dev`
+2.  **Start Server:** `cd ducksy-server && npm run dev`
+3.  **Start App:** `cd ducksy-app && npm run electron`
+
+### Building the Application
+
+To create a distributable installer:
+
+```bash
+cd ducksy-app
+
+# Build for macOS (Universal DMG)
+npm run build:mac
+
+# Build for Windows (NSIS Installer)
+npm run build:win
+
+# Build for All
+npm run build:all
+```
+
+> **Note:** Building for Windows on macOS requires Wine, or use CI/CD. The build output will be in `ducksy-app/dist/`.
 
 ## Project Structure
 
@@ -105,6 +119,9 @@ npm run dev
   - `src/app/page.jsx`: Main onboarding and interface logic.
 - `ducksy-app/`: Contains the Electron main process logic.
   - `index.js`: Main entry point, window creation, and IPC handlers (permissions, screen sources).
+- `ducksy-server/`: Express.js backend for handling AI requests and OAuth.
+  - `routes/`: API and Auth routes.
+  - `utils/`: Helper functions and Gemini integration.
 
 ## Contributing
 
@@ -113,3 +130,24 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 [MIT](LICENSE)
+
+## Environment Variables (.env)
+
+Create a `.env` file in `ducksy-server/` with the following keys:
+
+```ini
+# Server Configuration
+PORT=8080
+
+# Google Gemini API (Required for AI features)
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Google OAuth (For Calendar Integration)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Notion Integration (Optional)
+NOTION_CLIENT_ID=your_notion_client_id
+NOTION_CLIENT_SECRET=your_notion_client_secret
+NOTION_REDIRECT_URI=http://localhost:8080/auth/notion/callback
+```
