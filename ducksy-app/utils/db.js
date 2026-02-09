@@ -517,6 +517,33 @@ const getAllMcpCredentials = async () => {
       return await db.all('SELECT provider, access_token IS NOT NULL as connected, updatedAt FROM mcp_credentials');
 };
 
+const searchAll = async (query) => {
+      const db = await getDb();
+      const searchQuery = `%${query}%`;
+
+      const rows = await db.all(`
+            SELECT 
+                  f.id, 
+                  f.title, 
+                  f.type, 
+                  f.createdAt, 
+                  'file' as resultType,
+                  t.summary,
+                  t.content
+            FROM files f
+            LEFT JOIN transcriptions t ON f.id = t.fileId
+            WHERE 
+                  f.title LIKE ? OR 
+                  f.description LIKE ? OR 
+                  t.summary LIKE ? OR 
+                  t.content LIKE ?
+            ORDER BY f.createdAt DESC
+            LIMIT 20
+      `, [searchQuery, searchQuery, searchQuery, searchQuery]);
+
+      return rows;
+};
+
 module.exports = {
       initializeDatabase,
       isAlreadyFile,
@@ -536,5 +563,6 @@ module.exports = {
       saveMcpCredential,
       getMcpCredential,
       deleteMcpCredential,
-      getAllMcpCredentials
+      getAllMcpCredentials,
+      searchAll
 };

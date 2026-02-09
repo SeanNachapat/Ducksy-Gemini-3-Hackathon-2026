@@ -35,6 +35,8 @@ import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
 import CalendarEventCard from "@/components/CalendarEventCard"
 import EditableEventModal from "@/components/EditableEventModal"
+import ThinkingIndicator from "@/components/ThinkingIndicator"
+import DashboardSearch from "@/components/DashboardSearch"
 function LiveSystemMetrics() {
       const [metrics, setMetrics] = useState({
             latency: 0,
@@ -248,7 +250,7 @@ export default function DashboardPage() {
       }, [settings])
       React.useEffect(() => {
             if (!window.electron) return;
-            const handleTranscriptionUpdate = (event, data) => {
+            const handleTranscriptionUpdate = (data) => {
                   if (selectedSession && (data.fileId === selectedSession.fileId || data.fileId === selectedSession.id)) {
                         refetch();
                   }
@@ -402,8 +404,10 @@ export default function DashboardPage() {
                         </div>
                   </aside>
                   <main className="flex-1 flex flex-col relative overflow-hidden z-10 transition-all duration-300">
-                        <header className="h-24 px-8 flex items-center justify-between border-b border-white/5 bg-neutral-950/50 backdrop-blur-xl">
-                              <div></div>
+                        <header className="h-24 px-8 flex items-center justify-between border-b border-white/5 bg-neutral-950/50 backdrop-blur-xl relative z-50">
+                              <div>
+                                    <DashboardSearch onSelectSession={setSelectedSession} />
+                              </div>
                               <div className="flex items-center gap-6">
                                     <LiveSystemMetrics />
                                     <MicDevice setMicDevice={setMicDevice} micDevice={micDevice} />
@@ -569,7 +573,7 @@ export default function DashboardPage() {
                                                                               <h3 className="text-neutral-200 font-medium truncate text-sm">{log.title}</h3>
                                                                               <p className="text-xs text-neutral-500 mt-1 font-medium">{log.subtitle}</p>
                                                                         </div>
-                                                                        {}
+                                                                        { }
                                                                         {log.transcriptionStatus === 'processing' && (
                                                                               <div className="mr-2">
                                                                                     <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
@@ -667,10 +671,8 @@ export default function DashboardPage() {
                                                       </div>
                                                 )}
                                                 {selectedSession.transcriptionStatus === 'processing' && (
-                                                      <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
-                                                            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-                                                            <p className="text-sm font-medium">{t.status.processing}...</p>
-                                                            <p className="text-xs mt-1 text-neutral-600">{t.session.analyzing}</p>
+                                                      <div className="flex flex-col items-center justify-center h-64 w-full">
+                                                            <ThinkingIndicator type={selectedSession.mimeType?.startsWith('image') ? 'image' : 'audio'} />
                                                       </div>
                                                 )}
                                                 {selectedSession.transcriptionStatus === 'failed' && (
@@ -918,7 +920,7 @@ export default function DashboardPage() {
                               </>
                         )}
                   </AnimatePresence>
-                  {}
+                  { }
                   <AnimatePresence>
                         {showCalendarModal && (
                               <motion.div

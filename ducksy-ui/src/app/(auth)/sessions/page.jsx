@@ -28,6 +28,7 @@ import { useSessionLogs } from "@/hooks/useSessionLogs"
 import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
 import EditableEventModal from "@/components/EditableEventModal"
+import ThinkingIndicator from "@/components/ThinkingIndicator"
 
 export default function SessionsPage() {
     const [selectedSession, setSelectedSession] = useState(null)
@@ -409,10 +410,8 @@ export default function SessionsPage() {
                                 )}
 
                                 {selectedSession.transcriptionStatus === 'processing' && (
-                                    <div className="flex flex-col items-center justify-center h-48 text-neutral-500">
-                                        <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-                                        <p className="text-sm font-medium">{t.status?.processing || "Processing"}...</p>
-                                        <p className="text-xs mt-1 text-neutral-600">{t.session?.analyzing || "AI is analyzing your recording"}</p>
+                                    <div className="flex flex-col items-center justify-center h-64 w-full">
+                                        <ThinkingIndicator type={selectedSession.mimeType?.startsWith('image') ? 'image' : 'audio'} />
                                     </div>
                                 )}
 

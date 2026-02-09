@@ -7,6 +7,7 @@ import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp
 import { useRecorder } from "@/hooks/useRecorder"
 import SessionChat from "@/components/SessionChat"
 import MediaPreview from "@/components/MediaPreview"
+import ThinkingIndicator from "@/components/ThinkingIndicator"
 import { useSettings } from "@/hooks/SettingsContext"
 import { useSearchParams } from "next/navigation"
 
@@ -515,13 +516,9 @@ export default function OnRecordPage() {
                                                       </div>
                                                 )}
 
-                                                <div className="flex items-center gap-3 py-4">
-                                                      <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
-                                                      <div className="text-left">
-                                                            <p className="text-sm font-medium text-white">{t.processing || "Analyzing..."}</p>
-                                                            <p className="text-xs text-neutral-500">Using Gemini 2.0 Flash</p>
-                                                      </div>
-                                                </div>
+
+
+                                                <ThinkingIndicator type={capturedFile?.mimeType?.startsWith('image') ? 'image' : 'audio'} />
                                           </motion.div>
                                     ) : transcriptionResult?.status === 'failed' ? (
                                           <motion.div

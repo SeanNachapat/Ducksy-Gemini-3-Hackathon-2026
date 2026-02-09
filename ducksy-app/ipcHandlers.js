@@ -562,6 +562,15 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message, data: [] };
             }
       });
+      ipcMain.handle("search-everything", async (event, { query }) => {
+            try {
+                  const results = await db.searchAll(query);
+                  return { success: true, data: results };
+            } catch (err) {
+                  console.error("Failed to search:", err);
+                  return { success: false, error: err.message, data: [] };
+            }
+      });
       ipcMain.handle("get-db-size", async () => {
             try {
                   const size = await db.getSizeOfdb();
