@@ -45,13 +45,13 @@
         "dmg",
         "zip"
       ],
-      "icon": "assets/ducksy.png",
+      "icon": "assets/icon_square.png",
       "category": "public.app-category.productivity",
       "darkModeSupport": true
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "icon": "assets/ducksy.svg",
+      "icon": "assets/icon_square.png",
       "iconSize": 100,
       "window": {
         "width": 540,
@@ -75,7 +75,7 @@
       "target": [
         "nsis"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon_square.png"
     },
     "nsis": {
       "oneClick": false,
@@ -89,7 +89,7 @@
         "AppImage",
         "deb"
       ],
-      "icon": "assets/ducksy.png",
+      "icon": "assets/icon_square.png",
       "category": "Utility"
     }
   }
