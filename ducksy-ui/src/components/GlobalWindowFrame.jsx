@@ -8,6 +8,7 @@ export default function GlobalWindowFrame({ children }) {
     const pathname = usePathname()
     const isLanding = pathname === "/"
     const isOverlay = pathname?.startsWith("/onRecord")
+    const isInit = pathname?.startsWith("/init")
 
     useEffect(() => {
         const userAgent = window.navigator.userAgent.toLowerCase()
@@ -36,13 +37,15 @@ export default function GlobalWindowFrame({ children }) {
 
     return (
         <div className="relative h-screen flex flex-col overflow-hidden">
-            <div className={`fixed top-0 w-full z-50 flex items-center h-10 bg-linear-to-b from-black to-transparent pointer-events-none ${platform === 'windows' ? 'justify-end pr-4 pt-2 items-start' : 'justify-start pl-6 pt-4 items-start'}`} style={{ WebkitAppRegion: 'drag' }}>
-                <div className="pointer-events-auto" style={{ WebkitAppRegion: 'no-drag' }}>
-                    <WindowControls platform={platform} />
+            {!isLanding && !isInit && (
+                <div className={`fixed top-0 w-full z-50 flex items-center h-10 bg-linear-to-b from-black to-transparent pointer-events-none ${platform === 'windows' ? 'justify-end pr-4 pt-2 items-start' : 'justify-start pl-6 pt-4 items-start'}`} style={{ WebkitAppRegion: 'drag' }}>
+                    <div className="pointer-events-auto" style={{ WebkitAppRegion: 'no-drag' }}>
+                        <WindowControls platform={platform} />
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <div className={`flex-1 w-full h-full ${isLanding ? '' : 'pt-[18px]'}`}>
+            <div className={`flex-1 w-full h-full ${isLanding || isInit ? '' : 'pt-[18px]'}`}>
                 {children}
             </div>
         </div>

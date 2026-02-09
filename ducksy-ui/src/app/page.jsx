@@ -17,8 +17,8 @@ export default function App() {
             }
       }, [])
       return (
-            <div>
-                  <h1>Check Status</h1>
+            <div className="flex h-screen w-full items-center justify-center bg-transparent">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-white/20 border-t-white"></div>
             </div>
       )
 }
