@@ -495,7 +495,7 @@ export default function OnRecordPage() {
                         </div>
                   </motion.div>
 
-                  {/* Volume Sliders - Show during recording */}
+                  {/* Mic Volume Slider - Show during recording */}
                   <AnimatePresence>
                         {isRecording && (
                               <motion.div
@@ -505,66 +505,38 @@ export default function OnRecordPage() {
                                     transition={{ duration: 0.2 }}
                                     className="mt-3 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-xl"
                               >
-                                    <div className="flex items-end gap-4">
-                                          {/* Mic Volume - Vertical */}
-                                          <div className="flex flex-col items-center gap-1.5">
-                                                <input
-                                                      type="range"
-                                                      min="0"
-                                                      max="1"
-                                                      step="0.01"
-                                                      value={micVolume}
-                                                      onChange={(e) => setMicVolume(parseFloat(e.target.value))}
-                                                      className="w-1 h-16 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
-                                                            [&::-webkit-slider-thumb]:appearance-none
-                                                            [&::-webkit-slider-thumb]:w-2.5
-                                                            [&::-webkit-slider-thumb]:h-2.5
-                                                            [&::-webkit-slider-thumb]:rounded-full
-                                                            [&::-webkit-slider-thumb]:bg-amber-500
-                                                            [&::-webkit-slider-thumb]:cursor-pointer
-                                                            [&::-webkit-slider-thumb]:shadow-md
-                                                            [&::-webkit-slider-thumb]:shadow-amber-500/40"
-                                                      style={{
-                                                            writingMode: 'vertical-lr',
-                                                            direction: 'rtl',
-                                                            background: `linear-gradient(to top, #f59e0b ${micVolume * 100}%, rgba(255,255,255,0.1) ${micVolume * 100}%)`
-                                                      }}
-                                                />
-                                                <button
-                                                      onClick={() => setMicVolume(micVolume > 0 ? 0 : 1)}
-                                                      className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
-                                                      title="Microphone"
-                                                >
-                                                      {micVolume > 0 ? (
-                                                            <Mic className="w-3 h-3 text-amber-500" />
-                                                      ) : (
-                                                            <VolumeX className="w-3 h-3 text-neutral-500" />
-                                                      )}
-                                                </button>
-                                                <span className="text-[10px] text-neutral-500 mt-0.5">Mic</span>
-                                          </div>
-
-                                          {/* System Audio - Not supported on macOS */}
-                                          <div className="flex flex-col items-center gap-1.5 opacity-40">
-                                                <div className="w-1 h-16 bg-white/5 rounded-full relative">
-                                                      <div className="absolute inset-0 flex items-center justify-center">
-                                                            <div className="w-6 h-0.5 bg-red-500/60 rotate-45 absolute"></div>
-                                                            <div className="w-6 h-0.5 bg-red-500/60 -rotate-45 absolute"></div>
-                                                      </div>
-                                                </div>
-                                                <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center" title="System audio not supported on macOS">
-                                                      <Monitor className="w-3 h-3 text-neutral-600" />
-                                                </div>
-                                                <span className="text-[10px] text-neutral-600 mt-0.5">N/A</span>
-                                          </div>
-                                    </div>
-
-                                    {/* macOS Notice */}
-                                    <div className="mt-2 pt-2 border-t border-white/5">
-                                          <p className="text-[10px] text-neutral-500 text-center flex items-center justify-center gap-1">
-                                                <span className="text-amber-500">⚠️</span>
-                                                System audio not supported on macOS
-                                          </p>
+                                    <div className="flex items-center gap-2">
+                                          <button
+                                                onClick={() => setMicVolume(micVolume > 0 ? 0 : 1)}
+                                                className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
+                                                title="Microphone"
+                                          >
+                                                {micVolume > 0 ? (
+                                                      <Mic className="w-3 h-3 text-amber-500" />
+                                                ) : (
+                                                      <VolumeX className="w-3 h-3 text-neutral-500" />
+                                                )}
+                                          </button>
+                                          <input
+                                                type="range"
+                                                min="0"
+                                                max="1"
+                                                step="0.01"
+                                                value={micVolume}
+                                                onChange={(e) => setMicVolume(parseFloat(e.target.value))}
+                                                className="w-20 h-1 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
+                                                      [&::-webkit-slider-thumb]:appearance-none
+                                                      [&::-webkit-slider-thumb]:w-2.5
+                                                      [&::-webkit-slider-thumb]:h-2.5
+                                                      [&::-webkit-slider-thumb]:rounded-full
+                                                      [&::-webkit-slider-thumb]:bg-amber-500
+                                                      [&::-webkit-slider-thumb]:cursor-pointer
+                                                      [&::-webkit-slider-thumb]:shadow-md
+                                                      [&::-webkit-slider-thumb]:shadow-amber-500/40"
+                                                style={{
+                                                      background: `linear-gradient(to right, #f59e0b ${micVolume * 100}%, rgba(255,255,255,0.1) ${micVolume * 100}%)`
+                                                }}
+                                          />
                                     </div>
                               </motion.div>
                         )}
