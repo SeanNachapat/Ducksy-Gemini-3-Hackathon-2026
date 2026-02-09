@@ -108,35 +108,8 @@ export function useRecorder() {
                   micSource.connect(micGain)
                   micGain.connect(destination)
 
-                  // Try to get system audio via getDisplayMedia (handled by main process)
-                  try {
-                        // Use getDisplayMedia - our main process handler will provide loopback audio
-                        const systemStream = await navigator.mediaDevices.getDisplayMedia({
-                              video: true, // Required, but we'll discard it
-                              audio: true  // This triggers our handler which provides loopback audio
-                        })
-                        systemStreamRef.current = systemStream
-
-                        // Stop video track immediately - we only need audio
-                        systemStream.getVideoTracks().forEach(track => track.stop())
-
-                        // Check if we got audio
-                        const audioTracks = systemStream.getAudioTracks()
-                        if (audioTracks.length > 0) {
-                              console.log('System audio captured successfully via loopback')
-                              const systemSource = audioContext.createMediaStreamSource(systemStream)
-                              const systemGain = audioContext.createGain()
-                              systemGain.gain.value = systemVolume
-                              systemGainRef.current = systemGain
-                              systemSource.connect(systemGain)
-                              systemGain.connect(destination)
-                        } else {
-                              console.warn('No system audio track - ensure Screen Recording permission is granted and restart the app')
-                        }
-                  } catch (systemErr) {
-                        console.warn('System audio not available:', systemErr.message)
-                        // Continue with mic-only recording
-                  }
+                  // Note: System audio capture is not supported on macOS
+                  // Only microphone audio will be recorded
 
                   // Set up MediaRecorder on the mixed stream
                   let mimeType = 'audio/webm;codecs=opus'

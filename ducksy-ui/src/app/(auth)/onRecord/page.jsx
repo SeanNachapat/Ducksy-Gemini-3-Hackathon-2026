@@ -541,44 +541,30 @@ export default function OnRecordPage() {
                                                             <VolumeX className="w-3 h-3 text-neutral-500" />
                                                       )}
                                                 </button>
+                                                <span className="text-[10px] text-neutral-500 mt-0.5">Mic</span>
                                           </div>
 
-                                          {/* System Volume - Vertical */}
-                                          <div className="flex flex-col items-center gap-1.5">
-                                                <input
-                                                      type="range"
-                                                      min="0"
-                                                      max="1"
-                                                      step="0.01"
-                                                      value={systemVolume}
-                                                      onChange={(e) => setSystemVolume(parseFloat(e.target.value))}
-                                                      className="w-1 h-16 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
-                                                            [&::-webkit-slider-thumb]:appearance-none
-                                                            [&::-webkit-slider-thumb]:w-2.5
-                                                            [&::-webkit-slider-thumb]:h-2.5
-                                                            [&::-webkit-slider-thumb]:rounded-full
-                                                            [&::-webkit-slider-thumb]:bg-blue-500
-                                                            [&::-webkit-slider-thumb]:cursor-pointer
-                                                            [&::-webkit-slider-thumb]:shadow-md
-                                                            [&::-webkit-slider-thumb]:shadow-blue-500/40"
-                                                      style={{
-                                                            writingMode: 'vertical-lr',
-                                                            direction: 'rtl',
-                                                            background: `linear-gradient(to top, #3b82f6 ${systemVolume * 100}%, rgba(255,255,255,0.1) ${systemVolume * 100}%)`
-                                                      }}
-                                                />
-                                                <button
-                                                      onClick={() => setSystemVolume(systemVolume > 0 ? 0 : 1)}
-                                                      className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
-                                                      title="System Audio"
-                                                >
-                                                      {systemVolume > 0 ? (
-                                                            <Monitor className="w-3 h-3 text-blue-500" />
-                                                      ) : (
-                                                            <VolumeX className="w-3 h-3 text-neutral-500" />
-                                                      )}
-                                                </button>
+                                          {/* System Audio - Not supported on macOS */}
+                                          <div className="flex flex-col items-center gap-1.5 opacity-40">
+                                                <div className="w-1 h-16 bg-white/5 rounded-full relative">
+                                                      <div className="absolute inset-0 flex items-center justify-center">
+                                                            <div className="w-6 h-0.5 bg-red-500/60 rotate-45 absolute"></div>
+                                                            <div className="w-6 h-0.5 bg-red-500/60 -rotate-45 absolute"></div>
+                                                      </div>
+                                                </div>
+                                                <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center" title="System audio not supported on macOS">
+                                                      <Monitor className="w-3 h-3 text-neutral-600" />
+                                                </div>
+                                                <span className="text-[10px] text-neutral-600 mt-0.5">N/A</span>
                                           </div>
+                                    </div>
+
+                                    {/* macOS Notice */}
+                                    <div className="mt-2 pt-2 border-t border-white/5">
+                                          <p className="text-[10px] text-neutral-500 text-center flex items-center justify-center gap-1">
+                                                <span className="text-amber-500">⚠️</span>
+                                                System audio not supported on macOS
+                                          </p>
                                     </div>
                               </motion.div>
                         )}
