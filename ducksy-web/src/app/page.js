@@ -24,9 +24,11 @@ export default async function Home() {
   const version = release?.tag_name || "Latest";
   const assets = release?.assets || [];
 
-  // Find Windows installer if available (exe or msi)
+  // Find assets
   const windowsAsset = assets.find(a => a.name.endsWith('.exe') || a.name.endsWith('.msi'));
-  const downloadUrl = windowsAsset?.browser_download_url || release?.html_url || "https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/releases";
+  const macAsset = assets.find(a => a.name.endsWith('.dmg') || a.name.endsWith('.pkg')); // Assuming DMG or PKG for Mac
+
+  const fallbackUrl = release?.html_url || "https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/releases";
 
   // Format date
   const publishDate = release?.published_at ? new Date(release.published_at).toLocaleDateString() : null;
@@ -59,34 +61,41 @@ export default async function Home() {
           Seamlessly integrate AI into your workflow.
         </p>
 
-        <div className="flex flex-col gap-4 w-full max-w-md items-center">
+        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-2xl mx-auto">
+          {/* Windows Download */}
           <a
-            href={downloadUrl}
-            className="w-full flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-black font-bold text-lg hover:bg-neutral-200 transition-all hover:scale-[1.02] shadow-lg shadow-white/10"
+            href={windowsAsset?.browser_download_url || fallbackUrl}
+            className={`flex-1 flex items-center justify-center gap-3 px-8 py-5 rounded-2xl font-bold text-lg md:text-xl transition-all hover:scale-[1.02] shadow-lg hover:shadow-xl ${windowsAsset ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" x2="12" y1="15" y2="3" />
-            </svg>
-            {windowsAsset ? "Download for Windows" : "Download from GitHub"}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6h-3V4c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z" /><path d="M9 4h6v2H9z" /></svg>
+            <span className="whitespace-nowrap">{windowsAsset ? "Download for Windows" : "Windows"}</span>
           </a>
 
-          {release?.body && (
-            <div className="w-full mt-8 p-6 rounded-2xl bg-white/5 border border-white/10 text-left">
-              <h3 className="text-lg font-semibold mb-4 text-white p-2 border-b border-white/10">Release Notes</h3>
-              <div className="prose prose-invert prose-sm max-w-none text-neutral-300 overflow-y-auto max-h-60 whitespace-pre-wrap">
-                {release.body}
-              </div>
-            </div>
-          )}
-
-          {!release && (
-            <div className="p-4 rounded-lg bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
-              No releases found. Check back soon!
-            </div>
-          )}
+          {/* Mac Download */}
+          <a
+            href={macAsset?.browser_download_url || fallbackUrl}
+            className={`flex-1 flex items-center justify-center gap-3 px-8 py-5 rounded-2xl font-bold text-lg md:text-xl transition-all hover:scale-[1.02] shadow-lg hover:shadow-xl ${macAsset ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2" /><line x1="12" x2="12" y1="4" y2="20" /><line x1="2" x2="22" y1="12" y2="12" /></svg>
+            <span className="whitespace-nowrap">{macAsset ? "Download for Mac" : "Mac"}</span>
+          </a>
         </div>
+
+        {/* Release Notes */}
+        {release?.body && (
+          <div className="w-full mt-8 p-6 rounded-2xl bg-white/5 border border-white/10 text-left">
+            <h3 className="text-lg font-semibold mb-4 text-white p-2 border-b border-white/10">Release Notes</h3>
+            <div className="prose prose-invert prose-sm max-w-none text-neutral-300 overflow-y-auto max-h-60 whitespace-pre-wrap">
+              {release.body}
+            </div>
+          </div>
+        )}
+
+        {!release && (
+          <div className="p-4 rounded-lg bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+            No releases found. Check back soon!
+          </div>
+        )}
       </main>
 
       <footer className="mt-16 flex gap-6 text-sm text-neutral-500">

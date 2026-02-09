@@ -31,6 +31,14 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          async
+          crossOrigin="anonymous"
+          src="https://tweakcn.com/embed.js"
+        />
+        <meta name="google-site-verification" content="5NQ1ODlHJdJXx7wgI5frj1OgBFnxpg43u94QC3ZnudQ" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${prompt.variable} font-sans antialiased bg-neutral-950 text-white min-h-screen`}
       >
