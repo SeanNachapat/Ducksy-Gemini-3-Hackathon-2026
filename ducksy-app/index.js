@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell, globalShortcut, Tray, Menu, nativeImage } = require("electron")
+const { app, BrowserWindow, ipcMain, systemPreferences, desktopCapturer, screen, shell, globalShortcut, Tray, Menu, nativeImage, session } = require("electron")
 const path = require("path")
 const fs = require("fs")
 const serve = require("electron-serve").default
@@ -315,6 +315,25 @@ if (!gotTheLock) {
       })
 }
 app.whenReady().then(async () => {
+      // Setup permission handler for renderer process (critical for packaged app)
+      session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+            const allowedPermissions = ["media", "mediaKeySystem", "display-capture"]
+            if (allowedPermissions.includes(permission)) {
+                  console.log("[Permission] Granted:", permission)
+                  callback(true)
+            } else {
+                  console.log("[Permission] Denied:", permission)
+                  callback(false)
+            }
+      })
+      session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+            const allowedPermissions = ["media", "mediaKeySystem", "display-capture"]
+            return allowedPermissions.includes(permission)
+      })
+
+      // Request microphone permission from OS before creating window (macOS)
+      await requestMicrophonePermission()
+
       createWindow()
       registerIpcHandlers();
       createTray();
@@ -356,10 +375,11 @@ async function checkPermissions() {
 async function requestMicrophonePermission() {
       if (process.platform === "darwin") {
             const status = systemPreferences.getMediaAccessStatus("microphone")
+            console.log("[Mic] Current permission status:", status)
             if (status === "not-determined") {
-                  // const granted = await systemPreferences.askForMediaAccess("microphone")
-                  // return granted ? "granted" : "denied"
-                  return status
+                  const granted = await systemPreferences.askForMediaAccess("microphone")
+                  console.log("[Mic] Permission granted:", granted)
+                  return granted ? "granted" : "denied"
             }
             return status
       }
