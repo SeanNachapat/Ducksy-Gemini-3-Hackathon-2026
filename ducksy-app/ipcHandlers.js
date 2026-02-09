@@ -274,7 +274,6 @@ const registerIpcHandlers = () => {
                         transcriptionId: file.transcriptionId,
                         type: file.transcriptionType || details.type || "summary",
                         title: file.transcriptionTitle || file.title,
-                        mode: file.mode === "ghost" ? "Ghost Mode 👻" : "Lens Mode 🕶️",
                         details: {
                               topic: details.topic || file.title,
                               summary: file.transcriptionSummary || "",
@@ -695,6 +694,34 @@ const registerIpcHandlers = () => {
                   return { success: false, error: err.message };
             }
       });
+
+      ipcMain.handle("set-auto-launch", (event, enable) => {
+            try {
+                  const appPath = app.getPath("exe");
+                  app.setLoginItemSettings({
+                        openAtLogin: enable,
+                        openAsHidden: false,
+                        path: appPath,
+                        args: [
+                              '--process-start-args', `"--hidden"`
+                        ]
+                  });
+                  return { success: true, enabled: enable };
+            } catch (error) {
+                  console.error("Failed to set auto-launch:", error);
+                  return { success: false, error: error.message };
+            }
+      });
+
+      ipcMain.handle("get-auto-launch", () => {
+            try {
+                  const settings = app.getLoginItemSettings();
+                  return { success: true, enabled: settings.openAtLogin };
+            } catch (error) {
+                  return { success: false, error: error.message };
+            }
+      });
+
       ipcMain.handle("get-latest-file", async () => {
             if (!latestFileId) {
                   return { success: false, error: "No active file" };
@@ -842,6 +869,20 @@ const registerIpcHandlers = () => {
             } catch (err) {
                   return { success: false, error: err.message };
             }
+      });
+      ipcMain.handle("get-app-info", async () => {
+            const { execSync } = require("child_process");
+            let buildId = "Unknown";
+            try {
+                  buildId = execSync("git rev-parse --short HEAD").toString().trim();
+            } catch (e) {
+                  console.warn("Failed to get git hash for build ID:", e);
+                  buildId = "dev-" + Math.random().toString(36).substring(2, 8);
+            }
+            return {
+                  version: app.getVersion(),
+                  buildId: buildId
+            };
       });
 };
 module.exports = {

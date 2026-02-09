@@ -27,6 +27,7 @@ import {
       Upload
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useSettings } from "@/hooks/SettingsContext"
 import { useSessionLogs } from "@/hooks/useSessionLogs"
 import Voice from "@/components/Voice"
@@ -111,10 +112,33 @@ function LiveSystemMetrics() {
 }
 export default function DashboardPage() {
       const [selectedSession, setSelectedSession] = useState(null)
+      const router = useRouter()
       const [micDevice, setMicDevice] = useState(null)
       const [isDeleting, setIsDeleting] = useState(false)
       const [isDragging, setIsDragging] = useState(false)
-      const [isProcessingFile, setIsProcessingFile] = useState(false)
+      const [isProcessingFile, setIsProcessingFile] = useState(false);
+      const [logoAnimation, setLogoAnimation] = useState("");
+      const [animKey, setAnimKey] = useState(0);
+
+      const triggerLogoAnimation = (e) => {
+            const animations = ["spin", "bounce", "shake", "pulse"];
+            const randomAnim = animations[Math.floor(Math.random() * animations.length)];
+
+            setLogoAnimation(randomAnim);
+            setAnimKey(prev => prev + 1);
+
+            // Navigate home after a short delay if not already there
+            const path = window.location.pathname;
+            if (path !== '/dashboard' && path !== '/dashboard/') {
+                  setTimeout(() => {
+                        router.push('/dashboard');
+                  }, 400);
+            }
+
+            // Reset state after animation duration
+            setTimeout(() => setLogoAnimation(""), 1000);
+      };
+
       const fileInputRef = useRef(null)
       const [showCalendarModal, setShowCalendarModal] = useState(false)
       const [eventDate, setEventDate] = useState('')
@@ -384,8 +408,26 @@ export default function DashboardPage() {
                   <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-amber-500/5 blur-[120px] rounded-full pointer-events-none z-0" />
                   <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-amber-400/3 blur-[100px] rounded-full pointer-events-none z-0" />
                   <aside className="w-20 border-r border-white/5 flex flex-col items-center py-6 z-20 bg-neutral-900/30 backdrop-blur-md">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center mb-8 hover:bg-white/10 transition-colors cursor-pointer group">
-                              <Layers className="w-5 h-5 text-neutral-500 group-hover:text-amber-400 transition-colors" />
+                        <div onClick={triggerLogoAnimation} className="mb-8 group cursor-pointer">
+                              <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/10 flex items-center justify-center hover:bg-amber-500/20 hover:border-amber-500/30 transition-all duration-500 shadow-[0_0_20px_rgba(251,191,36,0.05)] group-hover:shadow-[0_0_25px_rgba(251,191,36,0.15)] group-hover:scale-105 overflow-hidden p-2">
+                                    <motion.div
+                                          key={animKey}
+                                          animate={
+                                                logoAnimation === "spin" ? { rotate: 360 } :
+                                                      logoAnimation === "bounce" ? { y: [0, -12, 0, -6, 0] } :
+                                                            logoAnimation === "shake" ? { x: [0, -5, 5, -5, 5, 0] } :
+                                                                  logoAnimation === "pulse" ? { scale: [1, 1.3, 1] } :
+                                                                        { rotate: 0, y: 0, x: 0, scale: 1 }
+                                          }
+                                          transition={{
+                                                duration: logoAnimation === "pulse" ? 0.3 : 0.6,
+                                                ease: "easeInOut"
+                                          }}
+                                          className="w-full h-full flex items-center justify-center"
+                                    >
+                                          <img src="/ducksy-logo.svg" alt="Ducksy Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(251,191,36,0.3)] group-hover:brightness-110 transition-all pointer-events-none" />
+                                    </motion.div>
+                              </div>
                         </div>
                         <div className="mt-auto flex flex-col gap-6 items-center pb-6">
                               <div className="relative group flex items-center justify-center">
@@ -405,7 +447,7 @@ export default function DashboardPage() {
                   </aside>
                   <main className="flex-1 flex flex-col relative overflow-hidden z-10 transition-all duration-300">
                         <header className="h-24 px-8 flex items-center justify-between border-b border-white/5 bg-neutral-950/50 backdrop-blur-xl relative z-50">
-                              <div>
+                              <div className="hidden lg:block">
                                     <DashboardSearch onSelectSession={setSelectedSession} />
                               </div>
                               <div className="flex items-center gap-6">
@@ -414,8 +456,8 @@ export default function DashboardPage() {
                               </div>
                         </header>
                         <div className="flex-1 overflow-hidden p-8">
-                              <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-                                    <div className="lg:col-span-4 flex flex-col gap-6 h-full">
+                              <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 h-full overflow-y-auto lg:overflow-visible pb-20 lg:pb-0">
+                                    <div className="lg:col-span-4 md:col-span-1 flex flex-col gap-6 h-[500px] lg:h-full">
                                           <motion.button
                                                 whileHover={{ scale: 1.01, backgroundColor: "rgb(251 191 36)" }}
                                                 whileTap={{ scale: 0.99 }}
@@ -504,7 +546,7 @@ export default function DashboardPage() {
                                                 </div>
                                           </div>
                                     </div>
-                                    <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
+                                    <div className="lg:col-span-8 md:col-span-1 flex flex-col h-[500px] lg:h-full overflow-hidden">
                                           <div className="bg-neutral-900/40 border border-white/5 rounded-3xl p-8 flex-1 flex flex-col backdrop-blur-sm relative overflow-hidden">
                                                 <div className="flex items-center justify-between mb-8 z-10 relative">
                                                       <div className="flex items-center gap-3">
@@ -629,9 +671,6 @@ export default function DashboardPage() {
                                           <div className="p-6 border-b border-white/5 flex items-start justify-between bg-neutral-900/30">
                                                 <div>
                                                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                            <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-white/5 text-neutral-400 border border-white/5">
-                                                                  {selectedSession.mode}
-                                                            </span>
                                                             <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
                                                                   {selectedSession.type}
                                                             </span>

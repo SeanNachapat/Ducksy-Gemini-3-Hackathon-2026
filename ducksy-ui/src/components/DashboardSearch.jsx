@@ -83,7 +83,7 @@ const DashboardSearch = ({ onSelectSession }) => {
 
     return (
         <div ref={containerRef} className="relative z-50">
-            <div className={`relative flex items-center w-80 h-10 rounded-full transition-all duration-300 border ${isFocused || isOpen ? 'bg-white/10 border-yellow-400/50' : 'bg-white/5 border-white/10'}`}>
+            <div className={`relative flex items-center w-full md:w-80 h-10 rounded-full transition-all duration-300 border ${isFocused || isOpen ? 'bg-white/10 border-yellow-400/50' : 'bg-white/5 border-white/10'}`}>
                 <div className="pl-3 text-neutral-400">
                     {isSearching ? (
                         <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
@@ -134,7 +134,7 @@ const DashboardSearch = ({ onSelectSession }) => {
             </div>
 
             {isOpen && (results.length > 0 || isSearching) && (
-                <div className="absolute top-full left-0 w-[400px] mt-2 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-full left-0 w-full md:w-[400px] mt-2 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="max-h-[60vh] overflow-y-auto custom-scrollbar p-2">
                         {results.length > 0 ? (
                             <>

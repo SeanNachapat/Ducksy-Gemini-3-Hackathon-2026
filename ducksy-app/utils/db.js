@@ -332,7 +332,6 @@ const getSessionLogs = async () => {
                   type: type,
                   title: file.transcriptionTitle || file.title,
                   subtitle: `${subtitlePrefix} • ${timeAgo}`,
-                  mode: file.mode === "ghost" ? "Ghost Mode 👻" : "Lens Mode 🕶️",
                   details: {
                         topic: details.topic || file.title,
                         summary: file.transcriptionSummary || "",

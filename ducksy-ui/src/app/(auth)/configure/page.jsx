@@ -17,8 +17,38 @@ export default function ConfigurePage() {
         reducedMotion: false
     })
     const [saving, setSaving] = useState(false)
+    const [appInfo, setAppInfo] = useState({ version: "v1.0.0", buildId: "..." })
+    const [lastSave, setLastSave] = useState(null)
     const [showBuilders, setShowBuilders] = useState(false)
     const [contributors, setContributors] = useState([])
+
+    useEffect(() => {
+        const fetchAppInfo = async () => {
+            if (window.electron) {
+                try {
+                    const info = await window.electron.invoke("get-app-info")
+                    if (info) setAppInfo(info)
+                } catch (e) {
+                    console.error("Failed to fetch app info:", e)
+                }
+            }
+        }
+        fetchAppInfo()
+
+        const savedLastSave = localStorage.getItem("ducksy_last_save")
+        if (savedLastSave) {
+            setLastSave(new Date(parseInt(savedLastSave)))
+        }
+    }, [])
+
+    const formatRelativeTime = (date) => {
+        if (!date) return "Never"
+        const now = new Date()
+        const diffInSeconds = Math.floor((now - date) / 1000)
+        if (diffInSeconds < 60) return "Just now"
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
     useEffect(() => {
         const fetchContributors = async () => {
             try {
@@ -56,14 +86,30 @@ export default function ConfigurePage() {
         }
     }, [showBuilders])
     useEffect(() => {
-        const savedSettings = localStorage.getItem("ducksy_settings")
-        if (savedSettings) {
-            const parsed = JSON.parse(savedSettings)
-            if (!['en', 'th', 'zh', 'ja'].includes(parsed.language)) {
-                parsed.language = 'en'
+        const init = async () => {
+            const savedSettings = localStorage.getItem("ducksy_settings")
+            let parsed = {}
+            if (savedSettings) {
+                try {
+                    parsed = JSON.parse(savedSettings);
+                    if (!['en', 'th', 'zh', 'ja'].includes(parsed.language)) {
+                        parsed.language = 'en'
+                    }
+                } catch (e) { console.error(e) }
+            }
+            if (window.electron) {
+                try {
+                    const result = await window.electron.invoke("get-auto-launch")
+                    if (result && result.success) {
+                        parsed.autoStart = result.enabled
+                    }
+                } catch (e) {
+                    console.error("Failed to get auto-launch status:", e)
+                }
             }
             setSettings(prev => ({ ...prev, ...parsed }))
         }
+        init()
     }, [])
     const [mcpStatus, setMcpStatus] = useState({
         google_calendar: { connected: false },
@@ -155,12 +201,24 @@ export default function ConfigurePage() {
             })
         }
     }
-    const handleSave = () => {
+    const handleSave = async () => {
         setSaving(true)
+        try {
+            if (window.electron) {
+                await window.electron.invoke("set-auto-launch", settings.autoStart)
+            }
+        } catch (e) {
+            console.error("Failed to set auto-launch:", e)
+        }
         setTimeout(() => {
+            const now = Date.now()
             localStorage.setItem("ducksy_settings", JSON.stringify(settings))
+            localStorage.setItem("ducksy_last_save", now.toString())
             setSaving(false)
-            window.location.reload()
+            setLastSave(new Date(now))
+            setTimeout(() => {
+                window.location.reload()
+            }, 500)
         }, 800)
     }
     const t = translations[settings.language] || translations.en
@@ -532,7 +590,7 @@ export default function ConfigurePage() {
                                             </div>
                                             <div>
                                                 <h3 className="text-xl font-bold text-white">Ducksy</h3>
-                                                <p className="text-sm text-neutral-400 font-mono mt-1">v1.2.0-alpha</p>
+                                                <p className="text-sm text-neutral-400 font-mono mt-1">v{appInfo.version}</p>
                                                 <div className="flex items-center gap-2 mt-2">
                                                     <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[10px] text-neutral-500 font-mono uppercase">Electron</span>
                                                     <span className="px-2 py-0.5 rounded bg-white/5 border border-white/5 text-[10px] text-neutral-500 font-mono uppercase">React</span>
@@ -542,7 +600,7 @@ export default function ConfigurePage() {
                                         </div>
                                         <div className="hidden md:block text-right">
                                             <p className="text-xs text-neutral-500 font-mono mb-1">BUILD ID</p>
-                                            <p className="text-sm text-white font-mono">8f314e4-aa5a</p>
+                                            <p className="text-sm text-white font-mono">{appInfo.buildId}</p>
                                         </div>
                                     </div>
                                     <Link href="https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026" target="_blank" className="group bg-neutral-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm flex flex-col gap-4 hover:bg-white/5 hover:border-white/10 transition-all">
@@ -721,7 +779,7 @@ export default function ConfigurePage() {
                 <div className="h-24 px-12 border-t border-white/5 flex items-center justify-between bg-neutral-900/50 backdrop-blur-xl">
                     <div className="text-xs text-neutral-500 font-medium">
                         <span className="text-neutral-600 mr-2">LAST SAVE</span>
-                        Just now
+                        {formatRelativeTime(lastSave)}
                     </div>
                     <button
                         onClick={handleSave}
