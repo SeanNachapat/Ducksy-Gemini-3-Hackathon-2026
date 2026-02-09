@@ -1,0 +1,8 @@
+APP_PATH="/Applications/Ducksy.app"
+
+if [ -d "$APP_PATH" ]; then
+    /usr/bin/xattr -cr "$APP_PATH"
+    echo "Quarantine attributes removed from $APP_PATH"
+fi
+
+exit 0
