@@ -505,83 +505,38 @@ export default function OnRecordPage() {
                                     transition={{ duration: 0.2 }}
                                     className="mt-3 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-xl"
                               >
-                                    <div className="flex items-center gap-3">
-                                          {/* Mic Volume */}
-                                          <div className="flex items-center gap-2">
-                                                <button
-                                                      onClick={() => setMicVolume(micVolume > 0 ? 0 : 1)}
-                                                      className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
-                                                      title="Microphone"
-                                                >
-                                                      {micVolume > 0 ? (
-                                                            <Mic className="w-3 h-3 text-amber-500" />
-                                                      ) : (
-                                                            <VolumeX className="w-3 h-3 text-neutral-500" />
-                                                      )}
-                                                </button>
-                                                <input
-                                                      type="range"
-                                                      min="0"
-                                                      max="1"
-                                                      step="0.01"
-                                                      value={micVolume}
-                                                      onChange={(e) => setMicVolume(parseFloat(e.target.value))}
-                                                      className="w-16 h-1 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
-                                                            [&::-webkit-slider-thumb]:appearance-none
-                                                            [&::-webkit-slider-thumb]:w-2.5
-                                                            [&::-webkit-slider-thumb]:h-2.5
-                                                            [&::-webkit-slider-thumb]:rounded-full
-                                                            [&::-webkit-slider-thumb]:bg-amber-500
-                                                            [&::-webkit-slider-thumb]:cursor-pointer
-                                                            [&::-webkit-slider-thumb]:shadow-md
-                                                            [&::-webkit-slider-thumb]:shadow-amber-500/40"
-                                                      style={{
-                                                            background: `linear-gradient(to right, #f59e0b ${micVolume * 100}%, rgba(255,255,255,0.1) ${micVolume * 100}%)`
-                                                      }}
-                                                />
-                                          </div>
-
-                                          {/* System Volume - Show only on Windows/Linux */}
-                                          {typeof navigator !== 'undefined' &&
-                                                !navigator.platform?.toLowerCase().includes('mac') &&
-                                                !navigator.userAgent?.toLowerCase().includes('mac') && (
-                                                      <>
-                                                            <div className="w-px h-4 bg-white/10" />
-                                                            <div className="flex items-center gap-2">
-                                                                  <button
-                                                                        onClick={() => setSystemVolume(systemVolume > 0 ? 0 : 1)}
-                                                                        className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
-                                                                        title="System Audio"
-                                                                  >
-                                                                        {systemVolume > 0 ? (
-                                                                              <Monitor className="w-3 h-3 text-blue-500" />
-                                                                        ) : (
-                                                                              <VolumeX className="w-3 h-3 text-neutral-500" />
-                                                                        )}
-                                                                  </button>
-                                                                  <input
-                                                                        type="range"
-                                                                        min="0"
-                                                                        max="1"
-                                                                        step="0.01"
-                                                                        value={systemVolume}
-                                                                        onChange={(e) => setSystemVolume(parseFloat(e.target.value))}
-                                                                        className="w-16 h-1 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
-                                                                        [&::-webkit-slider-thumb]:appearance-none
-                                                                        [&::-webkit-slider-thumb]:w-2.5
-                                                                        [&::-webkit-slider-thumb]:h-2.5
-                                                                        [&::-webkit-slider-thumb]:rounded-full
-                                                                        [&::-webkit-slider-thumb]:bg-blue-500
-                                                                        [&::-webkit-slider-thumb]:cursor-pointer
-                                                                        [&::-webkit-slider-thumb]:shadow-md
-                                                                        [&::-webkit-slider-thumb]:shadow-blue-500/40"
-                                                                        style={{
-                                                                              background: `linear-gradient(to right, #3b82f6 ${systemVolume * 100}%, rgba(255,255,255,0.1) ${systemVolume * 100}%)`
-                                                                        }}
-                                                                  />
-                                                            </div>
-                                                      </>
+                                    <div className="flex items-center gap-2">
+                                          <button
+                                                onClick={() => setMicVolume(micVolume > 0 ? 0 : 1)}
+                                                className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
+                                                title="Microphone"
+                                          >
+                                                {micVolume > 0 ? (
+                                                      <Mic className="w-3 h-3 text-amber-500" />
+                                                ) : (
+                                                      <VolumeX className="w-3 h-3 text-neutral-500" />
                                                 )}
+                                          </button>
+                                          <input
+                                                type="range"
+                                                min="0"
+                                                max="1"
+                                                step="0.01"
+                                                value={micVolume}
+                                                onChange={(e) => setMicVolume(parseFloat(e.target.value))}
+                                                className="w-20 h-1 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
+                                                      [&::-webkit-slider-thumb]:appearance-none
+                                                      [&::-webkit-slider-thumb]:w-2.5
+                                                      [&::-webkit-slider-thumb]:h-2.5
+                                                      [&::-webkit-slider-thumb]:rounded-full
+                                                      [&::-webkit-slider-thumb]:bg-amber-500
+                                                      [&::-webkit-slider-thumb]:cursor-pointer
+                                                      [&::-webkit-slider-thumb]:shadow-md
+                                                      [&::-webkit-slider-thumb]:shadow-amber-500/40"
+                                                style={{
+                                                      background: `linear-gradient(to right, #f59e0b ${micVolume * 100}%, rgba(255,255,255,0.1) ${micVolume * 100}%)`
+                                                }}
+                                          />
                                     </div>
                               </motion.div>
                         )}
