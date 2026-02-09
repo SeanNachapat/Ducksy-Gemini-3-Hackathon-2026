@@ -244,7 +244,7 @@ ${jsonStructure}
 `;
       let normalizedMimeType = mimeType.split(';')[0].trim()
       try {
-            const text = await generateContent(apiKey, 'gemini-3-pro-preview', [{
+            const text = await generateContent(apiKey, process.env.model, [{
                   parts: [
                         { inline_data: { mime_type: normalizedMimeType, data: base64Audio } },
                         { text: prompt }
@@ -292,7 +292,7 @@ ${jsonStructure}
 `;
       let normalizedMimeType = mimeType.split(';')[0].trim()
       try {
-            const text = await generateContent(apiKey, 'gemini-3-pro-preview', [{
+            const text = await generateContent(apiKey, process.env.model, [{
                   parts: [
                         { inline_data: { mime_type: normalizedMimeType, data: base64Image } },
                         { text: prompt }
@@ -355,7 +355,7 @@ Do not mention the JSON in your text response, just append it at the end.
             { role: "user", parts: [{ text: userMessage }] }
       ];
       try {
-            const text = await generateContent(apiKey, 'gemini-3-pro-preview', contents, {
+            const text = await generateContent(apiKey, process.env.model, contents, {
                   temperature: 0.7,
                   maxOutputTokens: 1000
             });
