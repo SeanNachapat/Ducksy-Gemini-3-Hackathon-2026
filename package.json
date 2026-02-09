@@ -4,10 +4,11 @@
       "workspaces": [
             "ducksy-app",
             "ducksy-ui",
-            "ducksy-server"
+            "ducksy-server",
+            "ducksy-web"
       ],
       "scripts": {
-            "dev": "concurrently -n \"NEXT,ELECTRON,SERVER\" -c \"yellow,blue,green\" --kill-others \"npm -w ducksy-ui run dev\" \"npm -w ducksy-app run electron\" \"npm -w ducksy-server run dev\"",
+            "dev": "concurrently -n \"NEXT,ELECTRON,SERVER,WEB\" -c \"yellow,blue,green,magenta\" --kill-others \"npm -w ducksy-ui run dev\" \"npm -w ducksy-app run electron\" \"npm -w ducksy-server run dev\" \"npm -w ducksy-web run dev\"",
             "dev:app": "concurrently -n \"NEXT,ELECTRON\" -c \"yellow,blue\" --kill-others \"npm -w ducksy-ui run dev\" \"npm -w ducksy-app run electron\"",
             "server": "npm -w ducksy-server run dev",
             "build": "npm -w ducksy-ui run build && npm -w ducksy-app run build"
