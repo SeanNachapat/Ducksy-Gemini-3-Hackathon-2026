@@ -25,8 +25,17 @@ export default async function Home() {
 
   // Find assets
   const windowsAsset = assets.find(a => a.name.endsWith('.exe') || a.name.endsWith('.msi'));
-  const downloadUrl = windowsAsset?.browser_download_url || release?.html_url || "https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/releases";
+  const macAsset = assets.find(a => a.name.endsWith('.dmg') || a.name.endsWith('.zip'));
+
+  const windowsDownloadUrl = windowsAsset?.browser_download_url || release?.html_url || "https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/releases";
+  const macDownloadUrl = macAsset?.browser_download_url || release?.html_url || "https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/releases";
 
   // Pass data to Client Component
-  return <LandingPage initialVersion={version} initialDownloadUrl={downloadUrl} />;
+  return (
+    <LandingPage
+      initialVersion={version}
+      initialWindowsDownloadUrl={windowsDownloadUrl}
+      initialMacDownloadUrl={macDownloadUrl}
+    />
+  );
 }

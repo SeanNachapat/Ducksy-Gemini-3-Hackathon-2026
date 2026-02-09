@@ -3,16 +3,17 @@
 import React, { useState } from 'react'
 
 const CONFIG = {
-    videoUrl: null, 
-    githubUrl: null,
+    videoUrl: 'https://www.youtube.com/embed/_XMQErOkuMg',
+    githubUrl: 'https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026',
     downloadUrl: 'https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/releases/latest'
 }
 
-const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
+const LandingPage = ({ initialVersion, initialWindowsDownloadUrl, initialMacDownloadUrl }) => {
     const [showTooltip, setShowTooltip] = useState(false)
 
     const version = initialVersion || "v1.0.0"
-    const downloadUrl = initialDownloadUrl || CONFIG.downloadUrl
+    const windowsDownloadUrl = initialWindowsDownloadUrl || CONFIG.downloadUrl
+    const macDownloadUrl = initialMacDownloadUrl || CONFIG.downloadUrl
 
     return (
         <div className="flex bg-[#0a0a0a] text-white font-sans selection:bg-amber-500/30 overflow-hidden relative h-screen w-screen">
@@ -63,7 +64,7 @@ const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
 
                 <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl">
                     <a
-                        href={downloadUrl}
+                        href={macDownloadUrl}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-black bg-amber-500 hover:bg-amber-400 transition-all hover:scale-[1.02] shadow-[0_0_15px_rgba(245,158,11,0.2)]"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.21-1.98 1.07-3.11-1.04.05-2.29.69-3.02 1.55-.65.75-1.21 1.95-1.06 3.04 1.15.09 2.3-.64 3.01-1.48" /></svg>
@@ -71,7 +72,7 @@ const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
                     </a>
 
                     <a
-                        href={downloadUrl}
+                        href={windowsDownloadUrl}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-black bg-amber-500 hover:bg-amber-400 transition-all hover:scale-[1.02] shadow-[0_0_15px_rgba(245,158,11,0.2)]"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0v-8.102zm10.949-1.67L24 0v11.551H10.949V1.78zm-10.949 10.929h9.75v8.1l-9.75-1.35v-6.75zm10.949 0h13.051v9.541L10.949 20.45v-7.74z" /></svg>
