@@ -3,8 +3,8 @@
 import React, { useState } from 'react'
 
 const CONFIG = {
-    videoUrl: null, // Set to a URL (e.g., YouTube embed) to show video
-    githubUrl: null, // Set to GitHub repo URL
+    videoUrl: null, 
+    githubUrl: null,
     downloadUrl: 'https://github.com/SeanNachapat/Ducksy-Gemini-3-Hackathon-2026/releases/latest'
 }
 
@@ -16,7 +16,6 @@ const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
 
     return (
         <div className="flex bg-[#0a0a0a] text-white font-sans selection:bg-amber-500/30 overflow-hidden relative h-screen w-screen">
-            {/* Background Orbs */}
             <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
                 <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-amber-500/5 blur-[120px] rounded-full" />
                 <div className="absolute bottom-[-20%] left-[-10%] w-[500px] h-[500px] bg-amber-500/5 blur-[100px] rounded-full" />
@@ -24,7 +23,6 @@ const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
 
             <main className="relative z-10 flex flex-col items-center justify-center w-full h-full p-6 animate-fade-in gap-6">
 
-                {/* Header - Compact */}
                 <div className="text-center flex flex-col items-center">
                     <div className="flex items-center justify-center gap-3 mb-2">
                         <div className="relative w-10 h-10 group">
@@ -40,9 +38,7 @@ const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
                     </div>
                 </div>
 
-                {/* Video Container - Central & Compact */}
                 <div className="w-full max-w-2xl aspect-video rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-2xl flex items-center justify-center relative group shrink-0">
-                    {/* Glow */}
                     <div className="absolute -inset-1 bg-linear-to-r from-amber-500 to-amber-600 rounded-2xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
 
                     <div className="relative w-full h-full bg-[#0a0a0a] rounded-2xl flex items-center justify-center z-10 overflow-hidden">
@@ -65,7 +61,6 @@ const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
                     </div>
                 </div>
 
-                {/* Buttons - Row */}
                 <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl">
                     <a
                         href={downloadUrl}
@@ -102,7 +97,6 @@ const LandingPage = ({ initialVersion, initialDownloadUrl }) => {
                     </div>
                 </div>
 
-                {/* Footer Link */}
                 <div className="absolute bottom-4 text-[10px] text-neutral-600 flex gap-4">
                     <a href="/tos" className="hover:text-neutral-400">Terms</a>
                     <a href="/privacy" className="hover:text-neutral-400">Privacy</a>
