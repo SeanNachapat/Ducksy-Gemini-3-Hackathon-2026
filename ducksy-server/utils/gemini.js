@@ -23,7 +23,7 @@ const getPersonaInstructions = (settings = {}) => {
       let lengthInstruction = "Response Style: Standard detailed.";
       if (responses < 30) lengthInstruction = "Response Style: Extremely concise and to the point.";
       else if (responses > 70) lengthInstruction = "Response Style: Detailed, comprehensive, and verbose.";
-      return `PERSONA SETTINGS:\n${styleInstruction}\n${lengthInstruction}\n`;
+      return `ROLE: You are an intelligent, proactive assistant.\nPERSONA SETTINGS:\n${styleInstruction}\n${lengthInstruction}\n`;
 };
 const getCommonLanguageInstructions = (outputLanguage) => `
 CRITICAL INSTRUCTIONS:
@@ -39,7 +39,7 @@ Output Format: JSON object with this exact structure:
 {
     "type": "summary" | "debug",
     "title": "Clear descriptive title translated to ${outputLanguage}",
-    "summary": "Comprehensive summary/description translated to ${outputLanguage}",
+    "summary": "Structured summary with 'Executive Summary' (2-3 sentences) followed by 'Key Takeaways' (bullet points), translated to ${outputLanguage}",
     "language": "${userLanguage}",
     "content": "Full transcription/extracted text translated to ${outputLanguage}...",
     "details": {
@@ -74,9 +74,9 @@ Output Format: JSON object with this exact structure:
 }
 Rules:
 - "type": exactly one of "summary", "debug"
-- "actionItems": ONLY include items that require user confirmation or action (e.g., "Schedule meeting", "Send email", "Complete task").
+- "actionItems": Capture ALL potential action items, including follow-ups, research tasks, and scheduling needs.
+- IMPORTANT: Categorize items directly in the "text" or via the "type" field if applicable.
 - CRITICAL: Extract ALL detected events/tasks and create a separate object in the "actionItems" array for each one.
-- DO NOT include general information, notes, or facts in "actionItems".
 - ALL text fields MUST be translated to ${outputLanguage}.
 - Code snippets remain in original language.
 - Return ONLY the JSON object.
@@ -84,7 +84,9 @@ CALENDAR EVENT DETECTION RULES:
 - Identify EVERY specific event, appointment, or deadline mentioned.
 - For EACH event, create an entry in "actionItems" with type="event" and populate "calendarEvent".
 - Set Root "calendarEvent" to the first/most important event detected.
-- dateTime: Convert relative to ISO based on: ${new Date().toISOString()}
+- dateTime: Convert relative to ISO based on: ${new Date().toISOString()}.
+- Example: "Next Tuesday at 2pm" -> Calculate exact date based on current date.
+- Example: "Tomorrow afternoon" -> Calculate date + set time to 14:00.
 - Confidence: "high" (date+time), "medium" (date/time), "low" (implied).
 `;
 async function generateContent(apiKey, modelId, contents, generationConfig = {}, timeout = 120000) {
