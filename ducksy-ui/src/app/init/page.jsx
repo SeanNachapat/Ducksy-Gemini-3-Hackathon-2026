@@ -22,7 +22,6 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(true)
     const [isInitialDb, setIsInitialDb] = useState(false)
     const [permissions, setPermissions] = useState({
-        microphone: "unknown",
         screen: "unknown",
     })
     const [builders, setBuilders] = useState([])
@@ -97,17 +96,6 @@ export default function Home() {
         router.push("/dashboard")
     }
 
-    const requestMicrophonePermission = async () => {
-        if (window.electron) {
-            const status = await window.electron.invoke("request-microphone")
-            setPermissions(prev => ({ ...prev, microphone: status }))
-
-            if (status === "denied") {
-                window.electron.send("open-system-preferences", "microphone")
-            }
-        }
-    }
-
     const requestScreenPermission = async () => {
         if (window.electron) {
             const status = await window.electron.invoke("request-screen")
@@ -119,7 +107,7 @@ export default function Home() {
         }
     }
 
-    const allPermissionsGranted = permissions.microphone === "granted" && permissions.screen === "granted"
+    const allPermissionsGranted = permissions.screen === "granted"
 
     const slideVariants = {
         enter: direction => ({
@@ -419,22 +407,6 @@ export default function Home() {
                             transition={{ delay: 0.4 }}
                             className="flex flex-col gap-4 w-full max-w-md mt-4"
                         >
-                            <button
-                                onClick={requestMicrophonePermission}
-                                disabled={permissions.microphone === "granted"}
-                                className={`flex items-center gap-4 p-4 rounded-xl border transition-all
-                           ${getStatusBg(permissions.microphone)}
-                           ${permissions.microphone !== "granted" ? "hover:border-amber-400/50 cursor-pointer" : "cursor-default"}`}
-                            >
-                                <div className="flex-1 text-left">
-                                    <div className="font-medium text-white">{t.microphone}</div>
-                                    <div className="text-sm text-neutral-500">{t.microphoneDesc}</div>
-                                </div>
-                                <div className={`text-sm font-medium ${getStatusColor(permissions.microphone)}`}>
-                                    {permissions.microphone === "granted"}{getStatusText(permissions.microphone)}
-                                </div>
-                            </button>
-
                             <button
                                 onClick={requestScreenPermission}
                                 disabled={permissions.screen === "granted"}

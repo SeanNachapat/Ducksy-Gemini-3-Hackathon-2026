@@ -357,8 +357,9 @@ async function requestMicrophonePermission() {
       if (process.platform === "darwin") {
             const status = systemPreferences.getMediaAccessStatus("microphone")
             if (status === "not-determined") {
-                  const granted = await systemPreferences.askForMediaAccess("microphone")
-                  return granted ? "granted" : "denied"
+                  // const granted = await systemPreferences.askForMediaAccess("microphone")
+                  // return granted ? "granted" : "denied"
+                  return status
             }
             return status
       }
