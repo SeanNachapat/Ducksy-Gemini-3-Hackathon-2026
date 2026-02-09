@@ -10,9 +10,24 @@ export function useRecorder() {
       const [error, setError] = useState(null)
       const [micVolume, setMicVolume] = useState(1)
       const [systemVolume, setSystemVolume] = useState(1)
+      const [supportsSystemAudio, setSupportsSystemAudio] = useState(false)
+
+      useEffect(() => {
+            const checkPlatform = async () => {
+                  if (typeof window !== 'undefined' && window.electron) {
+                        const platform = navigator.platform?.toLowerCase() || ''
+                        const userAgent = navigator.userAgent?.toLowerCase() || ''
+                        // Simple check for Windows
+                        const isWindows = platform.includes('win') || userAgent.includes('windows')
+                        setSupportsSystemAudio(isWindows)
+                  }
+            }
+            checkPlatform()
+      }, [])
 
       const mediaRecorderRef = useRef(null)
       const chunksRef = useRef([])
+
       const timerRef = useRef(null)
       const isPausedRef = useRef(false)
       const elapsedBeforePauseRef = useRef(0)
@@ -334,6 +349,7 @@ export function useRecorder() {
             systemVolume,
             setMicVolume,
             setSystemVolume,
+            supportsSystemAudio,
             startRecording,
             pauseRecording,
             resumeRecording,

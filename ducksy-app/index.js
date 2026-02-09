@@ -326,6 +326,15 @@ app.whenReady().then(async () => {
                   callback(false)
             }
       })
+      session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+            desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+                  // Grant access to the first screen found.
+                  callback({ video: sources[0], audio: 'loopback' })
+            }).catch((error) => {
+                  console.error(error)
+                  callback(null)
+            })
+      })
       session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
             const allowedPermissions = ["media", "mediaKeySystem", "display-capture"]
             return allowedPermissions.includes(permission)

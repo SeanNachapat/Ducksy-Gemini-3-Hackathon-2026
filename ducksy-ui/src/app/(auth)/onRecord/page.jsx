@@ -43,6 +43,8 @@ export default function OnRecordPage() {
             systemVolume,
             setMicVolume,
             setSystemVolume,
+            supportsSystemAudio,
+            duration,
       } = useRecorder()
 
       useEffect(() => {
@@ -56,6 +58,13 @@ export default function OnRecordPage() {
 
       useEffect(() => {
             if (!audioBlob) return
+
+            // Minimum 3 seconds duration check
+            if (duration < 3) {
+                  console.log("Recording less than 3 seconds, discarding.")
+                  resetRecording()
+                  return
+            }
 
             const save = async () => {
                   const result = await saveRecording()
@@ -240,6 +249,14 @@ export default function OnRecordPage() {
             if (typeof window !== 'undefined' && window.electron) {
                   window.electron.send('recording-control', { action: 'stop' })
             }
+
+            // Check duration (use local formattedDuration or track separate start time if needed, 
+            // but here we use the hook's duration state which should be accurate enough for seconds)
+            if (duration < 3) {
+                  console.log("Recording skipped: < 3s")
+                  return
+            }
+
             setIsProcessing(true)
             setExpanded(true)
             if (typeof window !== 'undefined' && window.electron) {
@@ -535,6 +552,45 @@ export default function OnRecordPage() {
                                                       [&::-webkit-slider-thumb]:shadow-amber-500/40"
                                                 style={{
                                                       background: `linear-gradient(to right, #f59e0b ${micVolume * 100}%, rgba(255,255,255,0.1) ${micVolume * 100}%)`
+                                                }}
+                                          />
+                                    </div>
+
+                                    {/* System Audio Slider - Gray out if not supported (Windows only) */}
+                                    <div
+                                          className={`flex items-center gap-2 mt-2 pt-2 border-t border-white/5 transition-opacity ${!supportsSystemAudio ? 'opacity-40 grayscale' : ''}`}
+                                          title={!supportsSystemAudio ? "System audio recording is only available on Windows" : "System Audio"}
+                                    >
+                                          <button
+                                                disabled={!supportsSystemAudio}
+                                                onClick={() => setSystemVolume(systemVolume > 0 ? 0 : 1)}
+                                                className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable disabled:cursor-not-allowed"
+                                          >
+                                                {systemVolume > 0 ? (
+                                                      <Monitor className="w-3 h-3 text-blue-400" />
+                                                ) : (
+                                                      <VolumeX className="w-3 h-3 text-neutral-500" />
+                                                )}
+                                          </button>
+                                          <input
+                                                disabled={!supportsSystemAudio}
+                                                type="range"
+                                                min="0"
+                                                max="1"
+                                                step="0.01"
+                                                value={systemVolume}
+                                                onChange={(e) => setSystemVolume(parseFloat(e.target.value))}
+                                                className="w-20 h-1 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable disabled:cursor-not-allowed
+                                                      [&::-webkit-slider-thumb]:appearance-none
+                                                      [&::-webkit-slider-thumb]:w-2.5
+                                                      [&::-webkit-slider-thumb]:h-2.5
+                                                      [&::-webkit-slider-thumb]:rounded-full
+                                                      [&::-webkit-slider-thumb]:bg-blue-400
+                                                      [&::-webkit-slider-thumb]:cursor-pointer
+                                                      [&::-webkit-slider-thumb]:shadow-md
+                                                      [&::-webkit-slider-thumb]:shadow-blue-400/40"
+                                                style={{
+                                                      background: `linear-gradient(to right, #60a5fa ${systemVolume * 100}%, rgba(255,255,255,0.1) ${systemVolume * 100}%)`
                                                 }}
                                           />
                                     </div>
