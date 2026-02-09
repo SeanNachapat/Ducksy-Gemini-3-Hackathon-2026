@@ -47,7 +47,14 @@
       ],
       "icon": "assets/icon_square.png",
       "category": "public.app-category.productivity",
-      "darkModeSupport": true
+      "darkModeSupport": true,
+      "identity": null,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Ducksy needs microphone access for audio recording and transcription.",
+        "NSScreenCaptureUsageDescription": "Ducksy needs screen capture access for Magic Lens feature."
+      }
     },
     "dmg": {
       "title": "${productName} ${version}",
