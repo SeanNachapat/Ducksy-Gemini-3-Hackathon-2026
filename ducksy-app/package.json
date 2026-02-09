@@ -42,8 +42,8 @@
     ],
     "mac": {
       "target": [
-        "dmg",
-        "zip"
+        "pkg",
+        "dmg"
       ],
       "icon": "assets/icon_square.png",
       "category": "public.app-category.productivity",
@@ -55,6 +55,10 @@
         "NSMicrophoneUsageDescription": "Ducksy needs microphone access for audio recording and transcription.",
         "NSScreenCaptureUsageDescription": "Ducksy needs screen capture access for Magic Lens feature."
       }
+    },
+    "pkg": {
+      "scripts": "scripts/pkg",
+      "installLocation": "/Applications"
     },
     "dmg": {
       "title": "${productName} ${version}",
