@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw, CalendarPlus, Check, Plus, Calendar, Sparkles, Upload } from "lucide-react"
+import { Square, Pause, Play, Mic, Monitor, Camera, Home, ChevronDown, ChevronUp, X, Loader2, RefreshCw, CalendarPlus, Check, Plus, Calendar, Sparkles, Upload, Volume2, VolumeX } from "lucide-react"
 
 import { useRecorder } from "@/hooks/useRecorder"
 import SessionChat from "@/components/SessionChat"
@@ -39,6 +39,10 @@ export default function OnRecordPage() {
             audioBlob,
             saveRecording,
             resetRecording,
+            micVolume,
+            systemVolume,
+            setMicVolume,
+            setSystemVolume,
       } = useRecorder()
 
       useEffect(() => {
@@ -490,6 +494,95 @@ export default function OnRecordPage() {
                               <div className="w-1 h-1 rounded-full bg-white/20" />
                         </div>
                   </motion.div>
+
+                  {/* Volume Sliders - Show during recording */}
+                  <AnimatePresence>
+                        {isRecording && (
+                              <motion.div
+                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="mt-3 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-xl"
+                              >
+                                    <div className="flex items-end gap-4">
+                                          {/* Mic Volume - Vertical */}
+                                          <div className="flex flex-col items-center gap-1.5">
+                                                <input
+                                                      type="range"
+                                                      min="0"
+                                                      max="1"
+                                                      step="0.01"
+                                                      value={micVolume}
+                                                      onChange={(e) => setMicVolume(parseFloat(e.target.value))}
+                                                      className="w-1 h-16 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
+                                                            [&::-webkit-slider-thumb]:appearance-none
+                                                            [&::-webkit-slider-thumb]:w-2.5
+                                                            [&::-webkit-slider-thumb]:h-2.5
+                                                            [&::-webkit-slider-thumb]:rounded-full
+                                                            [&::-webkit-slider-thumb]:bg-amber-500
+                                                            [&::-webkit-slider-thumb]:cursor-pointer
+                                                            [&::-webkit-slider-thumb]:shadow-md
+                                                            [&::-webkit-slider-thumb]:shadow-amber-500/40"
+                                                      style={{
+                                                            writingMode: 'vertical-lr',
+                                                            direction: 'rtl',
+                                                            background: `linear-gradient(to top, #f59e0b ${micVolume * 100}%, rgba(255,255,255,0.1) ${micVolume * 100}%)`
+                                                      }}
+                                                />
+                                                <button
+                                                      onClick={() => setMicVolume(micVolume > 0 ? 0 : 1)}
+                                                      className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
+                                                      title="Microphone"
+                                                >
+                                                      {micVolume > 0 ? (
+                                                            <Mic className="w-3 h-3 text-amber-500" />
+                                                      ) : (
+                                                            <VolumeX className="w-3 h-3 text-neutral-500" />
+                                                      )}
+                                                </button>
+                                          </div>
+
+                                          {/* System Volume - Vertical */}
+                                          <div className="flex flex-col items-center gap-1.5">
+                                                <input
+                                                      type="range"
+                                                      min="0"
+                                                      max="1"
+                                                      step="0.01"
+                                                      value={systemVolume}
+                                                      onChange={(e) => setSystemVolume(parseFloat(e.target.value))}
+                                                      className="w-1 h-16 bg-white/10 rounded-full appearance-none cursor-pointer non-draggable
+                                                            [&::-webkit-slider-thumb]:appearance-none
+                                                            [&::-webkit-slider-thumb]:w-2.5
+                                                            [&::-webkit-slider-thumb]:h-2.5
+                                                            [&::-webkit-slider-thumb]:rounded-full
+                                                            [&::-webkit-slider-thumb]:bg-blue-500
+                                                            [&::-webkit-slider-thumb]:cursor-pointer
+                                                            [&::-webkit-slider-thumb]:shadow-md
+                                                            [&::-webkit-slider-thumb]:shadow-blue-500/40"
+                                                      style={{
+                                                            writingMode: 'vertical-lr',
+                                                            direction: 'rtl',
+                                                            background: `linear-gradient(to top, #3b82f6 ${systemVolume * 100}%, rgba(255,255,255,0.1) ${systemVolume * 100}%)`
+                                                      }}
+                                                />
+                                                <button
+                                                      onClick={() => setSystemVolume(systemVolume > 0 ? 0 : 1)}
+                                                      className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors non-draggable"
+                                                      title="System Audio"
+                                                >
+                                                      {systemVolume > 0 ? (
+                                                            <Monitor className="w-3 h-3 text-blue-500" />
+                                                      ) : (
+                                                            <VolumeX className="w-3 h-3 text-neutral-500" />
+                                                      )}
+                                                </button>
+                                          </div>
+                                    </div>
+                              </motion.div>
+                        )}
+                  </AnimatePresence>
 
                   <AnimatePresence>
                         {expanded && (isProcessing || transcriptionResult) && (

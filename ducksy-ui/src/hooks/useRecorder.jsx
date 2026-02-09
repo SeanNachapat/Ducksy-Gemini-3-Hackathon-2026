@@ -8,18 +8,40 @@ export function useRecorder() {
       const [duration, setDuration] = useState(0)
       const [audioBlob, setAudioBlob] = useState(null)
       const [error, setError] = useState(null)
+      const [micVolume, setMicVolume] = useState(1)
+      const [systemVolume, setSystemVolume] = useState(1)
 
       const mediaRecorderRef = useRef(null)
       const chunksRef = useRef([])
-      const streamRef = useRef(null)
       const timerRef = useRef(null)
       const isPausedRef = useRef(false)
       const elapsedBeforePauseRef = useRef(0)
       const lastResumeTimeRef = useRef(0)
 
+      // Audio context and streams
+      const audioContextRef = useRef(null)
+      const micStreamRef = useRef(null)
+      const systemStreamRef = useRef(null)
+      const micGainRef = useRef(null)
+      const systemGainRef = useRef(null)
+      const destinationRef = useRef(null)
+
       useEffect(() => {
             isPausedRef.current = isPaused
       }, [isPaused])
+
+      // Update gain when volume changes
+      useEffect(() => {
+            if (micGainRef.current) {
+                  micGainRef.current.gain.value = micVolume
+            }
+      }, [micVolume])
+
+      useEffect(() => {
+            if (systemGainRef.current) {
+                  systemGainRef.current.gain.value = systemVolume
+            }
+      }, [systemVolume])
 
       const formatTime = useCallback((seconds) => {
             const mins = Math.floor(seconds / 60)
@@ -36,19 +58,87 @@ export function useRecorder() {
             }
       }, [formatTime])
 
+      const cleanupAudio = useCallback(() => {
+            // Stop all tracks
+            if (micStreamRef.current) {
+                  micStreamRef.current.getTracks().forEach(track => track.stop())
+                  micStreamRef.current = null
+            }
+            if (systemStreamRef.current) {
+                  systemStreamRef.current.getTracks().forEach(track => track.stop())
+                  systemStreamRef.current = null
+            }
+            // Close audio context
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                  audioContextRef.current.close()
+                  audioContextRef.current = null
+            }
+            micGainRef.current = null
+            systemGainRef.current = null
+            destinationRef.current = null
+      }, [])
+
       const startRecording = useCallback(async (deviceId = null) => {
             setError(null)
             setAudioBlob(null)
             chunksRef.current = []
 
             try {
-                  const constraints = {
+                  // Create audio context
+                  const AudioContext = window.AudioContext || window.webkitAudioContext
+                  const audioContext = new AudioContext()
+                  audioContextRef.current = audioContext
+
+                  // Create destination for mixing
+                  const destination = audioContext.createMediaStreamDestination()
+                  destinationRef.current = destination
+
+                  // Get microphone stream
+                  const micConstraints = {
                         audio: deviceId ? { deviceId: { exact: deviceId } } : true
                   }
+                  const micStream = await navigator.mediaDevices.getUserMedia(micConstraints)
+                  micStreamRef.current = micStream
 
-                  const stream = await navigator.mediaDevices.getUserMedia(constraints)
-                  streamRef.current = stream
+                  // Create mic gain node
+                  const micSource = audioContext.createMediaStreamSource(micStream)
+                  const micGain = audioContext.createGain()
+                  micGain.gain.value = micVolume
+                  micGainRef.current = micGain
+                  micSource.connect(micGain)
+                  micGain.connect(destination)
 
+                  // Try to get system audio via getDisplayMedia (handled by main process)
+                  try {
+                        // Use getDisplayMedia - our main process handler will provide loopback audio
+                        const systemStream = await navigator.mediaDevices.getDisplayMedia({
+                              video: true, // Required, but we'll discard it
+                              audio: true  // This triggers our handler which provides loopback audio
+                        })
+                        systemStreamRef.current = systemStream
+
+                        // Stop video track immediately - we only need audio
+                        systemStream.getVideoTracks().forEach(track => track.stop())
+
+                        // Check if we got audio
+                        const audioTracks = systemStream.getAudioTracks()
+                        if (audioTracks.length > 0) {
+                              console.log('System audio captured successfully via loopback')
+                              const systemSource = audioContext.createMediaStreamSource(systemStream)
+                              const systemGain = audioContext.createGain()
+                              systemGain.gain.value = systemVolume
+                              systemGainRef.current = systemGain
+                              systemSource.connect(systemGain)
+                              systemGain.connect(destination)
+                        } else {
+                              console.warn('No system audio track - ensure Screen Recording permission is granted and restart the app')
+                        }
+                  } catch (systemErr) {
+                        console.warn('System audio not available:', systemErr.message)
+                        // Continue with mic-only recording
+                  }
+
+                  // Set up MediaRecorder on the mixed stream
                   let mimeType = 'audio/webm;codecs=opus'
                   if (typeof MediaRecorder !== 'undefined' && !MediaRecorder.isTypeSupported(mimeType)) {
                         if (MediaRecorder.isTypeSupported('audio/webm')) {
@@ -61,7 +151,7 @@ export function useRecorder() {
                   }
 
                   const options = mimeType ? { mimeType } : {}
-                  const mediaRecorder = new MediaRecorder(stream, options)
+                  const mediaRecorder = new MediaRecorder(destination.stream, options)
                   mediaRecorderRef.current = mediaRecorder
 
                   mediaRecorder.ondataavailable = (e) => {
@@ -74,11 +164,7 @@ export function useRecorder() {
                         const blobType = mediaRecorder.mimeType || 'audio/webm'
                         const blob = new Blob(chunksRef.current, { type: blobType })
                         setAudioBlob(blob)
-
-                        if (streamRef.current) {
-                              streamRef.current.getTracks().forEach(track => track.stop())
-                              streamRef.current = null
-                        }
+                        cleanupAudio()
                   }
 
                   mediaRecorder.start(1000)
@@ -103,9 +189,10 @@ export function useRecorder() {
 
             } catch (err) {
                   console.error('Failed to start recording:', err)
-                  setError('Microphone access denied. Please check permissions.')
+                  cleanupAudio()
+                  setError('Failed to start recording. Please check permissions.')
             }
-      }, [sendTimeUpdate])
+      }, [sendTimeUpdate, cleanupAudio, micVolume, systemVolume])
 
       const pauseRecording = useCallback(() => {
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -222,11 +309,9 @@ export function useRecorder() {
                   if (timerRef.current) {
                         clearInterval(timerRef.current)
                   }
-                  if (streamRef.current) {
-                        streamRef.current.getTracks().forEach(track => track.stop())
-                  }
+                  cleanupAudio()
             }
-      }, [])
+      }, [cleanupAudio])
 
       return {
             isRecording,
@@ -235,6 +320,10 @@ export function useRecorder() {
             formattedDuration: formatTime(duration),
             audioBlob,
             error,
+            micVolume,
+            systemVolume,
+            setMicVolume,
+            setSystemVolume,
             startRecording,
             pauseRecording,
             resumeRecording,

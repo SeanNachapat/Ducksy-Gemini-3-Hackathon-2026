@@ -10,6 +10,12 @@ const dotenv = require('dotenv')
 dotenv.config()
 const isProd = app.isPackaged
 app.commandLine.appendSwitch('enable-transparent-visuals')
+
+// Enable macOS audio loopback for system audio capture (macOS 13+)
+if (process.platform === 'darwin') {
+      app.commandLine.appendSwitch('enable-features', 'MacLoopbackAudioForScreenShare,MacSckSystemAudioLoopbackOverride')
+}
+
 const loadURL = serve({ directory: 'out' });
 function getAppPath(page = '') {
       if (isProd) {
@@ -315,6 +321,28 @@ if (!gotTheLock) {
       })
 }
 app.whenReady().then(async () => {
+      // Set up display media request handler for system audio capture
+      const { session } = require('electron')
+      session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+            try {
+                  const sources = await desktopCapturer.getSources({ types: ['screen', 'window'] })
+                  const screenSource = sources.find(s => s.name === 'Entire Screen') || sources[0]
+
+                  if (screenSource) {
+                        // Pass 'loopback' for audio to enable system audio capture on macOS
+                        callback({
+                              video: screenSource,
+                              audio: 'loopback'
+                        })
+                  } else {
+                        callback(null)
+                  }
+            } catch (err) {
+                  console.error('Display media request error:', err)
+                  callback(null)
+            }
+      })
+
       createWindow()
       registerIpcHandlers();
       createTray();
