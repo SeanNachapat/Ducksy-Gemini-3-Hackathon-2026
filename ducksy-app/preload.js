@@ -87,10 +87,7 @@ contextBridge.exposeInMainWorld("electron", {
                   "mcp-disconnect",
                   "calendar-create-event",
                   "calendar-dismiss-event",
-                  "search-everything",
-                  "get-auto-launch",
-                  "set-auto-launch",
-                  "get-app-info"
+                  "search-everything"
             ]
             if (validChannels.includes(channel)) {
                   return await ipcRenderer.invoke(channel, data)

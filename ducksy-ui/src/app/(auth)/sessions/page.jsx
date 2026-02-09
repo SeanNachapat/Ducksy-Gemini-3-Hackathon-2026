@@ -23,7 +23,6 @@ import {
     Plus
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useSettings } from "@/hooks/SettingsContext"
 import { useSessionLogs } from "@/hooks/useSessionLogs"
 import SessionChat from "@/components/SessionChat"
@@ -32,26 +31,7 @@ import EditableEventModal from "@/components/EditableEventModal"
 import ThinkingIndicator from "@/components/ThinkingIndicator"
 
 export default function SessionsPage() {
-    const router = useRouter()
     const [selectedSession, setSelectedSession] = useState(null)
-    const [logoAnimation, setLogoAnimation] = useState("");
-    const [animKey, setAnimKey] = useState(0);
-
-    const triggerLogoAnimation = (e) => {
-        // Pick a random animation
-        const animations = ["spin", "bounce", "shake", "pulse"];
-        const randomAnim = animations[Math.floor(Math.random() * animations.length)];
-        setLogoAnimation(randomAnim);
-        setAnimKey(prev => prev + 1);
-
-        // Navigate home after delay
-        setTimeout(() => {
-            router.push('/dashboard');
-        }, 400);
-
-        // Reset after duration
-        setTimeout(() => setLogoAnimation(""), 1000);
-    };
     const [isDeleting, setIsDeleting] = useState(false)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [searchQuery, setSearchQuery] = useState("")
@@ -224,26 +204,8 @@ export default function SessionsPage() {
             <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-amber-400/3 blur-[100px] rounded-full pointer-events-none z-0" />
 
             <aside className="w-20 border-r border-white/5 flex flex-col items-center py-6 z-20 bg-neutral-900/30 backdrop-blur-md">
-                <div onClick={triggerLogoAnimation} className="mb-8 group cursor-pointer">
-                    <div className="w-12 h-12 rounded-2xl bg-linear-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/10 flex items-center justify-center hover:bg-amber-500/20 hover:border-amber-500/30 transition-all duration-500 shadow-[0_0_20px_rgba(251,191,36,0.05)] group-hover:shadow-[0_0_25px_rgba(251,191,36,0.15)] group-hover:scale-105 overflow-hidden p-2">
-                        <motion.div
-                            key={animKey}
-                            animate={
-                                logoAnimation === "spin" ? { rotate: 360 } :
-                                    logoAnimation === "bounce" ? { y: [0, -12, 0, -6, 0] } :
-                                        logoAnimation === "shake" ? { x: [0, -5, 5, -5, 5, 0] } :
-                                            logoAnimation === "pulse" ? { scale: [1, 1.3, 1] } :
-                                                { rotate: 0, y: 0, x: 0, scale: 1 }
-                            }
-                            transition={{
-                                duration: logoAnimation === "pulse" ? 0.3 : 0.6,
-                                ease: "easeInOut"
-                            }}
-                            className="w-full h-full flex items-center justify-center"
-                        >
-                            <img src="/ducksy-logo.svg" alt="Ducksy Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(251,191,36,0.3)] group-hover:brightness-110 transition-all pointer-events-none" />
-                        </motion.div>
-                    </div>
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center mb-8 hover:bg-white/10 transition-colors cursor-pointer group">
+                    <Layers className="w-5 h-5 text-neutral-500 group-hover:text-amber-400 transition-colors" />
                 </div>
             </aside>
 
@@ -403,6 +365,9 @@ export default function SessionsPage() {
                             <div className="p-6 border-b border-white/5 flex items-start justify-between bg-neutral-900/30">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-white/5 text-neutral-400 border border-white/5">
+                                            {selectedSession.mode}
+                                        </span>
                                         <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
                                             {selectedSession.type}
                                         </span>
